@@ -1,0 +1,154 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+export async function GET(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+
+  const { searchParams } = req.nextUrl;
+  const period = searchParams.get("period") ?? "month"; // week | month | year | all
+
+  // Определяем диапазон дат
+  const now = new Date();
+  let fromDate: Date;
+  if (period === "week") {
+    fromDate = new Date(now); fromDate.setDate(now.getDate() - 7);
+  } else if (period === "month") {
+    fromDate = new Date(now); fromDate.setMonth(now.getMonth() - 1);
+  } else if (period === "year") {
+    fromDate = new Date(now); fromDate.setFullYear(now.getFullYear() - 1);
+  } else {
+    fromDate = new Date("2000-01-01");
+  }
+  const from = fromDate.toISOString();
+
+  // ── Общие показатели ──────────────────────────────────────────────────────
+  const totalRevenue = (db.prepare(
+    `SELECT COALESCE(SUM(paid), 0) as v FROM rentals WHERE status NOT IN ('cancelled') AND created_at >= ?`
+  ).get(from) as { v: number }).v;
+
+  const totalRentals = (db.prepare(
+    `SELECT COUNT(*) as v FROM rentals WHERE created_at >= ?`
+  ).get(from) as { v: number }).v;
+
+  const activeRentals = (db.prepare(
+    `SELECT COUNT(*) as v FROM rentals WHERE status IN ('active', 'booked', 'overdue')`
+  ).get() as { v: number }).v;
+
+  const overdueRentals = (db.prepare(
+    `SELECT COUNT(*) as v FROM rentals WHERE status = 'overdue'`
+  ).get() as { v: number }).v;
+
+  const totalDebt = (db.prepare(
+    `SELECT COALESCE(SUM(total - paid), 0) as v FROM rentals WHERE status IN ('active','overdue') AND total > paid`
+  ).get() as { v: number }).v;
+
+  const newClients = (db.prepare(
+    `SELECT COUNT(*) as v FROM clients WHERE created_at >= ?`
+  ).get(from) as { v: number }).v;
+
+  const totalClients = (db.prepare(`SELECT COUNT(*) as v FROM clients`).get() as { v: number }).v;
+
+  const freeInventory = (db.prepare(
+    `SELECT COUNT(*) as v FROM inventory_items WHERE status = 'available'`
+  ).get() as { v: number }).v;
+
+  const totalInventory = (db.prepare(`SELECT COUNT(*) as v FROM inventory_items`).get() as { v: number }).v;
+
+  // ── Выручка по дням (для графика) ─────────────────────────────────────────
+  const revenueByDay = db.prepare(`
+    SELECT
+      DATE(created_at) as day,
+      COALESCE(SUM(paid), 0) as revenue,
+      COUNT(*) as count
+    FROM rentals
+    WHERE created_at >= ? AND status NOT IN ('cancelled')
+    GROUP BY DATE(created_at)
+    ORDER BY day
+  `).all(from) as { day: string; revenue: number; count: number }[];
+
+  // ── Выручка по месяцам ────────────────────────────────────────────────────
+  const revenueByMonth = db.prepare(`
+    SELECT
+      strftime('%Y-%m', created_at) as month,
+      COALESCE(SUM(paid), 0) as revenue,
+      COUNT(*) as count
+    FROM rentals
+    WHERE status NOT IN ('cancelled')
+    GROUP BY strftime('%Y-%m', created_at)
+    ORDER BY month DESC
+    LIMIT 12
+  `).all() as { month: string; revenue: number; count: number }[];
+
+  // ── Топ клиентов по выручке ───────────────────────────────────────────────
+  const topClients = db.prepare(`
+    SELECT
+      c.id, c.name, c.phone,
+      COUNT(r.id) as rentals_count,
+      COALESCE(SUM(r.paid), 0) as total_paid,
+      COALESCE(SUM(r.total - r.paid), 0) as total_debt
+    FROM clients c
+    LEFT JOIN rentals r ON JSON_EXTRACT(r.client_json, '$.id') = c.id
+      AND r.status NOT IN ('cancelled')
+      AND r.created_at >= ?
+    GROUP BY c.id
+    HAVING rentals_count > 0
+    ORDER BY total_paid DESC
+    LIMIT 10
+  `).all(from) as { id: string; name: string; phone: string; rentals_count: number; total_paid: number; total_debt: number }[];
+
+  // ── Топ инвентаря по количеству аренд ─────────────────────────────────────
+  // Считаем через items_json (массив позиций в каждой аренде)
+  const allRentals = db.prepare(
+    `SELECT items_json FROM rentals WHERE status NOT IN ('cancelled') AND created_at >= ?`
+  ).all(from) as { items_json: string }[];
+
+  const inventoryCount: Record<string, { name: string; count: number; revenue: number }> = {};
+  for (const r of allRentals) {
+    try {
+      const items = JSON.parse(r.items_json || "[]") as { inventoryItemId?: string; name: string; qty: number; pricePerDay: number }[];
+      for (const item of items) {
+        const key = item.inventoryItemId ?? item.name;
+        if (!inventoryCount[key]) inventoryCount[key] = { name: item.name, count: 0, revenue: 0 };
+        inventoryCount[key].count += item.qty;
+        inventoryCount[key].revenue += item.pricePerDay * item.qty;
+      }
+    } catch { /* ignore */ }
+  }
+  const topInventory = Object.values(inventoryCount)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  // ── Аренды по статусам ────────────────────────────────────────────────────
+  const byStatus = db.prepare(`
+    SELECT status, COUNT(*) as count
+    FROM rentals
+    WHERE created_at >= ?
+    GROUP BY status
+  `).all(from) as { status: string; count: number }[];
+
+  // ── Мастерская ────────────────────────────────────────────────────────────
+  const workshopActive = (db.prepare(
+    `SELECT COUNT(*) as v FROM workshop_tickets WHERE status NOT IN ('done','archived')`
+  ).get() as { v: number }).v;
+
+  const workshopCost = (db.prepare(`
+    SELECT COALESCE(SUM(CAST(JSON_EXTRACT(value, '$.total') AS REAL)), 0) as v
+    FROM (SELECT json_each.value FROM workshop_tickets, json_each(lines_json))
+  `).get() as { v: number } | undefined)?.v ?? 0;
+
+  return NextResponse.json({
+    period,
+    summary: {
+      totalRevenue, totalRentals, activeRentals, overdueRentals,
+      totalDebt, newClients, totalClients, freeInventory, totalInventory,
+      workshopActive,
+    },
+    revenueByDay,
+    revenueByMonth: revenueByMonth.reverse(),
+    topClients,
+    topInventory,
+    byStatus,
+  });
+}

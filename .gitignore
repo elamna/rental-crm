@@ -1,0 +1,25 @@
+# Зависимости
+node_modules/
+
+# Next.js сборка
+.next/
+out/
+
+# База данных (локальная)
+data/
+
+# Загруженные файлы (локальные)
+public/uploads/
+
+# Переменные окружения
+.env
+.env.local
+.env.production
+
+# Логи
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

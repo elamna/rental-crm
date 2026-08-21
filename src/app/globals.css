@@ -1,0 +1,101 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+:root {
+  --color-bg: #F6F6FB;
+  --color-surface: #FFFFFF;
+  --color-sidebar: #15121F;
+  --color-sidebar-hover: #211C33;
+  --color-primary: #6D4AFF;
+  --color-primary-hover: #5B3AE8;
+  --color-primary-soft: #EFEBFF;
+  --color-border: #E7E7F0;
+  --color-text: #16151F;
+  --color-text-muted: #71718A;
+  --shadow-card: 0 1px 2px rgba(20, 15, 50, 0.04), 0 8px 24px -12px rgba(20, 15, 50, 0.10);
+  --shadow-card-hover: 0 4px 10px rgba(20, 15, 50, 0.06), 0 16px 32px -12px rgba(20, 15, 50, 0.16);
+  --radius-card: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9D9E8;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C4C4DA;
+}
+
+.crm-input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  padding: 0.6rem 0.75rem;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.crm-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.card-shadow {
+  box-shadow: var(--shadow-card);
+}
+.card-shadow-hover:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.28s ease both;
+}
+
+/* ─── TipTap editor styles ─── */
+.ProseMirror {
+  outline: none;
+}
+.ProseMirror p { margin: 0.5em 0; }
+.ProseMirror h1 { font-size: 1.4em; font-weight: bold; margin: 0.8em 0 0.4em; }
+.ProseMirror h2 { font-size: 1.2em; font-weight: bold; margin: 0.7em 0 0.3em; }
+.ProseMirror h3 { font-size: 1.05em; font-weight: bold; margin: 0.6em 0 0.3em; }
+.ProseMirror ul { list-style: disc; padding-left: 1.4em; }
+.ProseMirror ol { list-style: decimal; padding-left: 1.4em; }
+.ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+.ProseMirror td, .ProseMirror th { border: 1px solid #ccc; padding: 4px 8px; min-width: 40px; }
+.ProseMirror th { background: #f5f5f5; font-weight: bold; }
+.ProseMirror .selectedCell { background: #e8f0fe; }
+
+.field-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
