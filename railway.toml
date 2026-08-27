@@ -3,5 +3,5 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "npm run start"
-healthcheckPath = "/"
+healthcheckPath = "/api/auth/me"
 restartPolicyType = "on_failure"

@@ -427,35 +427,45 @@ export default function NewRentalPage() {
                 const catItems = items.filter((i) => (i.category ?? "product") === cat);
                 const catLabel = cat === "product" ? "Продукты" : cat === "kit" ? "Комплекты" : "Услуги";
                 return (
-                  <div key={cat} className="mb-3 last:mb-0">
+                  <div key={cat} className="mb-4 last:mb-0">
                     <div className="mb-2 flex items-center justify-between">
-                      <h3 className="text-[13.5px] font-semibold">{catLabel}</h3>
+                      <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{catLabel}</span>
                       <button
                         onClick={() => setAddModalCategory(cat)}
-                        className="flex items-center gap-1.5 rounded-[10px] bg-[#16151F] px-3 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-black"
+                        className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                       >
-                        <Plus className="h-3.5 w-3.5" /> Добавить
+                        <Plus className="h-3 w-3" /> Добавить
                       </button>
                     </div>
-                    {catItems.length > 0 && (
+                    {catItems.length > 0 ? (
                       <div className="space-y-1.5">
                         {catItems.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-3 py-2">
-                            <div>
-                              <div className="text-[13px] font-medium">{item.name}</div>
-                              <div className="text-[11.5px] text-[var(--color-text-muted)]">
-                                {item.qty} шт · {formatMoney(item.pricePerDay)} / сутки
-                              </div>
+                          <div key={item.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 hover:border-[var(--color-primary-soft)]">
+                            {/* Иконка */}
+                            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                              <span className="text-[10px] font-bold">{item.qty}</span>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[13px] font-semibold">{formatMoney(item.pricePerDay * item.qty * duration)}</span>
-                              <button onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))} className="text-[var(--color-text-muted)] hover:text-[#C0272D]">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                            {/* Название */}
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-[12.5px] font-medium">{item.name}</div>
+                              <div className="text-[11px] text-[var(--color-text-muted)]">{formatMoney(item.pricePerDay)}/сут</div>
                             </div>
+                            {/* Сумма */}
+                            <span className="shrink-0 text-[12.5px] font-semibold">{formatMoney(item.pricePerDay * item.qty * duration)}</span>
+                            {/* Удалить */}
+                            <button onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))} className="shrink-0 text-[var(--color-text-muted)] hover:text-[#C0272D]">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         ))}
                       </div>
+                    ) : (
+                      <button
+                        onClick={() => setAddModalCategory(cat)}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2.5 text-[12px] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                      >
+                        <Plus className="h-3 w-3" /> Добавить {catLabel.toLowerCase()}
+                      </button>
                     )}
                   </div>
                 );

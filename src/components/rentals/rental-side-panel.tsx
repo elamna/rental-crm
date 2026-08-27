@@ -4,8 +4,20 @@ import { Rental, DocumentTemplate, RentalDocument } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 import { currentUser } from "@/lib/current-user";
-import { FileText, Download, Printer, ShieldCheck, AlertOctagon, Receipt, MessageSquare, Plus, Paperclip, Undo2, PackageCheck, Siren, Trash2, ExternalLink } from "lucide-react";
+import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+
+type PaymentMethod = "cash" | "kaspi_qr" | "company";
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: "Наличные",
+  kaspi_qr: "Kaspi QR",
+  company: "Оплата компаний",
+};
+const PAYMENT_METHOD_ICONS: Record<PaymentMethod, React.ElementType> = {
+  cash: Banknote,
+  kaspi_qr: QrCode,
+  company: Building2,
+};
 
 function Section({
   icon: Icon,
@@ -41,15 +53,10 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   const updateRental = useAppStore((s) => s.updateRental);
   const [paying, setPaying] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  async function handleAcceptPayment() {
-    if (remaining <= 0) return;
-    const amount = parseMoneyAmount(window.prompt(`Сумма оплаты, ₸ (остаток ${formatMoney(remaining)})`, String(remaining)));
-    if (amount === null) return;
-    if (amount <= 0) {
-      setActionError("Укажите сумму оплаты больше 0");
-      return;
-    }
+  async function handleAcceptPayment(amount: number, method: PaymentMethod) {
+    if (amount <= 0) return;
     const paid = Math.min(rental.total, rental.paid + amount);
     setPaying(true);
     setActionError(null);
@@ -58,6 +65,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         paid,
         paymentStatus: paid >= rental.total ? "paid" : "partial",
       });
+      setShowPaymentModal(false);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Не удалось принять оплату");
     } finally {
@@ -191,24 +199,47 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       )}
       {/* Payment */}
       <Section icon={Receipt} title="К оплате">
+        {/* Строки сумм */}
         <div className="space-y-1.5 text-[13px]">
-          <Row label="Общая сумма" value={formatMoney(rental.total)} bold />
-          <Row label="Оплачено" value={formatMoney(rental.paid)} valueClass="text-[#1C8A46]" />
-          <Row label="Остаток" value={formatMoney(remaining)} valueClass={remaining > 0 ? "text-[#C0272D]" : ""} bold />
+          <div className="flex items-center justify-between">
+            <span className="text-[var(--color-text-muted)]">Инвентарь</span>
+            <span className="font-medium">{formatMoney(rental.total)}</span>
+          </div>
+          <div className="border-t border-[var(--color-border)] pt-1.5">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">Итого</span>
+              <span className="font-bold">{formatMoney(rental.total)}</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-[8px] bg-[var(--color-bg)] px-2.5 py-2">
+            <span className="text-[12.5px] font-semibold text-[var(--color-text-muted)]">К оплате</span>
+            <span className={`text-[15px] font-bold ${remaining > 0 ? "text-[#C0272D]" : "text-[#1C8A46]"}`}>
+              {formatMoney(remaining)}
+            </span>
+          </div>
+          {rental.paid > 0 && remaining > 0 && (
+            <div className="flex items-center justify-between text-[12px]">
+              <span className="text-[var(--color-text-muted)]">Уже оплачено</span>
+              <span className="font-medium text-[#1C8A46]">{formatMoney(rental.paid)}</span>
+            </div>
+          )}
         </div>
+
         {remaining > 0 ? (
           <button
-            onClick={handleAcceptPayment}
+            onClick={() => setShowPaymentModal(true)}
             disabled={paying}
-            className="mt-3 w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] bg-[#1C8A46] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-60"
           >
-            {paying ? "Оплата…" : "Принять оплату"}
+            <CreditCard className="h-4 w-4" />
+            {paying ? "Оплата…" : `Принять оплату +`}
           </button>
         ) : (
           <div className="mt-3 rounded-[10px] bg-[#EAF7EE] py-2.5 text-center text-[13px] font-semibold text-[#1C8A46]">
-            Оплачено полностью
+            ✓ Оплачено полностью
           </div>
         )}
+
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button className="rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             Скидка
@@ -226,6 +257,16 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           </button>
         )}
       </Section>
+
+      {/* Модалка оплаты */}
+      {showPaymentModal && (
+        <PaymentModal
+          remaining={remaining}
+          onPay={handleAcceptPayment}
+          onClose={() => setShowPaymentModal(false)}
+          paying={paying}
+        />
+      )}
 
       {/* Documents */}
       <DocumentsSection rental={rental} />
@@ -251,7 +292,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       </Section>
 
       {/* Penalties */}
-      <Section icon={AlertOctagon} title="Штрафы">
+      <Section icon={AlertCircle} title="Штрафы">
         {rental.penalties && rental.penalties.length > 0 ? (
           <div className="space-y-1.5">
             {rental.penalties.map((p, i) => (
@@ -288,7 +329,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       </Section>
 
       {/* Notes */}
-      <Section icon={MessageSquare} title="Заметки">
+      <Section icon={MessageCircle} title="Заметки">
         <div className="space-y-2">
           {notes.map((n, i) => (
             <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">
@@ -517,6 +558,93 @@ function DocumentsSection({ rental }: { rental: Rental }) {
         </div>
       )}
     </>
+  );
+}
+
+// ─── Модалка оплаты ──────────────────────────────────────────────────────────
+
+function PaymentModal({ remaining, onPay, onClose, paying }: {
+  remaining: number;
+  onPay: (amount: number, method: PaymentMethod) => Promise<void>;
+  onClose: () => void;
+  paying: boolean;
+}) {
+  const [method, setMethod] = useState<PaymentMethod>("cash");
+  const [amountStr, setAmountStr] = useState(String(remaining));
+  const amount = parseFloat(amountStr.replace(/\s/g, "").replace(",", ".")) || 0;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+      <div className="w-full max-w-[380px] overflow-hidden rounded-[20px] bg-white card-shadow">
+        {/* Шапка */}
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
+          <h3 className="text-[15px] font-bold">Оплатить сейчас</h3>
+          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Тип оплаты */}
+          <div>
+            <p className="mb-2 text-[12px] font-semibold text-[var(--color-text-muted)]">
+              Тип оплаты <span className="text-[#C0272D]">*</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(["company", "cash", "kaspi_qr"] as PaymentMethod[]).map((m) => {
+                const Icon = PAYMENT_METHOD_ICONS[m];
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMethod(m)}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition border ${
+                      method === m
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                        : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {PAYMENT_METHOD_LABELS[m]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Сумма */}
+          <div>
+            <p className="mb-1.5 text-[12px] font-semibold text-[var(--color-text-muted)]">
+              Сумма оплаты <span className="text-[#C0272D]">*</span>
+            </p>
+            <input
+              type="number"
+              value={amountStr}
+              onChange={(e) => setAmountStr(e.target.value)}
+              className="crm-input text-[16px] font-semibold"
+              placeholder="0"
+              min={0}
+              max={remaining}
+            />
+          </div>
+
+          {/* Добавить способ оплаты */}
+          <button className="flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--color-primary)] hover:underline">
+            <Plus className="h-3.5 w-3.5" /> Добавить способ оплаты
+          </button>
+        </div>
+
+        {/* Кнопка */}
+        <div className="border-t border-[var(--color-border)] px-5 py-4">
+          <button
+            onClick={() => onPay(amount, method)}
+            disabled={paying || amount <= 0}
+            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+          >
+            {paying ? "Оплата…" : `Принять оплату ${amount > 0 ? formatMoney(amount) : ""}`}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
