@@ -75,7 +75,7 @@ export default function NewRentalPage() {
 
   const [startAt, setStartAt] = useState(() => toLocalInputValue(new Date()));
   const [endAt, setEndAt] = useState(() => toLocalInputValue(new Date(Date.now() + 24 * 3600 * 1000)));
-  const [branch, setBranch] = useState("");
+  const [branch, setBranch] = useState("Атырау");
   const [period, setPeriod] = useState<RentalPeriod>("daily");
 
   const [items, setItems] = useState<InventoryLine[]>([]);
@@ -388,11 +388,8 @@ export default function NewRentalPage() {
               </Field>
               <Field label="Пункт проката" required>
                 <select value={branch} onChange={(e) => setBranch(e.target.value)} className="crm-input">
-                  <option value="">Пункт проката</option>
                   {branches.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
+                    <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
               </Field>

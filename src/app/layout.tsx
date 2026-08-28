@@ -4,7 +4,7 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { AppShell } from "@/components/layout/app-shell";
 
 export const metadata: Metadata = {
-  title: "ПрокатCRM — Аренда строительного инструмента",
+  title: "QURAL-SAIMAN — Аренда строительного инструмента",
   description: "CRM-система для аренды строительного инструмента и оборудования",
 };
 

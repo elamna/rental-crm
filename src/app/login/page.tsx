@@ -44,7 +44,7 @@ export default function LoginPage() {
           <div className="mb-3 grid h-14 w-14 place-items-center rounded-[16px] bg-[#6D4AFF]">
             <Wrench className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-[22px] font-bold text-white">ПрокатCRM</h1>
+          <h1 className="text-[22px] font-bold text-white">QURAL-SAIMAN</h1>
           <p className="mt-1 text-[13px] text-white/50">Управление прокатом инструмента</p>
         </div>
 

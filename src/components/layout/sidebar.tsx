@@ -65,8 +65,8 @@ export function Sidebar() {
       <div className="flex items-center justify-between px-4 pt-5 pb-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-[var(--color-primary)] font-display text-sm font-bold text-white">П</div>
-            <span className="font-display text-[15px] font-bold text-white">ПрокатCRM</span>
+            <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-[var(--color-primary)] font-display text-sm font-bold text-white">Q</div>
+            <span className="font-display text-[15px] font-bold text-white">QURAL-SAIMAN</span>
           </div>
         )}
         <button onClick={() => setCollapsed((c) => !c)} className="grid h-7 w-7 place-items-center rounded-md text-white/40 transition hover:bg-white/10 hover:text-white/80">
