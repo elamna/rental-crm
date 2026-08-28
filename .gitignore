@@ -5,6 +5,10 @@ node_modules/
 .next/
 out/
 
+# TypeScript build info
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
 # База данных (локальная)
 data/
 

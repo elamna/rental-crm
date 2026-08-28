@@ -29,6 +29,11 @@ import {
   MessageSquare,
   Siren,
   Ban,
+  Banknote,
+  QrCode,
+  Building2,
+  X,
+  CreditCard,
 } from "lucide-react";
 
 function toLocalInputValue(d: Date) {
@@ -79,6 +84,7 @@ export default function NewRentalPage() {
 
   const [discountPct, setDiscountPct] = useState(0);
   const [paid, setPaid] = useState(0);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const [docsOpen, setDocsOpen] = useState(true);
   const [documents, setDocuments] = useState<string[]>([]);
@@ -493,29 +499,41 @@ export default function NewRentalPage() {
           {saveError && <p className="text-center text-[12.5px] text-[#C0272D]">{saveError}</p>}
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[13px] font-semibold">К оплате</span>
-              <span className="text-[15px] font-bold">{formatMoney(remaining)}</span>
-            </div>
-            {discountValue > 0 && (
-              <div className="mb-2 flex items-center justify-between text-[12px] text-[var(--color-text-muted)]">
-                <span>Скидка {discountPct}%</span>
-                <span>−{formatMoney(discountValue)}</span>
+            {/* Строки сумм */}
+            <div className="mb-3 space-y-1.5 text-[13px]">
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--color-text-muted)]">Инвентарь</span>
+                <span className="font-medium">{formatMoney(total)}</span>
               </div>
-            )}
+              {discountValue > 0 && (
+                <div className="flex items-center justify-between text-[12px]">
+                  <span className="text-[var(--color-text-muted)]">Скидка {discountPct}%</span>
+                  <span className="text-[#1C8A46]">−{formatMoney(discountValue)}</span>
+                </div>
+              )}
+              <div className="border-t border-[var(--color-border)] pt-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Итого</span>
+                  <span className="font-bold">{formatMoney(total - discountValue)}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-[8px] bg-[var(--color-bg)] px-2.5 py-2">
+                <span className="text-[12.5px] font-semibold text-[var(--color-text-muted)]">К оплате</span>
+                <span className={`text-[15px] font-bold ${remaining > 0 ? "text-[#C0272D]" : "text-[#1C8A46]"}`}>
+                  {formatMoney(remaining)}
+                </span>
+              </div>
+              {paid > 0 && remaining > 0 && (
+                <div className="flex items-center justify-between text-[12px]">
+                  <span className="text-[var(--color-text-muted)]">Уже оплачено</span>
+                  <span className="font-medium text-[#1C8A46]">{formatMoney(paid)}</span>
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => {
-                  const input = prompt(`Сумма оплаты (осталось ${formatMoney(remaining)})`, String(remaining));
-                  const val = parsePaymentAmount(input);
-                  if (val === null) return;
-                  if (val > 0) {
-                    setPaid((p) => Math.min(total, p + val));
-                  } else {
-                    alert("Укажите сумму оплаты больше 0");
-                  }
-                }}
-                className="rounded-[10px] bg-[#22C55E] py-2 text-[12.5px] font-semibold text-white transition hover:bg-[#1CA84E]"
+                onClick={() => setShowPaymentModal(true)}
+                className="flex items-center justify-center gap-1.5 rounded-[10px] bg-[#1C8A46] py-2 text-[12.5px] font-semibold text-white transition hover:bg-[#167A3C]"
               >
                 + Принять оплату
               </button>
@@ -532,6 +550,18 @@ export default function NewRentalPage() {
               </button>
             </div>
           </div>
+
+          {/* Модалка оплаты */}
+          {showPaymentModal && (
+            <NewRentalPaymentModal
+              remaining={remaining}
+              onPay={(amount) => {
+                setPaid((p) => Math.min(total, p + amount));
+                setShowPaymentModal(false);
+              }}
+              onClose={() => setShowPaymentModal(false)}
+            />
+          )}
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
             <button onClick={() => setDocsOpen((v) => !v)} className="flex w-full items-center justify-between">
@@ -909,6 +939,108 @@ function BlacklistWarningModal({
             className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
           >
             Отмена — выбрать другого клиента
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Модалка оплаты для формы новой аренды ───────────────────────────────────
+
+type PaymentMethodNew = "cash" | "kaspi_qr" | "company";
+
+const PM_LABELS: Record<PaymentMethodNew, string> = {
+  cash: "Наличные",
+  kaspi_qr: "Kaspi QR",
+  company: "Оплата компаний",
+};
+const PM_ICONS: Record<PaymentMethodNew, React.ElementType> = {
+  cash: Banknote,
+  kaspi_qr: QrCode,
+  company: Building2,
+};
+
+function NewRentalPaymentModal({
+  remaining, onPay, onClose,
+}: {
+  remaining: number;
+  onPay: (amount: number, method: PaymentMethodNew) => void;
+  onClose: () => void;
+}) {
+  const [method, setMethod] = useState<PaymentMethodNew>("cash");
+  const [amountStr, setAmountStr] = useState(String(remaining));
+  const amount = parseFloat(amountStr.replace(/\s/g, "").replace(",", ".")) || 0;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+      <div className="w-full max-w-[380px] overflow-hidden rounded-[20px] bg-white card-shadow">
+        {/* Шапка */}
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
+          <h3 className="text-[15px] font-bold">Оплатить сейчас</h3>
+          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Тип оплаты */}
+          <div>
+            <p className="mb-2 text-[12px] font-semibold text-[var(--color-text-muted)]">
+              Тип оплаты <span className="text-[#C0272D]">*</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(["company", "cash", "kaspi_qr"] as PaymentMethodNew[]).map((m) => {
+                const Icon = PM_ICONS[m];
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMethod(m)}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition border ${
+                      method === m
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                        : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {PM_LABELS[m]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Сумма */}
+          <div>
+            <p className="mb-1.5 text-[12px] font-semibold text-[var(--color-text-muted)]">
+              Сумма оплаты <span className="text-[#C0272D]">*</span>
+            </p>
+            <input
+              autoFocus
+              type="number"
+              value={amountStr}
+              onChange={(e) => setAmountStr(e.target.value)}
+              className="crm-input text-[16px] font-semibold"
+              placeholder="0"
+              min={0}
+            />
+          </div>
+
+          {/* Добавить способ оплаты */}
+          <button className="flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--color-primary)] hover:underline">
+            <Plus className="h-3.5 w-3.5" /> Добавить способ оплаты
+          </button>
+        </div>
+
+        {/* Кнопка */}
+        <div className="border-t border-[var(--color-border)] px-5 py-4">
+          <button
+            onClick={() => onPay(amount, method)}
+            disabled={amount <= 0}
+            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+          >
+            <CreditCard className="h-4 w-4" />
+            {amount > 0 ? `Принять оплату ${amount.toLocaleString("ru-RU")} ₸` : "Принять оплату"}
           </button>
         </div>
       </div>
