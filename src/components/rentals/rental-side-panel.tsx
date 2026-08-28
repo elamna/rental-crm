@@ -4,7 +4,7 @@ import { Rental, DocumentTemplate, RentalDocument } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 import { currentUser } from "@/lib/current-user";
-import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle } from "lucide-react";
+import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type PaymentMethod = "cash" | "kaspi_qr" | "company";
@@ -100,12 +100,40 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   const updateInventoryItem = useAppStore((s) => s.updateInventoryItem);
   const addWorkshopTicket = useAppStore((s) => s.addWorkshopTicket);
 
-  async function handleReturn(condition: "ok" | "maintenance" | "repair") {
+  // Состояние для каждого товара: выбран ли + его состояние
+  type ItemCondition = "ok" | "maintenance" | "repair";
+  const [returnItems, setReturnItems] = useState<Map<string, { selected: boolean; condition: ItemCondition }>>(
+    () => new Map(rental.items.filter((i) => i.inventoryItemId).map((i) => [i.inventoryItemId!, { selected: false, condition: "ok" }]))
+  );
+
+  function toggleReturnItem(id: string) {
+    setReturnItems((prev) => {
+      const next = new Map(prev);
+      const cur = next.get(id);
+      if (cur) next.set(id, { ...cur, selected: !cur.selected });
+      return next;
+    });
+  }
+
+  function setReturnCondition(id: string, condition: ItemCondition) {
+    setReturnItems((prev) => {
+      const next = new Map(prev);
+      const cur = next.get(id);
+      if (cur) next.set(id, { ...cur, condition });
+      return next;
+    });
+  }
+
+  async function handleReturn() {
+    const toReturn = rental.items.filter((i) => i.inventoryItemId && returnItems.get(i.inventoryItemId)?.selected);
+    if (toReturn.length === 0) return;
+
     setReturning(true);
     setActionError(null);
     try {
-      for (const item of rental.items) {
+      for (const item of toReturn) {
         if (!item.inventoryItemId) continue;
+        const { condition } = returnItems.get(item.inventoryItemId)!;
         await updateInventoryItem(item.inventoryItemId, {
           status: condition === "ok" ? "available" : condition,
         });
@@ -120,7 +148,12 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           });
         }
       }
-      await updateRental(rental.id, { status: "completed" });
+      // Если все товары возвращены — завершаем аренду, иначе оставляем активной
+      const allItems = rental.items.filter((i) => i.inventoryItemId);
+      const allReturned = allItems.every((i) => returnItems.get(i.inventoryItemId!)?.selected);
+      if (allReturned) {
+        await updateRental(rental.id, { status: "completed" });
+      }
       setShowReturnModal(false);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Не удалось оформить возврат товара");
@@ -361,41 +394,89 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
       {showReturnModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4">
-          <div className="w-full max-w-[380px] rounded-[16px] bg-white p-5 card-shadow">
-            <h3 className="text-[15px] font-semibold">Состояние товара при возврате</h3>
-            <p className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">
-              Отметьте состояние товара — это повлияет на его статус в каталоге.
-            </p>
-            <div className="mt-4 space-y-2">
-              <button
-                onClick={() => handleReturn("ok")}
-                disabled={returning}
-                className="w-full rounded-[10px] border border-[var(--color-border)] py-2.5 text-[13px] font-medium transition hover:bg-[var(--color-bg)] disabled:opacity-60"
-              >
-                Товар исправен
-              </button>
-              <button
-                onClick={() => handleReturn("maintenance")}
-                disabled={returning}
-                className="w-full rounded-[10px] border border-[var(--color-border)] py-2.5 text-[13px] font-medium text-[#B8860B] transition hover:bg-[var(--color-bg)] disabled:opacity-60"
-              >
-                Товар требует профилактики
-              </button>
-              <button
-                onClick={() => handleReturn("repair")}
-                disabled={returning}
-                className="w-full rounded-[10px] border border-[var(--color-border)] py-2.5 text-[13px] font-medium text-[#C0272D] transition hover:bg-[var(--color-bg)] disabled:opacity-60"
-              >
-                Товар требует ремонта
+          <div className="w-full max-w-[440px] overflow-hidden rounded-[16px] bg-white card-shadow" style={{ maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+            {/* Шапка */}
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4 shrink-0">
+              <div>
+                <h3 className="text-[15px] font-semibold">Возврат товара</h3>
+                <p className="text-[12px] text-[var(--color-text-muted)]">Выберите товары и отметьте состояние каждого</p>
+              </div>
+              <button onClick={() => setShowReturnModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <button
-              onClick={() => setShowReturnModal(false)}
-              disabled={returning}
-              className="mt-3 w-full rounded-[10px] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
-            >
-              Отмена
-            </button>
+
+            {/* Список товаров */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {rental.items.filter((i) => i.inventoryItemId).map((item) => {
+                const state = returnItems.get(item.inventoryItemId!);
+                if (!state) return null;
+                return (
+                  <div key={item.inventoryItemId} className={`rounded-[12px] border transition ${state.selected ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)] bg-white"}`}>
+                    {/* Строка товара с чекбоксом */}
+                    <button
+                      onClick={() => toggleReturnItem(item.inventoryItemId!)}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                    >
+                      <div className={`grid h-5 w-5 shrink-0 place-items-center rounded-[5px] border-2 transition ${state.selected ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-[var(--color-border)]"}`}>
+                        {state.selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13px] font-medium">{item.name}</div>
+                        <div className="text-[11.5px] text-[var(--color-text-muted)]">{item.qty} шт · {formatMoney(item.pricePerDay)}/сут</div>
+                      </div>
+                    </button>
+
+                    {/* Состояние — только если выбран */}
+                    {state.selected && (
+                      <div className="border-t border-[var(--color-primary)]/20 px-3 pb-3 pt-2">
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Состояние</p>
+                        <div className="flex gap-1.5">
+                          {([
+                            { value: "ok", label: "Исправен", color: "text-[#1C8A46]", activeBg: "bg-[#EAF7EE] border-[#1C8A46]" },
+                            { value: "maintenance", label: "Профилактика", color: "text-[#B8860B]", activeBg: "bg-[#FFF8EA] border-[#B8860B]" },
+                            { value: "repair", label: "Ремонт", color: "text-[#C0272D]", activeBg: "bg-[#FDECEC] border-[#C0272D]" },
+                          ] as const).map((opt) => (
+                            <button
+                              key={opt.value}
+                              onClick={(e) => { e.stopPropagation(); setReturnCondition(item.inventoryItemId!, opt.value); }}
+                              className={`flex-1 rounded-[8px] border py-1.5 text-[11.5px] font-semibold transition ${state.condition === opt.value ? `${opt.activeBg} ${opt.color}` : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"}`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Футер */}
+            <div className="border-t border-[var(--color-border)] p-4 shrink-0">
+              {(() => {
+                const selectedCount = Array.from(returnItems.values()).filter((s) => s.selected).length;
+                const totalCount = rental.items.filter((i) => i.inventoryItemId).length;
+                const allSelected = selectedCount === totalCount;
+                return (
+                  <>
+                    {selectedCount > 0 && selectedCount < totalCount && (
+                      <p className="mb-2 text-center text-[12px] text-[#B8620A]">
+                        ⚠ Частичный возврат — аренда останется активной
+                      </p>
+                    )}
+                    <button
+                      onClick={handleReturn}
+                      disabled={returning || selectedCount === 0}
+                      className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+                    >
+                      {returning ? "Оформляем…" : selectedCount === 0 ? "Выберите товары" : `Принять ${selectedCount} из ${totalCount} товар${selectedCount > 1 ? "ов" : "а"}${allSelected ? " и завершить аренду" : ""}`}
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}
