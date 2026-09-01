@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
-import { currentUser } from "@/lib/current-user";
+import { useAuth } from "@/components/auth/auth-provider";
 import { branches, rentalPeriods, depositTypeLabels } from "@/lib/mock-data";
 import { Client, InventoryLine, LineCategory, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
 import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, durationDays } from "@/lib/utils";
@@ -50,6 +50,7 @@ const tabDefs: { key: "all" | LineCategory; label: string }[] = [
 
 export default function NewRentalPage() {
   const router = useRouter();
+  const { user: sessionUser } = useAuth();
   const clients = useAppStore((s) => s.clients);
   const rentals = useAppStore((s) => s.rentals);
   const addRental = useAppStore((s) => s.addRental);
@@ -151,7 +152,9 @@ export default function NewRentalPage() {
       total,
       paid,
       items,
-      bookedBy: currentUser,
+      bookedBy: sessionUser
+        ? { id: sessionUser.id, name: sessionUser.name, initials: sessionUser.name.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase(), role: "" }
+        : { id: "unknown", name: "Неизвестно", initials: "—", role: "" },
       issuedBy: undefined,
       comment: notes.length ? notes.join(" · ") : undefined,
       delivery: false,

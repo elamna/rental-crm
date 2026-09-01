@@ -21,7 +21,7 @@ const PERMISSION_GROUPS = [
 ];
 
 export default function UsersPage() {
-  const { can } = useAuth();
+  const { can, user: me } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<"create" | "edit" | "password" | null>(null);
@@ -121,16 +121,29 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {can("users.edit") && !u.isAdmin && (
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => { setSelected(u); setModal("edit"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]" title="Редактировать"><Pencil className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => { setSelected(u); setModal("password"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title="Сменить пароль"><KeyRound className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => toggleActive(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title={u.isActive ? "Заблокировать" : "Разблокировать"}>
-                            {u.isActive ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Для администратора — только смена своего пароля */}
+                        {u.isAdmin && me?.id === u.id && (
+                          <button
+                            onClick={() => { setSelected(u); setModal("password"); }}
+                            className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
+                            title="Сменить пароль"
+                          >
+                            <KeyRound className="h-3.5 w-3.5" />
                           </button>
-                          <button onClick={() => deleteUser(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[#FDECEC] hover:text-[#C0272D]" title="Удалить"><Trash2 className="h-3.5 w-3.5" /></button>
-                        </div>
-                      )}
+                        )}
+                        {/* Для обычных пользователей — полный набор кнопок */}
+                        {can("users.edit") && !u.isAdmin && (
+                          <>
+                            <button onClick={() => { setSelected(u); setModal("edit"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]" title="Редактировать"><Pencil className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => { setSelected(u); setModal("password"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title="Сменить пароль"><KeyRound className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => toggleActive(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title={u.isActive ? "Заблокировать" : "Разблокировать"}>
+                              {u.isActive ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                            </button>
+                            <button onClick={() => deleteUser(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[#FDECEC] hover:text-[#C0272D]" title="Удалить"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

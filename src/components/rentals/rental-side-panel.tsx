@@ -3,7 +3,7 @@
 import { Rental, DocumentTemplate, RentalDocument } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
-import { currentUser } from "@/lib/current-user";
+import { useAuth } from "@/components/auth/auth-provider";
 import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -48,6 +48,7 @@ function Section({
 
 export function RentalSidePanel({ rental }: { rental: Rental }) {
   const remaining = rental.total - rental.paid;
+  const { user: sessionUser } = useAuth();
   const [notes, setNotes] = useState<string[]>(rental.comment ? [rental.comment] : []);
   const [draft, setDraft] = useState("");
   const updateRental = useAppStore((s) => s.updateRental);
@@ -81,7 +82,10 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
     setIssuing(true);
     setActionError(null);
     try {
-      const patch: Partial<typeof rental> = { status: "active", issuedBy: currentUser };
+      const patch: Partial<typeof rental> = {
+        status: "active",
+        issuedBy: sessionUser ? { id: sessionUser.id, name: sessionUser.name, initials: sessionUser.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase(), role: "" } : undefined,
+      };
       // Если не оплачено — отмечаем как долг (попадёт во вкладку «Должники»)
       if (!isFullyPaid) {
         patch.paymentStatus = "overdue";
@@ -164,8 +168,33 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
   const [marking, setMarking] = useState(false);
   const [showStolenModal, setShowStolenModal] = useState(false);
+  const [showStolenReturnModal, setShowStolenReturnModal] = useState(false);
+  const [stolenReturning, setStolenReturning] = useState(false);
   const canMarkStolen = rental.status === "active" || rental.status === "overdue";
   const updateClient = useAppStore((s) => s.updateClient);
+
+  async function handleStolenReturn(removeFromBlacklist: boolean) {
+    setStolenReturning(true);
+    setActionError(null);
+    try {
+      // Возвращаем товары в каталог (требуют проверки)
+      for (const item of rental.items) {
+        if (!item.inventoryItemId) continue;
+        await updateInventoryItem(item.inventoryItemId, { status: "repair" });
+      }
+      // Завершаем аренду
+      await updateRental(rental.id, { status: "completed" });
+      // Убираем из ЧС если выбрано
+      if (removeFromBlacklist) {
+        await updateClient(rental.client.id, { blacklisted: false });
+      }
+      setShowStolenReturnModal(false);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Ошибка при оформлении возврата");
+    } finally {
+      setStolenReturning(false);
+    }
+  }
 
   async function handleMarkStolen() {
     setMarking(true);
@@ -212,9 +241,17 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         </div>
       )}
       {rental.status === "stolen" && (
-        <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-[#5C1A1A] bg-[#2A0E0E] p-3 text-[12.5px] font-semibold text-[#FF6B6B]">
-          <Siren className="h-4 w-4 shrink-0" />
-          Товар отмечен украденным, клиент в чёрном списке
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-[#5C1A1A] bg-[#2A0E0E] p-3 text-[12.5px] font-semibold text-[#FF6B6B]">
+            <Siren className="h-4 w-4 shrink-0" />
+            Товар отмечен украденным, клиент в чёрном списке
+          </div>
+          <button
+            onClick={() => setShowStolenReturnModal(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#10B981] bg-white py-2.5 text-[13px] font-semibold text-[#10B981] transition hover:bg-[#EAF7EE]"
+          >
+            <Undo2 className="h-4 w-4" /> Товар возвращён клиентом
+          </button>
         </div>
       )}
       {canMarkStolen && (
@@ -292,6 +329,72 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       </Section>
 
       {/* Модалка оплаты */}
+      {showStolenReturnModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-[400px] overflow-hidden rounded-[20px] bg-white card-shadow">
+            {/* Шапка */}
+            <div className="bg-[#EAF7EE] px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#1C8A46]/20">
+                  <Undo2 className="h-5 w-5 text-[#1C8A46]" />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-bold text-[#1C8A46]">Товар возвращён клиентом</h3>
+                  <p className="text-[12px] text-[#1C8A46]/70">Аренда будет завершена, товар отправлен на проверку</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Клиент */}
+            <div className="border-b border-[var(--color-border)] px-5 py-3">
+              <div className="flex items-center gap-2.5">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#FDECEC] text-[11px] font-bold text-[#C0272D]">
+                  {rental.client.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
+                </div>
+                <div>
+                  <div className="text-[13px] font-semibold">{rental.client.name}</div>
+                  <div className="flex items-center gap-1 text-[11.5px] text-[#C0272D]">
+                    <Siren className="h-3 w-3" /> Клиент в чёрном списке
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Вопрос о ЧС */}
+            <div className="px-5 py-4">
+              <p className="text-[13px] font-semibold">Убрать клиента из чёрного списка?</p>
+              <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">
+                Товар был отмечен украденным. Клиент вернул его — решите, снять ли с него ограничения.
+              </p>
+
+              <div className="mt-4 space-y-2">
+                <button
+                  onClick={() => handleStolenReturn(true)}
+                  disabled={stolenReturning}
+                  className="w-full rounded-[12px] bg-[#1C8A46] py-3 text-[13px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-60"
+                >
+                  {stolenReturning ? "Оформляем…" : "Да, убрать из чёрного списка"}
+                </button>
+                <button
+                  onClick={() => handleStolenReturn(false)}
+                  disabled={stolenReturning}
+                  className="w-full rounded-[12px] border-2 border-[#C0272D] bg-white py-3 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC] disabled:opacity-60"
+                >
+                  Нет, оставить в чёрном списке
+                </button>
+                <button
+                  onClick={() => setShowStolenReturnModal(false)}
+                  disabled={stolenReturning}
+                  className="w-full rounded-[12px] py-2 text-[12.5px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPaymentModal && (
         <PaymentModal
           remaining={remaining}

@@ -8,7 +8,7 @@ import { inventoryStatusLabels } from "@/lib/mock-data";
 import { formatMoney } from "@/lib/utils";
 import { InventoryForm, InventoryFormValues } from "@/components/inventory/inventory-form";
 import { QrCode } from "@/components/inventory/qr-code";
-import { ArrowLeft, Trash2, Pencil, ClipboardList, Wrench } from "lucide-react";
+import { ArrowLeft, Trash2, Pencil, ClipboardList, Wrench, Printer } from "lucide-react";
 
 export default function InventoryItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -114,12 +114,37 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
             )}
           </section>
 
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 text-center card-shadow">
-            <h3 className="mb-3 text-[13.5px] font-semibold">QR-код</h3>
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+            <h3 className="mb-3 text-[13.5px] font-semibold text-center">QR-код</h3>
             <div className="flex justify-center">
-              <QrCode value={item.sku || item.id} />
+              <QrCode
+                value={JSON.stringify({
+                  id: item.id,
+                  sku: item.sku,
+                  name: item.name,
+                  category: item.category,
+                  url: typeof window !== "undefined" ? `${window.location.origin}/catalog/${item.id}` : `/catalog/${item.id}`,
+                })}
+                size={150}
+              />
             </div>
-            <p className="mt-2 text-[11.5px] text-[var(--color-text-muted)]">{item.sku || item.id}</p>
+            <div className="mt-2 space-y-0.5 text-center">
+              <p className="text-[12.5px] font-semibold">{item.sku || "—"}</p>
+              <p className="text-[11.5px] text-[var(--color-text-muted)] truncate">{item.name}</p>
+              <p className="text-[10.5px] text-[var(--color-text-muted)] font-mono opacity-50">{item.id}</p>
+            </div>
+            <button
+              onClick={() => {
+                const win = window.open("", "_blank");
+                if (!win) return;
+                const qrValue = JSON.stringify({ id: item.id, sku: item.sku, name: item.name, url: `${window.location.origin}/catalog/${item.id}` });
+                win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR — ${item.name}</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;background:#fff}.card{text-align:center;padding:32px;border:2px solid #eee;border-radius:16px;max-width:320px}.card h2{font-size:15px;margin:12px 0 4px}.card p{font-size:12px;color:#888;margin:2px 0}</style></head><body><div class="card"><div id="qr"></div><h2>${item.name}</h2><p>Артикул: ${item.sku || "—"}</p><p>ID: ${item.id}</p></div><script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"><\/script><script>QRCode.toCanvas(document.createElement("canvas"),"${qrValue.replace(/"/g, '\\"')}",{width:200},function(err,c){if(!c)return;document.getElementById("qr").appendChild(c);setTimeout(function(){window.print();},300);})<\/script></body></html>`);
+                win.document.close();
+              }}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+            >
+              <Printer className="h-3.5 w-3.5" /> Распечатать QR
+            </button>
           </section>
         </div>
 
