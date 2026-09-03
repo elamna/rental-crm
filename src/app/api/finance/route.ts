@@ -17,20 +17,20 @@ export async function GET(req: NextRequest) {
   else { fromDate = new Date("2000-01-01"); }
   const from = fromDate.toISOString();
 
-  // Все аренды за период
+  // Все аренды за период — JOIN с таблицей clients
   const rentals = db.prepare(`
-    SELECT id, number, client_json, paid, total, status, created_at,
-           penalties_json, expenses_json, deposit_json, items_json
-    FROM rentals
-    WHERE created_at >= ? AND status NOT IN ('cancelled')
-    ORDER BY created_at DESC
+    SELECT r.id, r.number, c.name as client_name, r.paid, r.total, r.status,
+           r.created_at, r.penalties_json, r.expenses_json, r.deposit_json
+    FROM rentals r
+    LEFT JOIN clients c ON c.id = r.client_id
+    WHERE r.created_at >= ? AND r.status NOT IN ('cancelled')
+    ORDER BY r.created_at DESC
   `).all(from) as {
-    id: string; number: string; client_json: string; paid: number; total: number;
-    status: string; created_at: string; penalties_json: string;
-    expenses_json: string; deposit_json: string | null; items_json: string;
+    id: string; number: string; client_name: string | null;
+    paid: number; total: number; status: string; created_at: string;
+    penalties_json: string; expenses_json: string; deposit_json: string | null;
   }[];
 
-  // Формируем список транзакций
   const transactions: {
     id: string; date: string; type: "income" | "expense" | "penalty" | "deposit";
     amount: number; description: string; rentalNumber: string; clientName: string; rentalId: string;
@@ -43,13 +43,11 @@ export async function GET(req: NextRequest) {
   let totalDebt = 0;
 
   for (const r of rentals) {
-    const client = JSON.parse(r.client_json || "{}") as { name?: string };
-    const clientName = client.name ?? "—";
+    const clientName = r.client_name ?? "—";
     const penalties = JSON.parse(r.penalties_json || "[]") as { amount: number; reason?: string; createdAt?: string }[];
     const expenses = JSON.parse(r.expenses_json || "[]") as { amount: number; description?: string; createdAt?: string }[];
     const deposit = r.deposit_json ? JSON.parse(r.deposit_json) as { amount?: number } : null;
 
-    // Оплата аренды
     if (r.paid > 0) {
       totalIncome += r.paid;
       transactions.push({
@@ -59,34 +57,30 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Долг
     if (r.total > r.paid && ["active", "overdue"].includes(r.status)) {
       totalDebt += r.total - r.paid;
     }
 
-    // Штрафы
     for (const p of penalties) {
       totalPenalties += p.amount;
       transactions.push({
-        id: `pen_${r.id}_${p.createdAt}`, date: p.createdAt ?? r.created_at,
+        id: `pen_${r.id}_${p.createdAt ?? Math.random()}`, date: p.createdAt ?? r.created_at,
         type: "penalty", amount: p.amount,
         description: p.reason ? `Штраф: ${p.reason}` : `Штраф по аренде №${r.number}`,
         rentalNumber: r.number, clientName, rentalId: r.id,
       });
     }
 
-    // Расходы
     for (const e of expenses) {
       totalExpenses += e.amount;
       transactions.push({
-        id: `exp_${r.id}_${e.createdAt}`, date: e.createdAt ?? r.created_at,
+        id: `exp_${r.id}_${e.createdAt ?? Math.random()}`, date: e.createdAt ?? r.created_at,
         type: "expense", amount: e.amount,
         description: e.description ?? `Расход по аренде №${r.number}`,
         rentalNumber: r.number, clientName, rentalId: r.id,
       });
     }
 
-    // Залог
     if (deposit?.amount) {
       totalDeposits += deposit.amount;
       transactions.push({
@@ -97,10 +91,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Сортируем по дате (новые первые)
   transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Итоги по дням для графика
   const byDay: Record<string, { income: number; expense: number }> = {};
   for (const t of transactions) {
     const day = t.date.slice(0, 10);
@@ -108,16 +100,10 @@ export async function GET(req: NextRequest) {
     if (t.type === "income" || t.type === "penalty") byDay[day].income += t.amount;
     if (t.type === "expense") byDay[day].expense += t.amount;
   }
-  const dailyChart = Object.entries(byDay)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([day, v]) => ({ day, ...v }));
+  const dailyChart = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b)).map(([day, v]) => ({ day, ...v }));
 
   return NextResponse.json({
-    summary: {
-      totalIncome, totalExpenses, totalPenalties,
-      totalDeposits, totalDebt,
-      netProfit: totalIncome - totalExpenses,
-    },
+    summary: { totalIncome, totalExpenses, totalPenalties, totalDeposits, totalDebt, netProfit: totalIncome - totalExpenses },
     transactions: transactions.slice(0, 200),
     dailyChart,
   });

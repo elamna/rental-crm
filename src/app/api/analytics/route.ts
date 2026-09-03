@@ -7,20 +7,14 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
-  const period = searchParams.get("period") ?? "month"; // week | month | year | all
+  const period = searchParams.get("period") ?? "month";
 
-  // Определяем диапазон дат
   const now = new Date();
   let fromDate: Date;
-  if (period === "week") {
-    fromDate = new Date(now); fromDate.setDate(now.getDate() - 7);
-  } else if (period === "month") {
-    fromDate = new Date(now); fromDate.setMonth(now.getMonth() - 1);
-  } else if (period === "year") {
-    fromDate = new Date(now); fromDate.setFullYear(now.getFullYear() - 1);
-  } else {
-    fromDate = new Date("2000-01-01");
-  }
+  if (period === "week") { fromDate = new Date(now); fromDate.setDate(now.getDate() - 7); }
+  else if (period === "month") { fromDate = new Date(now); fromDate.setMonth(now.getMonth() - 1); }
+  else if (period === "year") { fromDate = new Date(now); fromDate.setFullYear(now.getFullYear() - 1); }
+  else { fromDate = new Date("2000-01-01"); }
   const from = fromDate.toISOString();
 
   // ── Общие показатели ──────────────────────────────────────────────────────
@@ -56,12 +50,11 @@ export async function GET(req: NextRequest) {
 
   const totalInventory = (db.prepare(`SELECT COUNT(*) as v FROM inventory_items`).get() as { v: number }).v;
 
-  // ── Выручка по дням (для графика) ─────────────────────────────────────────
+  // ── Выручка по дням ───────────────────────────────────────────────────────
   const revenueByDay = db.prepare(`
-    SELECT
-      DATE(created_at) as day,
-      COALESCE(SUM(paid), 0) as revenue,
-      COUNT(*) as count
+    SELECT DATE(created_at) as day,
+           COALESCE(SUM(paid), 0) as revenue,
+           COUNT(*) as count
     FROM rentals
     WHERE created_at >= ? AND status NOT IN ('cancelled')
     GROUP BY DATE(created_at)
@@ -69,37 +62,32 @@ export async function GET(req: NextRequest) {
   `).all(from) as { day: string; revenue: number; count: number }[];
 
   // ── Выручка по месяцам ────────────────────────────────────────────────────
-  const revenueByMonth = db.prepare(`
-    SELECT
-      strftime('%Y-%m', created_at) as month,
-      COALESCE(SUM(paid), 0) as revenue,
-      COUNT(*) as count
+  const revenueByMonth = (db.prepare(`
+    SELECT strftime('%Y-%m', created_at) as month,
+           COALESCE(SUM(paid), 0) as revenue,
+           COUNT(*) as count
     FROM rentals
     WHERE status NOT IN ('cancelled')
     GROUP BY strftime('%Y-%m', created_at)
     ORDER BY month DESC
     LIMIT 12
-  `).all() as { month: string; revenue: number; count: number }[];
+  `).all() as { month: string; revenue: number; count: number }[]).reverse();
 
-  // ── Топ клиентов по выручке ───────────────────────────────────────────────
+  // ── Топ клиентов — JOIN с таблицей clients ────────────────────────────────
   const topClients = db.prepare(`
-    SELECT
-      c.id, c.name, c.phone,
-      COUNT(r.id) as rentals_count,
-      COALESCE(SUM(r.paid), 0) as total_paid,
-      COALESCE(SUM(r.total - r.paid), 0) as total_debt
+    SELECT c.id, c.name, c.phone,
+           COUNT(r.id) as rentals_count,
+           COALESCE(SUM(r.paid), 0) as total_paid,
+           COALESCE(SUM(r.total - r.paid), 0) as total_debt
     FROM clients c
-    LEFT JOIN rentals r ON JSON_EXTRACT(r.client_json, '$.id') = c.id
-      AND r.status NOT IN ('cancelled')
-      AND r.created_at >= ?
+    INNER JOIN rentals r ON r.client_id = c.id
+    WHERE r.status NOT IN ('cancelled') AND r.created_at >= ?
     GROUP BY c.id
-    HAVING rentals_count > 0
     ORDER BY total_paid DESC
     LIMIT 10
   `).all(from) as { id: string; name: string; phone: string; rentals_count: number; total_paid: number; total_debt: number }[];
 
-  // ── Топ инвентаря по количеству аренд ─────────────────────────────────────
-  // Считаем через items_json (массив позиций в каждой аренде)
+  // ── Топ инвентаря ─────────────────────────────────────────────────────────
   const allRentals = db.prepare(
     `SELECT items_json FROM rentals WHERE status NOT IN ('cancelled') AND created_at >= ?`
   ).all(from) as { items_json: string }[];
@@ -116,9 +104,7 @@ export async function GET(req: NextRequest) {
       }
     } catch { /* ignore */ }
   }
-  const topInventory = Object.values(inventoryCount)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+  const topInventory = Object.values(inventoryCount).sort((a, b) => b.count - a.count).slice(0, 10);
 
   // ── Аренды по статусам ────────────────────────────────────────────────────
   const byStatus = db.prepare(`
@@ -133,11 +119,6 @@ export async function GET(req: NextRequest) {
     `SELECT COUNT(*) as v FROM workshop_tickets WHERE status NOT IN ('done','archived')`
   ).get() as { v: number }).v;
 
-  const workshopCost = (db.prepare(`
-    SELECT COALESCE(SUM(CAST(JSON_EXTRACT(value, '$.total') AS REAL)), 0) as v
-    FROM (SELECT json_each.value FROM workshop_tickets, json_each(lines_json))
-  `).get() as { v: number } | undefined)?.v ?? 0;
-
   return NextResponse.json({
     period,
     summary: {
@@ -146,7 +127,7 @@ export async function GET(req: NextRequest) {
       workshopActive,
     },
     revenueByDay,
-    revenueByMonth: revenueByMonth.reverse(),
+    revenueByMonth,
     topClients,
     topInventory,
     byStatus,
