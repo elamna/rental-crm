@@ -429,22 +429,56 @@ export function listActivity(limit = 50) {
 
 export function applyOverdueAndPenalties(): { markedOverdue: number; penaltiesAdded: number } {
   const now = Date.now();
-  const active = db.prepare(`SELECT * FROM rentals WHERE status IN ('active','booked')`).all() as RentalRow[];
+  const active = db.prepare(`SELECT * FROM rentals WHERE status IN ('active','booked','overdue')`).all() as RentalRow[];
   let markedOverdue = 0;
   let penaltiesAdded = 0;
 
   for (const row of active) {
+    const start = new Date(row.start_at).getTime();
     const end = new Date(row.end_at).getTime();
     if (now <= end) continue;
 
     const hoursLate = Math.floor((now - end) / 3600000);
     let penalties = JSON.parse(row.penalties_json || "[]") as { reason: string; amount: number }[];
 
+    // Помечаем как просроченную
     if (row.status !== "overdue") {
       db.prepare(`UPDATE rentals SET status = 'overdue', updated_at = ? WHERE id = ?`).run(new Date().toISOString(), row.id);
       markedOverdue++;
     }
 
+    // Пересчёт total по фактическим дням (с начала аренды до сейчас)
+    // Только для аренд с посуточным периодом (не почасовые штрафы)
+    if (!row.auto_penalty_enabled || !row.penalty_rate_per_hour) {
+      try {
+        const items = JSON.parse(row.items_json || "[]") as { pricePerDay: number; qty: number; category?: string }[];
+        const products = items.filter((i) => i.category !== "service");
+        if (products.length > 0) {
+          // Фактические дни = от начала аренды до сейчас (минимум 1)
+          const actualDays = Math.max(1, Math.ceil((now - start) / 86400000));
+          // Оригинальные дни = от начала до конца по договору
+          const bookedDays = Math.max(1, Math.ceil((end - start) / 86400000));
+
+          if (actualDays > bookedDays) {
+            // Считаем новый total: товары × фактические дни + услуги (фикс)
+            const services = items.filter((i) => i.category === "service");
+            const productTotal = products.reduce((s, i) => s + i.pricePerDay * i.qty * actualDays, 0);
+            const serviceTotal = services.reduce((s, i) => s + i.pricePerDay * i.qty, 0);
+            const newTotal = productTotal + serviceTotal;
+
+            if (newTotal > row.total) {
+              db.prepare(`UPDATE rentals SET total = ?, updated_at = ? WHERE id = ?`).run(
+                newTotal,
+                new Date().toISOString(),
+                row.id
+              );
+            }
+          }
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    // Почасовые штрафы (если включены)
     if (row.auto_penalty_enabled && row.penalty_rate_per_hour && hoursLate > 0) {
       const alreadyChargedHours = penalties.filter((p) => p.reason.startsWith("Авто-штраф")).length;
       const hoursToCharge = hoursLate - alreadyChargedHours;

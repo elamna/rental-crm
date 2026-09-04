@@ -51,6 +51,86 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   const { user: sessionUser } = useAuth();
   const [notes, setNotes] = useState<string[]>(rental.comment ? [rental.comment] : []);
   const [draft, setDraft] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+
+  // Залог
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositType, setDepositType] = useState<"money" | "equipment" | "document">("money");
+  const [savingDeposit, setSavingDeposit] = useState(false);
+
+  // Штраф
+  const [showPenaltyModal, setShowPenaltyModal] = useState(false);
+  const [penaltyAmount, setPenaltyAmount] = useState("");
+  const [penaltyReason, setPenaltyReason] = useState("");
+  const [savingPenalty, setSavingPenalty] = useState(false);
+
+  // Расходы
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseType, setExpenseType] = useState("");
+  const [savingExpense, setSavingExpense] = useState(false);
+
+  async function saveNote() {
+    if (!draft.trim()) return;
+    setSavingNote(true);
+    const newNote = draft.trim();
+    try {
+      await updateRental(rental.id, { comment: [...notes, newNote].join("\n") });
+      setNotes((n) => [...n, newNote]);
+      setDraft("");
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function saveDeposit() {
+    const amount = parseFloat(depositAmount);
+    if (!amount || amount <= 0) return;
+    setSavingDeposit(true);
+    try {
+      await updateRental(rental.id, { deposit: { type: depositType, amount, returned: false } });
+      setShowDepositModal(false);
+      setDepositAmount("");
+    } finally {
+      setSavingDeposit(false);
+    }
+  }
+
+  async function savePenalty() {
+    const amount = parseFloat(penaltyAmount);
+    if (!amount || amount <= 0) return;
+    setSavingPenalty(true);
+    try {
+      const existing = rental.penalties ?? [];
+      const newPenalties = [...existing, { reason: penaltyReason || "Ручной штраф", amount }];
+      await updateRental(rental.id, {
+        penalties: newPenalties,
+        total: rental.total + amount,
+      });
+      setShowPenaltyModal(false);
+      setPenaltyAmount("");
+      setPenaltyReason("");
+    } finally {
+      setSavingPenalty(false);
+    }
+  }
+
+  async function saveExpense() {
+    const amount = parseFloat(expenseAmount);
+    if (!amount || amount <= 0) return;
+    setSavingExpense(true);
+    try {
+      const existing = rental.expenses ?? [];
+      const newExpenses = [...existing, { type: expenseType || "Прочее", amount }];
+      await updateRental(rental.id, { expenses: newExpenses });
+      setShowExpenseModal(false);
+      setExpenseAmount("");
+      setExpenseType("");
+    } finally {
+      setSavingExpense(false);
+    }
+  }
   const updateRental = useAppStore((s) => s.updateRental);
   const [paying, setPaying] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -329,6 +409,94 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       </Section>
 
       {/* Модалка оплаты */}
+      {/* Модалка залога */}
+      {showDepositModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold">Добавить залог</h3>
+              <button onClick={() => setShowDepositModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Тип залога</span>
+                <select value={depositType} onChange={(e) => setDepositType(e.target.value as typeof depositType)} className="crm-input">
+                  <option value="money">Денежный</option>
+                  <option value="equipment">Оборудование</option>
+                  <option value="document">Документ</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Сумма, ₸</span>
+                <input autoFocus type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="crm-input" placeholder="0" min={0} />
+              </label>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setShowDepositModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={saveDeposit} disabled={savingDeposit || !depositAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+                {savingDeposit ? "Сохранение…" : "Добавить"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка штрафа */}
+      {showPenaltyModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold">Ручной штраф</h3>
+              <button onClick={() => setShowPenaltyModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Причина</span>
+                <input autoFocus value={penaltyReason} onChange={(e) => setPenaltyReason(e.target.value)} className="crm-input" placeholder="Повреждение, утеря и т.д." />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Сумма штрафа, ₸</span>
+                <input type="number" value={penaltyAmount} onChange={(e) => setPenaltyAmount(e.target.value)} className="crm-input" placeholder="0" min={0} />
+              </label>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setShowPenaltyModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={savePenalty} disabled={savingPenalty || !penaltyAmount} className="flex-1 rounded-[10px] bg-[#C0272D] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[#A31F24]">
+                {savingPenalty ? "Сохранение…" : "Добавить штраф"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка расхода */}
+      {showExpenseModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold">Добавить расход</h3>
+              <button onClick={() => setShowExpenseModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Тип расхода</span>
+                <input autoFocus value={expenseType} onChange={(e) => setExpenseType(e.target.value)} className="crm-input" placeholder="Доставка, ремонт и т.д." />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Сумма, ₸</span>
+                <input type="number" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} className="crm-input" placeholder="0" min={0} />
+              </label>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setShowExpenseModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={saveExpense} disabled={savingExpense || !expenseAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+                {savingExpense ? "Сохранение…" : "Добавить"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showStolenReturnModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
           <div className="w-full max-w-[400px] overflow-hidden rounded-[20px] bg-white card-shadow">
@@ -422,7 +590,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         ) : (
           <p className="text-[12.5px] text-[var(--color-text-muted)]">Залог не добавлен</p>
         )}
-        <button className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+        <button onClick={() => setShowDepositModal(true)} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
           <Plus className="h-3.5 w-3.5" /> Добавить залог
         </button>
       </Section>
@@ -442,7 +610,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           <button className="rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             Авто-штраф
           </button>
-          <button className="rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button onClick={() => setShowPenaltyModal(true)} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             Ручной штраф
           </button>
         </div>
@@ -459,7 +627,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         ) : (
           <p className="text-[12.5px] text-[var(--color-text-muted)]">Расходов нет</p>
         )}
-        <button className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+        <button onClick={() => setShowExpenseModal(true)} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
           <Plus className="h-3.5 w-3.5" /> Добавить расход
         </button>
       </Section>
@@ -468,9 +636,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       <Section icon={MessageCircle} title="Заметки">
         <div className="space-y-2">
           {notes.map((n, i) => (
-            <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">
-              {n}
-            </div>
+            <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">{n}</div>
           ))}
           {notes.length === 0 && <p className="text-[12.5px] text-[var(--color-text-muted)]">Комментариев нет</p>}
         </div>
@@ -478,17 +644,14 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && saveNote()}
             placeholder="Написать комментарий…"
             className="flex-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--color-primary)]"
           />
           <button
-            onClick={() => {
-              if (draft.trim()) {
-                setNotes((n) => [...n, draft.trim()]);
-                setDraft("");
-              }
-            }}
-            className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
+            onClick={saveNote}
+            disabled={savingNote || !draft.trim()}
+            className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             +
           </button>
