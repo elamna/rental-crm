@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -225,31 +227,31 @@ export default function DocumentsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
+      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="font-display text-[20px] font-bold">Шаблоны документов</h1>
             <p className="text-[13px] text-[var(--color-text-muted)]">Создавайте шаблоны — переменные подставляются автоматически при генерации для аренды</p>
           </div>
-          <button onClick={openNew} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[var(--color-primary-hover)]">
+          <button onClick={openNew} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]">
             <Plus className="h-4 w-4" /> Новый шаблон
           </button>
         </div>
       </header>
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {loading ? (
           <p className="text-[13px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : templates.length === 0 ? (
-          <div className="mx-auto mt-16 max-w-md rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white p-8 text-center card-shadow">
+          <div className="mx-auto mt-16 max-w-md rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center card-shadow">
             <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[14px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"><FileText className="h-6 w-6" /></div>
             <h2 className="font-display text-[16px] font-bold">Нет шаблонов</h2>
             <p className="mt-1.5 text-[13px] text-[var(--color-text-muted)]">Создайте шаблон — он появится в каждой аренде.</p>
-            <button onClick={openNew} className="mt-4 mx-auto flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white"><Plus className="h-4 w-4" /> Создать первый шаблон</button>
+            <button onClick={openNew} className="mt-4 mx-auto flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)]"><Plus className="h-4 w-4" /> Создать первый шаблон</button>
           </div>
         ) : (
           <div className="space-y-2">
             {templates.map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white px-4 py-3 card-shadow">
+              <div key={t.id} className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 card-shadow">
                 <div className="flex items-center gap-3">
                   <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"><FileText className="h-4 w-4" /></div>
                   <div>
@@ -277,6 +279,7 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
   onSave: (name: string, body: string) => Promise<void>;
   onBack: () => void;
 }) {
+  const isMobile = useIsMobile();
   const [name, setName] = useState(initial.name || "Новый шаблон");
   const [saving, setSaving] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>([VARIABLES[0].group, VARIABLES[1].group]);
@@ -332,7 +335,7 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
   return (
     <div className="flex h-full flex-col">
       {/* Шапка */}
-      <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-white px-5 py-3 shrink-0">
+      <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3 shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             <ArrowLeft className="h-4 w-4" />
@@ -341,7 +344,7 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Название шаблона"
-            className="text-[16px] font-bold outline-none placeholder:text-[var(--color-text-muted)] border-b border-transparent focus:border-[var(--color-primary)] pb-0.5 min-w-[260px]"
+            className="min-w-0 flex-1 border-b border-transparent pb-0.5 text-[16px] font-bold outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] sm:min-w-[260px] sm:flex-none"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -352,7 +355,7 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[var(--color-primary-hover)]"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]"
           >
             {saving ? "Сохранение…" : "Сохранить"}
           </button>
@@ -390,17 +393,17 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
       )}
 
       {/* Основная область */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className={cn("flex flex-1 overflow-hidden", isMobile && "flex-col")}>
         {/* Редактор */}
         <div className="flex-1 overflow-y-auto bg-[#EBEBEB]">
-          <div className="mx-auto my-8 max-w-[794px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.12)] min-h-[1000px]">
+          <div className="mx-auto my-4 min-h-[600px] w-full max-w-[794px] bg-[var(--color-surface)] p-[14mm] shadow-[0_2px_12px_rgba(0,0,0,0.12)] sm:my-8 sm:min-h-[1000px]">
             <EditorContent editor={editor} />
           </div>
         </div>
 
         {/* Панель переменных */}
-        <div className="w-[230px] shrink-0 overflow-y-auto border-l border-[var(--color-border)] bg-white">
-          <div className="sticky top-0 border-b border-[var(--color-border)] bg-white px-4 py-3 z-10">
+        <div className={cn("shrink-0 overflow-y-auto bg-[var(--color-surface)]", isMobile ? "max-h-[45vh] w-full border-t border-[var(--color-border)]" : "w-[230px] border-l border-[var(--color-border)]")}>
+          <div className="sticky top-0 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 z-10">
             <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Переменные для шаблона</p>
             <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">Поставьте курсор → нажмите +</p>
           </div>
@@ -423,7 +426,7 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
                       </div>
                       <button
                         onClick={() => insertVariable(v.key)}
-                        className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-primary)] text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
                         title={`Вставить ${v.key}`}
                       >
                         <Plus className="h-3 w-3" />
@@ -444,7 +447,7 @@ function ToolBtn({ onClick, active, title, children }: {
   onClick: () => void; active?: boolean; title?: string; children: React.ReactNode;
 }) {
   return (
-    <button onClick={onClick} title={title} className={`grid h-7 w-7 place-items-center rounded-[6px] transition ${active ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:bg-[var(--color-border)]"}`}>
+    <button onClick={onClick} title={title} className={`grid h-7 w-7 place-items-center rounded-[6px] transition ${active ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[var(--color-text-muted)] hover:bg-[var(--color-border)]"}`}>
       {children}
     </button>
   );

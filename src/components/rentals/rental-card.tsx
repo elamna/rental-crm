@@ -1,7 +1,7 @@
 "use client";
 
 import { Rental } from "@/lib/types";
-import { cn, formatMoney, paymentLabels, paymentStyles, statusLabels, statusStyles } from "@/lib/utils";
+import { cn, formatDateTimeDisplay, formatMoney, paymentLabels, paymentStyles, statusLabels, statusStyles } from "@/lib/utils";
 import { Phone, Truck, ChevronDown, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
@@ -14,7 +14,7 @@ export function RentalCard({ rental, draggable }: { rental: Rental; draggable?: 
       href={`/rentals/${rental.id}`}
       draggable={draggable}
       className={cn(
-        "group block rounded-[var(--radius-card)] border bg-white p-4 card-shadow card-shadow-hover transition-all duration-200 hover:-translate-y-[2px]",
+        "group block rounded-[var(--radius-card)] border bg-[var(--color-surface)] p-4 card-shadow card-shadow-hover transition-all duration-200 hover:-translate-y-[2px]",
         st.border
       )}
     >
@@ -23,17 +23,17 @@ export function RentalCard({ rental, draggable }: { rental: Rental; draggable?: 
           <span className={cn("h-1.5 w-1.5 rounded-full", st.dot)} />
           {statusLabels[rental.status]}
         </span>
-        <span className="text-[12px] font-medium text-[var(--color-text-muted)]">{rental.number}</span>
+        <span className="text-[12px] font-medium text-[var(--color-text-muted)]">№{rental.number}</span>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-1.5">
           <div className="text-[10px] font-medium text-[var(--color-text-muted)]">Дата начала</div>
-          <div className="text-[12.5px] font-semibold">{rental.startDate}</div>
+          <div className="text-[12.5px] font-semibold">{formatDateTimeDisplay(rental.startAt ?? "") || "—"}</div>
         </div>
         <div className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-1.5">
           <div className="text-[10px] font-medium text-[var(--color-text-muted)]">Дата конца</div>
-          <div className="text-[12.5px] font-semibold">{rental.endDate}</div>
+          <div className="text-[12.5px] font-semibold">{formatDateTimeDisplay(rental.endAt ?? "") || "—"}</div>
         </div>
       </div>
 

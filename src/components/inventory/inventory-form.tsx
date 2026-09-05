@@ -79,18 +79,18 @@ export function InventoryForm({
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <div className="mx-auto max-w-3xl p-4 sm:p-6">
       <button onClick={() => router.back()} className="mb-4 flex items-center gap-1.5 text-[14px] font-semibold transition hover:text-[var(--color-primary)]">
         <ChevronLeft className="h-4 w-4" /> {title}
       </button>
 
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-6 card-shadow">
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 card-shadow">
         <div className="flex flex-col gap-4 sm:flex-row">
           <div className="flex-1 space-y-4">
             <Field label="Название" required>
               <input value={values.name} onChange={(e) => set("name", e.target.value)} className="crm-input" placeholder="Перфоратор Bosch GBH 5-40" />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Артикул (SKU)">
                 <input value={values.sku} onChange={(e) => set("sku", e.target.value)} className="crm-input" placeholder="QS.0142" />
               </Field>
@@ -113,7 +113,7 @@ export function InventoryForm({
 
         <div className="my-6 border-t border-[var(--color-border)]" />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Категория">
             <select value={values.category} onChange={(e) => set("category", e.target.value)} className="crm-input">
               <option value="">Категория</option>
@@ -166,7 +166,7 @@ export function InventoryForm({
           <button
             disabled={!canSubmit || submitting}
             onClick={() => onSubmit(values)}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {submitting ? "Сохранение…" : "Сохранить"}
           </button>

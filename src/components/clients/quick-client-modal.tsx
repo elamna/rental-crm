@@ -23,6 +23,14 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
   const [documentIssuedAt, setDocumentIssuedAt] = useState("");
   const [documentExpiresAt, setDocumentExpiresAt] = useState("");
 
+  // Реквизиты юр. лица
+  const [bin, setBin] = useState("");
+  const [legalAddress, setLegalAddress] = useState("");
+  const [companyDirector, setCompanyDirector] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [bank, setBank] = useState("");
+  const [bik, setBik] = useState("");
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -58,6 +66,12 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
         documentIssuedBy: documentIssuedBy.trim() || undefined,
         documentIssuedAt: documentIssuedAt || undefined,
         documentExpiresAt: documentExpiresAt || undefined,
+        bin: bin.trim() || undefined,
+        legalAddress: legalAddress.trim() || undefined,
+        companyDirector: companyDirector.trim() || undefined,
+        bankAccount: bankAccount.trim() || undefined,
+        bank: bank.trim() || undefined,
+        bik: bik.trim() || undefined,
       });
       onCreated(client);
     } catch (err) {
@@ -67,10 +81,10 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white card-shadow"
+        className="w-full max-w-xl rounded-t-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow sm:rounded-[var(--radius-card)]"
         style={{ maxHeight: "90vh", overflowY: "auto" }}
       >
         {/* Шапка */}
@@ -93,7 +107,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
                   </span>
                   <input autoFocus value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Иванов Иван Иванович" />
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">
                       Тип клиента <span className="text-[var(--color-primary)]">*</span>
@@ -138,7 +152,35 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
           {/* Документ клиента */}
           <div>
             <h4 className="mb-3 text-[13.5px] font-semibold">Документ клиента</h4>
-            <div className="grid grid-cols-2 gap-3">
+            {type === "company" ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">БИН</span>
+                  <input value={bin} onChange={(e) => setBin(e.target.value)} className="crm-input" placeholder="000000000000" maxLength={12} />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Юридический адрес (офис)</span>
+                  <input value={legalAddress} onChange={(e) => setLegalAddress(e.target.value)} className="crm-input" />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Руководитель компании</span>
+                  <input value={companyDirector} onChange={(e) => setCompanyDirector(e.target.value)} className="crm-input" />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">ИИК (Номер счёта)</span>
+                  <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="crm-input" placeholder="KZ00 0000 0000 0000 0000" />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Банк</span>
+                  <input value={bank} onChange={(e) => setBank(e.target.value)} className="crm-input" />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">БИК</span>
+                  <input value={bik} onChange={(e) => setBik(e.target.value)} className="crm-input" placeholder="БИК" />
+                </label>
+              </div>
+            ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">ИИН</span>
                 <input value={iin} onChange={(e) => setIin(e.target.value)} className="crm-input" placeholder="000000000000" maxLength={12} />
@@ -164,6 +206,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
                 <input type="date" value={documentExpiresAt} onChange={(e) => setDocumentExpiresAt(e.target.value)} className="crm-input" />
               </label>
             </div>
+            )}
           </div>
         </div>
 
@@ -177,7 +220,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
             <button
               disabled={!canSubmit}
               onClick={submit}
-              className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2 text-[13px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {saving ? "Создание…" : "Создать клиента"}
             </button>

@@ -1,30 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { bucketExpr, resolvePeriod } from "@/lib/period";
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const { searchParams } = req.nextUrl;
-  const period = searchParams.get("period") ?? "month";
-
-  const now = new Date();
-  let fromDate: Date;
-  if (period === "week") { fromDate = new Date(now); fromDate.setDate(now.getDate() - 7); }
-  else if (period === "month") { fromDate = new Date(now); fromDate.setMonth(now.getMonth() - 1); }
-  else if (period === "year") { fromDate = new Date(now); fromDate.setFullYear(now.getFullYear() - 1); }
-  else { fromDate = new Date("2000-01-01"); }
-  const from = fromDate.toISOString();
+  const { period, from, to, granularity } = resolvePeriod(req.nextUrl.searchParams);
 
   // ── Общие показатели ──────────────────────────────────────────────────────
   const totalRevenue = (db.prepare(
-    `SELECT COALESCE(SUM(paid), 0) as v FROM rentals WHERE status NOT IN ('cancelled') AND created_at >= ?`
-  ).get(from) as { v: number }).v;
+    `SELECT COALESCE(SUM(paid), 0) as v FROM rentals WHERE status NOT IN ('cancelled') AND created_at >= ? AND created_at <= ?`
+  ).get(from, to) as { v: number }).v;
 
   const totalRentals = (db.prepare(
-    `SELECT COUNT(*) as v FROM rentals WHERE created_at >= ?`
-  ).get(from) as { v: number }).v;
+    `SELECT COUNT(*) as v FROM rentals WHERE created_at >= ? AND created_at <= ?`
+  ).get(from, to) as { v: number }).v;
 
   const activeRentals = (db.prepare(
     `SELECT COUNT(*) as v FROM rentals WHERE status IN ('active', 'booked', 'overdue')`
@@ -39,8 +31,8 @@ export async function GET(req: NextRequest) {
   ).get() as { v: number }).v;
 
   const newClients = (db.prepare(
-    `SELECT COUNT(*) as v FROM clients WHERE created_at >= ?`
-  ).get(from) as { v: number }).v;
+    `SELECT COUNT(*) as v FROM clients WHERE created_at >= ? AND created_at <= ?`
+  ).get(from, to) as { v: number }).v;
 
   const totalClients = (db.prepare(`SELECT COUNT(*) as v FROM clients`).get() as { v: number }).v;
 
@@ -51,15 +43,17 @@ export async function GET(req: NextRequest) {
   const totalInventory = (db.prepare(`SELECT COUNT(*) as v FROM inventory_items`).get() as { v: number }).v;
 
   // ── Выручка по дням ───────────────────────────────────────────────────────
+  // Шаг группировки зависит от периода: сутки — по часам, месяц — по дням
+  const bucket = bucketExpr(granularity);
   const revenueByDay = db.prepare(`
-    SELECT DATE(created_at) as day,
+    SELECT ${bucket} as day,
            COALESCE(SUM(paid), 0) as revenue,
            COUNT(*) as count
     FROM rentals
-    WHERE created_at >= ? AND status NOT IN ('cancelled')
-    GROUP BY DATE(created_at)
+    WHERE created_at >= ? AND created_at <= ? AND status NOT IN ('cancelled')
+    GROUP BY ${bucket}
     ORDER BY day
-  `).all(from) as { day: string; revenue: number; count: number }[];
+  `).all(from, to) as { day: string; revenue: number; count: number }[];
 
   // ── Выручка по месяцам ────────────────────────────────────────────────────
   const revenueByMonth = (db.prepare(`
@@ -81,16 +75,16 @@ export async function GET(req: NextRequest) {
            COALESCE(SUM(r.total - r.paid), 0) as total_debt
     FROM clients c
     INNER JOIN rentals r ON r.client_id = c.id
-    WHERE r.status NOT IN ('cancelled') AND r.created_at >= ?
+    WHERE r.status NOT IN ('cancelled') AND r.created_at >= ? AND r.created_at <= ?
     GROUP BY c.id
     ORDER BY total_paid DESC
     LIMIT 10
-  `).all(from) as { id: string; name: string; phone: string; rentals_count: number; total_paid: number; total_debt: number }[];
+  `).all(from, to) as { id: string; name: string; phone: string; rentals_count: number; total_paid: number; total_debt: number }[];
 
   // ── Топ инвентаря ─────────────────────────────────────────────────────────
   const allRentals = db.prepare(
-    `SELECT items_json FROM rentals WHERE status NOT IN ('cancelled') AND created_at >= ?`
-  ).all(from) as { items_json: string }[];
+    `SELECT items_json FROM rentals WHERE status NOT IN ('cancelled') AND created_at >= ? AND created_at <= ?`
+  ).all(from, to) as { items_json: string }[];
 
   const inventoryCount: Record<string, { name: string; count: number; revenue: number }> = {};
   for (const r of allRentals) {
@@ -110,9 +104,9 @@ export async function GET(req: NextRequest) {
   const byStatus = db.prepare(`
     SELECT status, COUNT(*) as count
     FROM rentals
-    WHERE created_at >= ?
+    WHERE created_at >= ? AND created_at <= ?
     GROUP BY status
-  `).all(from) as { status: string; count: number }[];
+  `).all(from, to) as { status: string; count: number }[];
 
   // ── Мастерская ────────────────────────────────────────────────────────────
   const workshopActive = (db.prepare(
@@ -121,6 +115,9 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     period,
+    granularity,
+    from,
+    to,
     summary: {
       totalRevenue, totalRentals, activeRentals, overdueRentals,
       totalDebt, newClients, totalClients, freeInventory, totalInventory,

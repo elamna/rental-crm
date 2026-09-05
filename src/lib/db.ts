@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS clients (
   document_issued_by TEXT,
   document_issued_at TEXT,
   document_expires_at TEXT,
+  bin TEXT,
+  legal_address TEXT,
+  company_director TEXT,
+  bank_account TEXT,
+  bank TEXT,
+  bik TEXT,
   acquisition_channel TEXT,
   discount REAL,
   rating INTEGER,
@@ -173,7 +179,106 @@ CREATE TABLE IF NOT EXISTS inventory_checks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_inventory_checks_item ON inventory_checks(inventory_item_id);
+
+CREATE TABLE IF NOT EXISTS tasks (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'todo',
+  priority TEXT NOT NULL DEFAULT 'normal',
+  assignee_id TEXT,
+  created_by_id TEXT,
+  due_at TEXT,
+  done_at TEXT,
+  points INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS task_viewers (
+  task_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  PRIMARY KEY (task_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_done_at ON tasks(done_at);
+CREATE INDEX IF NOT EXISTS idx_task_viewers_user ON task_viewers(user_id);
+
+CREATE TABLE IF NOT EXISTS leads (
+  id TEXT PRIMARY KEY,
+  number INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  client_name TEXT,
+  phone TEXT,
+  amount REAL NOT NULL DEFAULT 0,
+  manager_id TEXT,
+  source TEXT,
+  needed_at TEXT,
+  unavailable INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'open',
+  notes TEXT,
+  closed_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+CREATE INDEX IF NOT EXISTS idx_leads_needed_at ON leads(needed_at);
+CREATE INDEX IF NOT EXISTS idx_leads_manager ON leads(manager_id);
+
+CREATE TABLE IF NOT EXISTS rental_events (
+  id TEXT PRIMARY KEY,
+  rental_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  details TEXT,
+  actor_name TEXT,
+  before_json TEXT,
+  reverted INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS rental_pauses (
+  id TEXT PRIMARY KEY,
+  rental_id TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  ended_at TEXT,
+  reason TEXT,
+  actor_name TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_rental_events_rental ON rental_events(rental_id);
+CREATE INDEX IF NOT EXISTS idx_rental_pauses_rental ON rental_pauses(rental_id);
 `);
+
+// Миграции: дозаливаем недостающие колонки в базы, созданные более ранними версиями.
+// CREATE TABLE IF NOT EXISTS не меняет структуру существующей таблицы, поэтому только так.
+function ensureColumns(table: string, columns: Record<string, string>) {
+  const existing = new Set((db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name));
+  for (const [name, type] of Object.entries(columns)) {
+    if (existing.has(name)) continue;
+    try {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
+    } catch (err) {
+      // Next поднимает несколько воркеров, каждый импортирует этот модуль: колонку мог
+      // добавить сосед между PRAGMA и ALTER. Любую другую ошибку пробрасываем дальше.
+      if (!String((err as Error).message).includes("duplicate column name")) throw err;
+    }
+  }
+}
+
+ensureColumns("rentals", { paused_at: "TEXT" });
+
+ensureColumns("clients", {
+  bin: "TEXT",
+  legal_address: "TEXT",
+  company_director: "TEXT",
+  bank_account: "TEXT",
+  bank: "TEXT",
+  bik: "TEXT",
+});
 
 // Сид: настройки компании по умолчанию
 {

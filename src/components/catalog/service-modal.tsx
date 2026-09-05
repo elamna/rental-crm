@@ -44,8 +44,8 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-[var(--radius-card)] bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-4 pb-8 shadow-xl safe-bottom sm:rounded-[var(--radius-card)] sm:p-6 sm:pb-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 className="font-display text-[18px] font-bold">{service ? "Услуга" : "Новая услуга"}</h2>
@@ -79,7 +79,7 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
                         : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]"
                     )}
                   >
-                    <span className={cn("grid h-4 w-4 place-items-center rounded-[4px] border", active ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white" : "border-[var(--color-border)]")}>
+                    <span className={cn("grid h-4 w-4 place-items-center rounded-[4px] border", active ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "border-[var(--color-border)]")}>
                       {active && <span className="text-[10px] leading-none">✓</span>}
                     </span>
                     {serviceTariffLabels[type]}
@@ -114,7 +114,7 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
           <button
             disabled={!canSave}
             onClick={save}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving ? "Сохранение…" : "Сохранить"}
           </button>

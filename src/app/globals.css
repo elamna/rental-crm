@@ -1,24 +1,30 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
-  --color-bg: #F6F6FB;
+  /* Тёплый минимал: песочная база, графитовый текст, изумрудный акцент */
+  --color-bg: #FAF9F6;
   --color-surface: #FFFFFF;
-  --color-sidebar: #15121F;
-  --color-sidebar-hover: #211C33;
-  --color-primary: #6D4AFF;
-  --color-primary-hover: #5B3AE8;
-  --color-primary-soft: #EFEBFF;
-  --color-border: #E7E7F0;
-  --color-text: #16151F;
-  --color-text-muted: #71718A;
-  --shadow-card: 0 1px 2px rgba(20, 15, 50, 0.04), 0 8px 24px -12px rgba(20, 15, 50, 0.10);
-  --shadow-card-hover: 0 4px 10px rgba(20, 15, 50, 0.06), 0 16px 32px -12px rgba(20, 15, 50, 0.16);
+  --color-sidebar: #F2F0EA;
+  --color-sidebar-hover: #E8E5DB;
+  --color-sidebar-text: #1A1A17;
+  --color-sidebar-muted: #6E6C63;
+  --color-sidebar-border: #E2DED2;
+  --color-primary: #0E7C66;
+  --color-primary-hover: #0B6352;
+  --color-primary-soft: #E2F1EC;
+  --color-on-primary: #FFFFFF;
+  --color-border: #E6E2D8;
+  --color-text: #1A1A17;
+  --color-text-muted: #6E6C63;
+  --shadow-card: 0 1px 2px rgba(40, 34, 20, 0.04), 0 8px 24px -12px rgba(40, 34, 20, 0.10);
+  --shadow-card-hover: 0 4px 10px rgba(40, 34, 20, 0.06), 0 16px 32px -12px rgba(40, 34, 20, 0.16);
+  --shadow-primary: 0 4px 14px -4px rgba(14, 124, 102, 0.45);
   --radius-card: 16px;
   --radius-md: 12px;
   --radius-sm: 8px;
-  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Onest", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Onest", ui-sans-serif, system-ui, sans-serif;
 }
 
 * {
@@ -33,6 +39,7 @@ html, body {
 
 h1, h2, h3, h4, .font-display {
   font-family: var(--font-display);
+  letter-spacing: -0.015em;
 }
 
 ::-webkit-scrollbar {
@@ -40,11 +47,11 @@ h1, h2, h3, h4, .font-display {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D9D9E8;
+  background: #DCD8CC;
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #C4C4DA;
+  background: #C9C4B4;
 }
 
 .crm-input {
@@ -87,9 +94,10 @@ h1, h2, h3, h4, .font-display {
 .ProseMirror h3 { font-size: 1.05em; font-weight: bold; margin: 0.6em 0 0.3em; }
 .ProseMirror ul { list-style: disc; padding-left: 1.4em; }
 .ProseMirror ol { list-style: decimal; padding-left: 1.4em; }
-.ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-.ProseMirror td, .ProseMirror th { border: 1px solid #ccc; padding: 4px 8px; min-width: 40px; }
-.ProseMirror th { background: #f5f5f5; font-weight: bold; }
+.ProseMirror { font-size: 13px; line-height: 1.45; }
+.ProseMirror table { border-collapse: collapse; width: 100%; margin: 1em 0; table-layout: fixed; }
+.ProseMirror td, .ProseMirror th { border: 1px solid #999; padding: 4px 8px; min-width: 40px; vertical-align: top; word-wrap: break-word; }
+.ProseMirror th { background: #f0f0f0; font-weight: bold; text-align: center; }
 .ProseMirror .selectedCell { background: #e8f0fe; }
 
 .field-label {
@@ -99,3 +107,123 @@ h1, h2, h3, h4, .font-display {
   font-weight: 500;
   color: var(--color-text-muted);
 }
+
+/* ─── Мобильная адаптация ─── */
+
+/* Безопасные зоны iOS (чёлка, домашняя полоса) */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Только тач-устройства: на компьютере с мышью всё остаётся как было,
+   даже если окно браузера сузили */
+@media (max-width: 1023px) and (pointer: coarse) {
+  /* Поля меньше 16px заставляют iOS зумить страницу при фокусе */
+  .crm-input,
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Полосы прокрутки на тач-устройствах только занимают место */
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* Горизонтальные таблицы прокручиваются с инерцией и не «залипают» */
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+}
+
+/* Убираем hover-эффекты там, где нет мыши: на тапе они залипают */
+@media (hover: none) {
+  .card-shadow-hover:hover { box-shadow: var(--shadow-card); }
+}
+
+/* ─── Тёмная тема ───
+   Включается атрибутом data-theme="dark" на <html> (см. theme-provider.tsx).
+   Ниже переопределяются те же переменные, что и в :root, плюс отдельный слой
+   для статусных цветов: они зашиты в классы Tailwind по всему проекту,
+   и перекрасить их точечно дешевле, чем переписывать 250 мест. */
+:root[data-theme="dark"] {
+  --color-bg: #0A0A0B;
+  --color-surface: #141417;
+  --color-sidebar: #101012;
+  --color-sidebar-hover: #1C1C20;
+  --color-sidebar-text: #F3F2EF;
+  --color-sidebar-muted: #8E8D87;
+  --color-sidebar-border: #232326;
+  --color-primary: #17B892;
+  --color-primary-hover: #14A180;
+  --color-primary-soft: #14312A;
+  --color-on-primary: #04211B;
+  --color-border: #26262B;
+  --color-text: #F3F2EF;
+  --color-text-muted: #97968F;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  --shadow-card-hover: 0 4px 10px rgba(0, 0, 0, 0.55), 0 16px 32px -12px rgba(0, 0, 0, 0.8);
+  --shadow-primary: 0 4px 14px -4px rgba(23, 184, 146, 0.5);
+  color-scheme: dark;
+}
+
+/* Статусные цвета: пастель светлой темы нечитаема на чёрном */
+:root[data-theme="dark"] {
+  /* красный — просрочка, удаление, ошибки */
+  --tone-red-bg: #2C1416;
+  --tone-red-fg: #FF7B7B;
+  --tone-red-border: #4A2124;
+  /* зелёный — оплачено, завершено, исправно */
+  --tone-green-bg: #102A1C;
+  --tone-green-fg: #4ADE80;
+  --tone-green-border: #1F4B31;
+  /* янтарный — в аренде, ожидание */
+  --tone-amber-bg: #2A1E0C;
+  --tone-amber-fg: #F5A524;
+  --tone-amber-border: #4A340F;
+  /* синий — забронировано */
+  --tone-blue-bg: #14203A;
+  --tone-blue-fg: #7BA5FF;
+  --tone-blue-border: #27395E;
+  /* серый — запрос, отменено */
+  --tone-grey-bg: #1E1E22;
+  --tone-grey-fg: #9A9A94;
+  --tone-grey-border: #2E2E33;
+}
+
+/* Классы Tailwind с произвольным цветом экранируются в CSS как .bg-\[\#RRGGBB\] */
+:root[data-theme="dark"] .bg-\[\#FDECEC\],
+:root[data-theme="dark"] .bg-\[\#FFF5F5\] { background-color: var(--tone-red-bg); }
+:root[data-theme="dark"] .hover\:bg-\[\#FDECEC\]:hover { background-color: var(--tone-red-bg); }
+:root[data-theme="dark"] .text-\[\#C0272D\] { color: var(--tone-red-fg); }
+:root[data-theme="dark"] .hover\:text-\[\#C0272D\]:hover { color: var(--tone-red-fg); }
+:root[data-theme="dark"] .text-\[\#A31F24\] { color: #FF9A9A; }
+:root[data-theme="dark"] .border-\[\#F3B7B7\],
+:root[data-theme="dark"] .border-\[\#F8C4C4\] { border-color: var(--tone-red-border); }
+
+:root[data-theme="dark"] .bg-\[\#EAF7EE\] { background-color: var(--tone-green-bg); }
+:root[data-theme="dark"] .text-\[\#1C8A46\] { color: var(--tone-green-fg); }
+:root[data-theme="dark"] .border-\[\#BFE8CC\] { border-color: var(--tone-green-border); }
+
+:root[data-theme="dark"] .bg-\[\#FFF4E5\],
+:root[data-theme="dark"] .bg-\[\#FFF8EA\],
+:root[data-theme="dark"] .bg-\[\#FFF3E0\],
+:root[data-theme="dark"] .bg-\[\#FEF6E3\] { background-color: var(--tone-amber-bg); }
+:root[data-theme="dark"] .text-\[\#B8620A\] { color: var(--tone-amber-fg); }
+:root[data-theme="dark"] .text-\[\#B8860B\] { color: #E0B33C; }
+:root[data-theme="dark"] .border-\[\#FFDCA8\] { border-color: var(--tone-amber-border); }
+
+:root[data-theme="dark"] .bg-\[\#E9F0FE\],
+:root[data-theme="dark"] .bg-\[\#EEF2FF\] { background-color: var(--tone-blue-bg); }
+:root[data-theme="dark"] .text-\[\#2B5FD9\] { color: var(--tone-blue-fg); }
+:root[data-theme="dark"] .text-\[\#4F46E5\] { color: #9A94FF; }
+:root[data-theme="dark"] .border-\[\#C8DAFB\] { border-color: var(--tone-blue-border); }
+
+:root[data-theme="dark"] .bg-\[\#F1F2F6\] { background-color: var(--tone-grey-bg); }
+:root[data-theme="dark"] .text-\[\#8A8F9C\],
+:root[data-theme="dark"] .text-\[\#8B8F98\] { color: var(--tone-grey-fg); }
+:root[data-theme="dark"] .border-\[\#DDE0EA\],
+:root[data-theme="dark"] .border-\[\#E3E5EC\] { border-color: var(--tone-grey-border); }
+
+/* Серая подложка редактора документов */
+:root[data-theme="dark"] .bg-\[\#EBEBEB\] { background-color: #0A0A0B; }
+
+/* Полосы прокрутки в тёмной теме */
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2E2E33; }
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #3C3C42; }

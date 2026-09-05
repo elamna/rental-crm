@@ -30,8 +30,8 @@ export function AddLineItemModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:rounded-[var(--radius-card)] sm:pb-5">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-[15px] font-semibold">{categoryTitles[category]}</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
@@ -61,7 +61,7 @@ export function AddLineItemModal({
           <button
             disabled={!canSubmit}
             onClick={submit}
-            className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Добавить
           </button>

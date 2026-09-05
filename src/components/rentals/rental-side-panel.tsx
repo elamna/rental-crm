@@ -1,7 +1,9 @@
 "use client";
 
 import { Rental, DocumentTemplate, RentalDocument } from "@/lib/types";
-import { formatMoney } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
+import { DOCUMENT_CSS, buildPrintDocument } from "@/lib/document-styles";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
 import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check } from "lucide-react";
@@ -31,7 +33,7 @@ function Section({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="grid h-7 w-7 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
@@ -47,6 +49,7 @@ function Section({
 }
 
 export function RentalSidePanel({ rental }: { rental: Rental }) {
+  const isMobile = useIsMobile();
   const remaining = rental.total - rental.paid;
   const { user: sessionUser } = useAuth();
   const [notes, setNotes] = useState<string[]>(rental.comment ? [rental.comment] : []);
@@ -289,7 +292,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             inventoryItemId: item.inventoryItemId,
             reason: condition,
             title: condition === "maintenance" ? "Профилактика после возврата" : "Ремонт после возврата",
-            description: `Заявка создана автоматически из аренды ${rental.number}`,
+            description: `Заявка создана автоматически из аренды №${rental.number}`,
             sourceRentalId: rental.id,
             lines: [],
           });
@@ -360,7 +363,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   }
 
   return (
-    <div className="w-[340px] shrink-0 space-y-4">
+    <div className={cn("space-y-4", isMobile ? "w-full" : "w-[340px] shrink-0")}>
       {canIssue && (
         <div className="space-y-1.5">
           {!isFullyPaid && (
@@ -371,7 +374,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           <button
             onClick={handleIssue}
             disabled={issuing}
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-primary)] py-3.5 text-[14px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-primary)] py-3.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
           >
             <PackageCheck className="h-4 w-4" />
             {issuing ? "Выдаём…" : "Выдать в аренду"}
@@ -391,7 +394,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           </div>
           <button
             onClick={() => setShowStolenReturnModal(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#10B981] bg-white py-2.5 text-[13px] font-semibold text-[#10B981] transition hover:bg-[#EAF7EE]"
+            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#10B981] bg-[var(--color-surface)] py-2.5 text-[13px] font-semibold text-[#10B981] transition hover:bg-[#EAF7EE]"
           >
             <Undo2 className="h-4 w-4" /> Товар возвращён клиентом
           </button>
@@ -400,7 +403,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       {canMarkStolen && (
         <button
           onClick={() => setShowStolenModal(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#F3B7B7] bg-white py-2.5 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
+          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#F3B7B7] bg-[var(--color-surface)] py-2.5 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
         >
           <Siren className="h-4 w-4" /> Украдено
         </button>
@@ -474,8 +477,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       {/* Модалка оплаты */}
       {/* Модалка скидки */}
       {showDiscountModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Применить скидку</h3>
               <button onClick={() => setShowDiscountModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
@@ -505,7 +508,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setShowDiscountModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveDiscount} disabled={savingDiscount || !discountInput} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+              <button onClick={saveDiscount} disabled={savingDiscount || !discountInput} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
                 {savingDiscount ? "Применяем…" : "Применить"}
               </button>
             </div>
@@ -515,8 +518,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
       {/* Модалка авто-штрафа */}
       {showAutopenaltyModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Автоматический штраф</h3>
               <button onClick={() => setShowAutopenaltyModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
@@ -538,7 +541,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setShowAutopenaltyModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveAutoPenalty} disabled={savingAutoPenalty} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+              <button onClick={saveAutoPenalty} disabled={savingAutoPenalty} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
                 {savingAutoPenalty ? "Сохранение…" : "Сохранить"}
               </button>
             </div>
@@ -548,8 +551,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
       {/* Модалка возврата средств */}
       {showRefundModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Возврат средств</h3>
               <button onClick={() => setShowRefundModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
@@ -575,8 +578,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
       {/* Модалка залога */}
       {showDepositModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Добавить залог</h3>
               <button onClick={() => setShowDepositModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
@@ -597,7 +600,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setShowDepositModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveDeposit} disabled={savingDeposit || !depositAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+              <button onClick={saveDeposit} disabled={savingDeposit || !depositAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
                 {savingDeposit ? "Сохранение…" : "Добавить"}
               </button>
             </div>
@@ -607,8 +610,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
       {/* Модалка штрафа */}
       {showPenaltyModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Ручной штраф</h3>
               <button onClick={() => setShowPenaltyModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
@@ -635,8 +638,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
       {/* Модалка расхода */}
       {showExpenseModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-[360px] rounded-[16px] bg-white p-5 card-shadow">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Добавить расход</h3>
               <button onClick={() => setShowExpenseModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
@@ -653,7 +656,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setShowExpenseModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveExpense} disabled={savingExpense || !expenseAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+              <button onClick={saveExpense} disabled={savingExpense || !expenseAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
                 {savingExpense ? "Сохранение…" : "Добавить"}
               </button>
             </div>
@@ -662,8 +665,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       )}
 
       {showStolenReturnModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-[400px] overflow-hidden rounded-[20px] bg-white card-shadow">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+          <div className="w-full max-w-[400px] overflow-hidden rounded-[20px] bg-[var(--color-surface)] card-shadow">
             {/* Шапка */}
             <div className="bg-[#EAF7EE] px-5 py-4">
               <div className="flex items-center gap-3">
@@ -710,7 +713,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                 <button
                   onClick={() => handleStolenReturn(false)}
                   disabled={stolenReturning}
-                  className="w-full rounded-[12px] border-2 border-[#C0272D] bg-white py-3 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC] disabled:opacity-60"
+                  className="w-full rounded-[12px] border-2 border-[#C0272D] bg-[var(--color-surface)] py-3 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC] disabled:opacity-60"
                 >
                   Нет, оставить в чёрном списке
                 </button>
@@ -815,7 +818,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           <button
             onClick={saveNote}
             disabled={savingNote || !draft.trim()}
-            className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[12.5px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[12.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             +
           </button>
@@ -824,7 +827,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
       {showReturnModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4">
-          <div className="w-full max-w-[440px] overflow-hidden rounded-[16px] bg-white card-shadow" style={{ maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+          <div className="w-full max-w-[440px] overflow-hidden rounded-[16px] bg-[var(--color-surface)] card-shadow" style={{ maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
             {/* Шапка */}
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4 shrink-0">
               <div>
@@ -842,7 +845,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                 const state = returnItems.get(item.inventoryItemId!);
                 if (!state) return null;
                 return (
-                  <div key={item.inventoryItemId} className={`rounded-[12px] border transition ${state.selected ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)] bg-white"}`}>
+                  <div key={item.inventoryItemId} className={`rounded-[12px] border transition ${state.selected ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)] bg-[var(--color-surface)]"}`}>
                     {/* Строка товара с чекбоксом */}
                     <button
                       onClick={() => toggleReturnItem(item.inventoryItemId!)}
@@ -899,7 +902,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                     <button
                       onClick={handleReturn}
                       disabled={returning || selectedCount === 0}
-                      className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+                      className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
                     >
                       {returning ? "Оформляем…" : selectedCount === 0 ? "Выберите товары" : `Принять ${selectedCount} из ${totalCount} товар${selectedCount > 1 ? "ов" : "а"}${allSelected ? " и завершить аренду" : ""}`}
                     </button>
@@ -913,7 +916,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
       {showStolenModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4">
-          <div className="w-full max-w-[380px] rounded-[16px] bg-white p-5 card-shadow">
+          <div className="w-full max-w-[380px] rounded-[16px] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="flex items-center gap-2 text-[#C0272D]">
               <Siren className="h-5 w-5" />
               <h3 className="text-[15px] font-semibold">Отметить как украденное?</h3>
@@ -991,12 +994,14 @@ function DocumentsSection({ rental }: { rental: Rental }) {
     setDocs((prev) => prev.filter((d) => d.id !== id));
   }
 
-  function printDoc(body: string) {
+  function printDoc(body: string, name = "Документ") {
     const w = window.open("", "_blank");
     if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Документ</title></head><body>${body}</body></html>`);
+    w.document.write(buildPrintDocument(name, body));
     w.document.close();
-    w.print();
+    w.focus();
+    // Печать сразу после write иногда уходит до применения стилей — даём кадр на отрисовку
+    setTimeout(() => w.print(), 250);
   }
 
   return (
@@ -1017,7 +1022,7 @@ function DocumentsSection({ rental }: { rental: Rental }) {
                 <button onClick={() => setPreviewDoc(doc)} className="truncate text-left font-medium hover:text-[var(--color-primary)] hover:underline">{doc.name}</button>
                 <div className="flex shrink-0 items-center gap-1 text-[var(--color-text-muted)]">
                   <button onClick={() => setPreviewDoc(doc)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Просмотр"><ExternalLink className="h-3.5 w-3.5" /></button>
-                  <button onClick={() => printDoc(doc.body)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Печать"><Printer className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => printDoc(doc.body, doc.name)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Печать"><Printer className="h-3.5 w-3.5" /></button>
                   <button onClick={() => deleteDoc(doc.id)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[#FDECEC] hover:text-[#C0272D]" title="Удалить"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
@@ -1030,8 +1035,8 @@ function DocumentsSection({ rental }: { rental: Rental }) {
       </Section>
 
       {showPicker && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-[16px] bg-white p-5 card-shadow">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+          <div className="w-full max-w-sm rounded-[16px] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-[15px] font-semibold">Выберите шаблон</h3>
               <button onClick={() => setShowPicker(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><span className="text-[18px]">×</span></button>
@@ -1054,17 +1059,23 @@ function DocumentsSection({ rental }: { rental: Rental }) {
 
       {previewDoc && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-8" onClick={() => setPreviewDoc(null)}>
-          <div className="w-full max-w-3xl rounded-[16px] bg-white card-shadow" style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-3xl rounded-[16px] bg-[var(--color-surface)] card-shadow" style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
               <span className="text-[14px] font-semibold">{previewDoc.name}</span>
               <div className="flex items-center gap-2">
-                <button onClick={() => printDoc(previewDoc.body)} className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[12.5px] hover:bg-[var(--color-bg)]">
+                <button onClick={() => printDoc(previewDoc.body, previewDoc.name)} className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[12.5px] hover:bg-[var(--color-bg)]">
                   <Printer className="h-3.5 w-3.5" /> Печать
                 </button>
                 <button onClick={() => setPreviewDoc(null)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><span className="text-[18px]">×</span></button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-6" dangerouslySetInnerHTML={{ __html: previewDoc.body }} />
+            <div className="flex-1 overflow-y-auto bg-[#EBEBEB] p-4 sm:p-6">
+              <style dangerouslySetInnerHTML={{ __html: DOCUMENT_CSS }} />
+              <div
+                className="doc-render mx-auto max-w-[794px] bg-white p-[14mm] shadow-[0_2px_12px_rgba(0,0,0,0.12)]"
+                dangerouslySetInnerHTML={{ __html: previewDoc.body }}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -1085,8 +1096,8 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
   const amount = parseFloat(amountStr.replace(/\s/g, "").replace(",", ".")) || 0;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-      <div className="w-full max-w-[380px] overflow-hidden rounded-[20px] bg-white card-shadow">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+      <div className="w-full max-w-[380px] overflow-hidden rounded-[20px] bg-[var(--color-surface)] card-shadow">
         {/* Шапка */}
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
           <h3 className="text-[15px] font-bold">Оплатить сейчас</h3>
@@ -1146,7 +1157,7 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
           <button
             onClick={() => onPay(amount, method)}
             disabled={paying || amount <= 0}
-            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             {paying ? "Оплата…" : `Принять оплату ${amount > 0 ? formatMoney(amount) : ""}`}
           </button>

@@ -64,7 +64,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div className="flex items-center gap-3">
           <Link href="/catalog" className="grid h-8 w-8 place-items-center rounded-[10px] border border-[var(--color-border)] transition hover:bg-[var(--color-bg)]">
             <ArrowLeft className="h-4 w-4" />
@@ -75,7 +75,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] font-medium transition hover:bg-[var(--color-bg)]">
+          <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium transition hover:bg-[var(--color-bg)]">
             <Pencil className="h-3.5 w-3.5" /> Изменить
           </button>
           <button
@@ -85,7 +85,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
                 router.push("/catalog");
               }
             }}
-            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] font-medium text-[#C0272D] transition hover:bg-[#FDECEC]"
+            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[#C0272D] transition hover:bg-[#FDECEC]"
           >
             <Trash2 className="h-3.5 w-3.5" /> Удалить
           </button>
@@ -94,7 +94,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
 
       <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto p-6 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-1">
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-4 flex h-40 items-center justify-center overflow-hidden rounded-[12px] bg-[var(--color-bg)]">
               {item.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -114,7 +114,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
             )}
           </section>
 
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <h3 className="mb-3 text-[13.5px] font-semibold text-center">QR-код</h3>
             <div className="flex justify-center">
               <QrCode
@@ -155,7 +155,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
               <h2 className="font-display text-[15px] font-bold">История аренды</h2>
             </div>
             {relatedRentals.length === 0 ? (
-              <div className="grid h-32 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white text-[13px] text-[var(--color-text-muted)]">
+              <div className="grid h-32 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] text-[var(--color-text-muted)]">
                 Этот инструмент ещё не сдавался в аренду
               </div>
             ) : (
@@ -164,9 +164,9 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
                   <Link
                     key={r.id}
                     href={`/rentals/${r.id}`}
-                    className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-white px-4 py-3 text-[13px] transition hover:bg-[var(--color-bg)]"
+                    className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[13px] transition hover:bg-[var(--color-bg)]"
                   >
-                    <span className="font-medium">{r.number}</span>
+                    <span className="font-medium">№{r.number}</span>
                     <span className="text-[var(--color-text-muted)]">{r.client.name}</span>
                     <span className="text-[var(--color-text-muted)]">{formatMoney(r.total)}</span>
                   </Link>
@@ -181,7 +181,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
               <h2 className="font-display text-[15px] font-bold">История обслуживания</h2>
             </div>
             {relatedWorkshopTickets.length === 0 ? (
-              <div className="grid h-24 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white text-[13px] text-[var(--color-text-muted)]">
+              <div className="grid h-24 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] text-[var(--color-text-muted)]">
                 Заявок на ремонт и профилактику пока нет
               </div>
             ) : (
@@ -190,7 +190,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
                   <Link
                     key={ticket.id}
                     href="/workshop"
-                    className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-white px-4 py-3 text-[13px] transition hover:bg-[var(--color-bg)]"
+                    className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[13px] transition hover:bg-[var(--color-bg)]"
                   >
                     <span className="font-medium">{ticket.number}</span>
                     <span className="text-[var(--color-text-muted)]">{ticket.title}</span>

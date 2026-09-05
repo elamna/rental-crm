@@ -107,36 +107,36 @@ export function ScheduleTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <SearchInput value={search} onChange={setSearch} className="flex-1" />
-        <div className="flex items-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px]">
+      <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+        <SearchInput value={search} onChange={setSearch} className="col-span-2 sm:flex-1" />
+        <div className="col-span-2 flex items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] sm:col-span-1">
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-transparent outline-none" />
           <span className="text-[var(--color-text-muted)]">→</span>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="bg-transparent outline-none" />
         </div>
         <FilterSelect value={category} onChange={setCategory} placeholder="Категория" options={inventoryCategories.map((c) => ({ value: c, label: c }))} />
         <FilterSelect value={branch} onChange={setBranch} placeholder="Пункт проката" options={branches.map((b) => ({ value: b, label: b }))} />
-        <div className="ml-auto">
+        <div className="col-span-2 sm:ml-auto">
           <ExportButton onClick={handleExport} />
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[12.5px] font-medium">
+      <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+        <span className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-[12.5px] font-medium">
           <span className="h-2 w-2 rounded-full bg-[var(--color-primary)]" /> Исправен
         </span>
-        <span className="flex items-center gap-1.5 rounded-[10px] border border-[#F8C4C4] bg-white px-3 py-1.5 text-[12.5px] font-medium">
+        <span className="flex items-center gap-1.5 rounded-[10px] border border-[#F8C4C4] bg-[var(--color-surface)] px-3 py-1.5 text-[12.5px] font-medium">
           <span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Сломан
           <span className="rounded-[6px] bg-[#FDECEC] px-1.5 py-[1px] text-[11px] text-[#C0272D]">Не сдаётся в аренду</span>
         </span>
       </div>
 
-      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white card-shadow">
+      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
         <div className="max-h-[65vh] overflow-auto">
           <table className="border-collapse" style={{ minWidth: 260 + days.length * CELL }}>
             <thead className="sticky top-0 z-20">
               <tr>
-                <th className="sticky left-0 z-30 w-[260px] min-w-[260px] border-b border-r border-[var(--color-border)] bg-white px-4 py-2.5 text-left text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                <th className="sticky left-0 z-30 w-[260px] min-w-[260px] border-b border-r border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-left text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
                   Инвентари
                 </th>
                 {days.map((d) => {
@@ -147,7 +147,7 @@ export function ScheduleTab() {
                       key={d.getTime()}
                       style={{ width: CELL, minWidth: CELL }}
                       className={cn(
-                        "border-b border-r border-[var(--color-border)] bg-white px-1 py-1.5 text-center",
+                        "border-b border-r border-[var(--color-border)] bg-[var(--color-surface)] px-1 py-1.5 text-center",
                         weekend && "bg-[var(--color-bg)]"
                       )}
                     >
@@ -155,7 +155,7 @@ export function ScheduleTab() {
                       <div
                         className={cn(
                           "mx-auto mt-0.5 grid h-5 w-5 place-items-center rounded-full text-[11.5px] font-semibold",
-                          isToday ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text)]"
+                          isToday ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[var(--color-text)]"
                         )}
                       >
                         {d.getDate()}
@@ -185,7 +185,7 @@ export function ScheduleTab() {
                   const broken = u.status === "repair" || u.status === "maintenance";
                   return (
                     <tr key={u.id} className="group">
-                      <td className="sticky left-0 z-10 w-[260px] min-w-[260px] border-b border-r border-[var(--color-border)] bg-white px-4 py-2.5 group-hover:bg-[var(--color-bg)]">
+                      <td className="sticky left-0 z-10 w-[260px] min-w-[260px] border-b border-r border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 group-hover:bg-[var(--color-bg)]">
                         <div className="flex items-center gap-2">
                           <span className={cn("h-2 w-2 shrink-0 rounded-full", broken ? "bg-[#EF4444]" : "bg-[var(--color-primary)]")} />
                           <div className="min-w-0">
@@ -228,7 +228,7 @@ export function ScheduleTab() {
                                   st.border
                                 )}
                               >
-                                <span className="truncate">{b.client || b.number}</span>
+                                <span className="truncate">{b.client || `№${b.number}`}</span>
                               </Link>
                             );
                           })}

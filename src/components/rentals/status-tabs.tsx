@@ -52,7 +52,7 @@ export function StatusTabs({
             className={cn(
               "flex shrink-0 items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[13px] font-semibold transition-colors",
               isActive
-                ? "bg-[var(--color-primary)] text-white"
+                ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                 : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
             )}
           >
@@ -60,7 +60,7 @@ export function StatusTabs({
             <span
               className={cn(
                 "rounded-full px-1.5 py-0.5 text-[11px]",
-                isActive ? "bg-white/20" : "bg-[var(--color-border)]"
+                isActive ? "bg-[var(--color-surface)]/20" : "bg-[var(--color-border)]"
               )}
             >
               {count}

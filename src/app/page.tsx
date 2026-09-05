@@ -42,7 +42,7 @@ export default function DashboardPage() {
   }, [rentals, today]);
 
   const cards = [
-    { label: "Активные аренды", value: stats.active, icon: PackageCheck, tint: "#6D4AFF" },
+    { label: "Активные аренды", value: stats.active, icon: PackageCheck, tint: "#0E7C66" },
     { label: "Клиентов в базе", value: clients.length, icon: Boxes, tint: "#22C55E" },
     { label: "Просроченные аренды", value: stats.overdueCount, icon: AlertTriangle, tint: "#EF4444" },
     { label: "Ожидаемые возвраты", value: stats.expectedReturns, icon: CalendarClock, tint: "#F59E0B" },
@@ -51,7 +51,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h1 className="font-display text-[22px] font-bold">Главная</h1>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/rentals/new"
-          className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_14px_-4px_rgba(109,74,255,0.7)] transition hover:bg-[var(--color-primary-hover)]"
+          className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
         >
           + Новая аренда
         </Link>
@@ -67,7 +67,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow card-shadow-hover transition">
+          <div key={c.label} className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow card-shadow-hover transition">
             <div className="mb-3 grid h-9 w-9 place-items-center rounded-[10px]" style={{ background: `${c.tint}18`, color: c.tint }}>
               <c.icon className="h-4.5 w-4.5" />
             </div>
@@ -86,7 +86,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           {stats.overdueList.length === 0 ? (
-            <div className="grid h-40 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white text-[13px] text-[var(--color-text-muted)]">
+            <div className="grid h-40 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] text-[var(--color-text-muted)]">
               {rentals.length === 0 ? (
                 <div className="text-center">
                   <p>Аренд пока нет.</p>
@@ -108,7 +108,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-5">
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="mb-3 flex items-center gap-2">
               <Bell className="h-4 w-4 text-[var(--color-primary)]" />
               <h2 className="text-[14px] font-semibold">Уведомления</h2>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <h2 className="mb-3 text-[14px] font-semibold">Последние действия</h2>
             {activity.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-4 text-center">

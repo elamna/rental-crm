@@ -13,7 +13,7 @@ export interface StatItem {
 
 export function StatBar({ items }: { items: StatItem[] }) {
   return (
-    <div className="inline-flex flex-wrap rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white card-shadow">
+    <div className="inline-flex flex-wrap rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
       {items.map((it, i) => (
         <div key={it.label} className={cn("px-5 py-3", i > 0 && "border-l border-[var(--color-border)]")}>
           <div className="flex items-baseline gap-1.5">
@@ -43,13 +43,13 @@ export function SearchInput({
   className?: string;
 }) {
   return (
-    <div className={cn("relative min-w-[200px]", className)}>
+    <div className={cn("relative w-full", className)}>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-[12px] border border-[var(--color-border)] bg-white py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
+        className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
       />
     </div>
   );
@@ -70,7 +70,7 @@ export function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-[12px] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none transition focus:border-[var(--color-primary)]"
+      className="w-full min-w-0 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none transition focus:border-[var(--color-primary)] sm:w-auto"
     >
       <option value="">{placeholder}</option>
       {options.map((o) => (
@@ -84,7 +84,7 @@ export function FilterSelect({
 
 export function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
-    <label className="flex cursor-pointer select-none items-center gap-2 rounded-[12px] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)]">
+    <label className="flex w-full min-w-0 cursor-pointer select-none items-center gap-2 truncate rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] sm:w-auto">
       <input
         type="checkbox"
         checked={checked}
@@ -100,7 +100,7 @@ export function ExportButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-white px-3.5 py-2.5 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+      className="flex w-full items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:w-auto"
     >
       <Download className="h-3.5 w-3.5" /> Экспорт
     </button>
@@ -109,7 +109,7 @@ export function ExportButton({ onClick }: { onClick: () => void }) {
 
 export function TableCard({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white card-shadow">
+    <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
       <div className="overflow-x-auto">{children}</div>
     </div>
   );
@@ -149,7 +149,7 @@ export function Pill({ tone, children }: { tone: "green" | "red" | "amber" | "vi
     green: "bg-[#EAF7EE] text-[#1C8A46]",
     red: "bg-[#FDECEC] text-[#C0272D]",
     amber: "bg-[#FFF4E5] text-[#B8620A]",
-    violet: "bg-[#EFEBFF] text-[#6D4AFF]",
+    violet: "bg-[#E9F0FE] text-[#2B5FD9]",
     grey: "bg-[#F1F2F6] text-[#8A8F9C]",
   } as const;
   return <span className={cn("inline-block rounded-[8px] px-3 py-1 text-center text-[12px] font-semibold", tones[tone])}>{children}</span>;
@@ -190,7 +190,7 @@ export function Pagination({
           onPerPage(Number(e.target.value));
           onPage(1);
         }}
-        className="rounded-[10px] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--color-primary)]"
+        className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--color-primary)]"
       >
         {[10, 25, 50, 100].map((n) => (
           <option key={n} value={n}>
@@ -240,8 +240,8 @@ function PageBtn({
       className={cn(
         "grid h-7 min-w-7 place-items-center rounded-[8px] border px-2 text-[12.5px] font-medium transition",
         active
-          ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-          : "border-[var(--color-border)] bg-white text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",
+          ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
+          : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",
         disabled && "cursor-not-allowed opacity-40"
       )}
     >

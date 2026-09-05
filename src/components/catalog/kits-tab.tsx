@@ -59,10 +59,10 @@ export function KitsTab({ editing, onCloseEditor }: { editing: boolean; onCloseE
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <SearchInput value={search} onChange={setSearch} className="flex-1" />
+      <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+        <SearchInput value={search} onChange={setSearch} className="col-span-2 sm:flex-1" />
         <FilterSelect value={category} onChange={setCategory} placeholder="Категория" options={inventoryCategories.map((c) => ({ value: c, label: c }))} />
-        <div className="ml-auto">
+        <div className="col-span-2 sm:ml-auto">
           <ExportButton onClick={handleExport} />
         </div>
       </div>

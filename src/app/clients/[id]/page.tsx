@@ -31,7 +31,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div className="flex items-center gap-3">
           <Link href="/clients" className="grid h-8 w-8 place-items-center rounded-[10px] border border-[var(--color-border)] transition hover:bg-[var(--color-bg)]">
             <ArrowLeft className="h-4 w-4" />
@@ -54,7 +54,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               deleteClient(client.id).then(() => router.push("/clients"));
             }
           }}
-          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] font-medium text-[#C0272D] transition hover:bg-[#FDECEC]"
+          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[#C0272D] transition hover:bg-[#FDECEC]"
         >
           <Trash2 className="h-3.5 w-3.5" /> Удалить
         </button>
@@ -62,7 +62,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
       <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto p-6 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-1">
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[16px] font-bold text-[var(--color-primary)]">
               {client.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
             </div>
@@ -76,7 +76,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             </div>
           </section>
 
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <h3 className="mb-3 text-[13.5px] font-semibold">Статистика</h3>
             <div className="grid grid-cols-2 gap-3 text-center">
               <Stat value={client.totalRentals} label="аренд всего" />
@@ -86,18 +86,32 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             </div>
           </section>
 
-          {client.iin && (
-            <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
-              <h3 className="mb-3 text-[13.5px] font-semibold">Документ</h3>
-              <div className="space-y-1.5 text-[12.5px]">
-                <Row label="ИИН" value={client.iin} />
-                {client.documentNumber && <Row label="Номер документа" value={client.documentNumber} />}
-                {client.documentIssuedBy && <Row label="Кем выдан" value={client.documentIssuedBy} />}
-                {client.documentIssuedAt && <Row label="Дата выдачи" value={client.documentIssuedAt} />}
-                {client.documentExpiresAt && <Row label="Истекает" value={client.documentExpiresAt} />}
-              </div>
-            </section>
-          )}
+          {client.type === "company"
+            ? (client.bin || client.legalAddress || client.bankAccount || client.bank) && (
+                <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+                  <h3 className="mb-3 text-[13.5px] font-semibold">Реквизиты</h3>
+                  <div className="space-y-1.5 text-[12.5px]">
+                    {client.bin && <Row label="БИН" value={client.bin} />}
+                    {client.legalAddress && <Row label="Юр. адрес" value={client.legalAddress} />}
+                    {client.companyDirector && <Row label="Руководитель" value={client.companyDirector} />}
+                    {client.bankAccount && <Row label="ИИК" value={client.bankAccount} />}
+                    {client.bank && <Row label="Банк" value={client.bank} />}
+                    {client.bik && <Row label="БИК" value={client.bik} />}
+                  </div>
+                </section>
+              )
+            : client.iin && (
+                <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+                  <h3 className="mb-3 text-[13.5px] font-semibold">Документ</h3>
+                  <div className="space-y-1.5 text-[12.5px]">
+                    <Row label="ИИН" value={client.iin} />
+                    {client.documentNumber && <Row label="Номер документа" value={client.documentNumber} />}
+                    {client.documentIssuedBy && <Row label="Кем выдан" value={client.documentIssuedBy} />}
+                    {client.documentIssuedAt && <Row label="Дата выдачи" value={client.documentIssuedAt} />}
+                    {client.documentExpiresAt && <Row label="Истекает" value={client.documentExpiresAt} />}
+                  </div>
+                </section>
+              )}
         </div>
 
         <div className="xl:col-span-2">
@@ -106,7 +120,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             <h2 className="font-display text-[15px] font-bold">История аренд</h2>
           </div>
           {clientRentals.length === 0 ? (
-            <div className="grid h-40 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white text-[13px] text-[var(--color-text-muted)]">
+            <div className="grid h-40 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] text-[var(--color-text-muted)]">
               У клиента пока нет аренд
             </div>
           ) : (

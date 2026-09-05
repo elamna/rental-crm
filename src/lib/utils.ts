@@ -45,7 +45,7 @@ export const statusStyles: Record<RentalStatus, { bg: string; text: string; bord
   overdue: { bg: "bg-[#FDECEC]", text: "text-[#C0272D]", border: "border-[#F8C4C4]", dot: "bg-[#EF4444]" },
   stolen: { bg: "bg-[#2A0E0E]", text: "text-[#FF6B6B]", border: "border-[#5C1A1A]", dot: "bg-[#FF3B3B]" },
   completed: { bg: "bg-[#EAF7EE]", text: "text-[#1C8A46]", border: "border-[#BFE8CC]", dot: "bg-[#22C55E]" },
-  booked: { bg: "bg-[#EFEBFF]", text: "text-[#6D4AFF]", border: "border-[#D9CCFF]", dot: "bg-[#6D4AFF]" },
+  booked: { bg: "bg-[#E9F0FE]", text: "text-[#2B5FD9]", border: "border-[#C8DAFB]", dot: "bg-[#2B5FD9]" },
   request: { bg: "bg-[#F1F2F6]", text: "text-[#565A6E]", border: "border-[#DDE0EA]", dot: "bg-[#9AA0B4]" },
   cancelled: { bg: "bg-[#F1F2F6]", text: "text-[#8A8F9C]", border: "border-[#E3E5EC]", dot: "bg-[#B4B8C4]" },
 };

@@ -103,7 +103,7 @@ export default function ClientsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div>
           <h1 className="font-display text-[20px] font-bold">Клиенты</h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">База клиентов и история отношений</p>
@@ -117,12 +117,12 @@ export default function ClientsPage() {
                 const menu = document.getElementById("export-menu");
                 menu?.classList.toggle("hidden");
               }}
-              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
             >
               <Download className="h-3.5 w-3.5" /> Экспорт
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
-            <div id="export-menu" className="hidden absolute right-0 top-[calc(100%+6px)] z-20 w-48 rounded-[12px] border border-[var(--color-border)] bg-white p-1.5 card-shadow">
+            <div id="export-menu" className="hidden absolute right-0 top-[calc(100%+6px)] z-20 w-48 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 card-shadow">
               <button
                 onClick={() => {
                   exportClientsToExcel(filtered);
@@ -147,13 +147,13 @@ export default function ClientsPage() {
           <div className="relative">
             <button
               onClick={() => setAddMenuOpen((v) => !v)}
-              className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_14px_-4px_rgba(109,74,255,0.7)] transition hover:bg-[var(--color-primary-hover)]"
+              className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
             >
               <Plus className="h-3.5 w-3.5" /> Добавить
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
             {addMenuOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-52 rounded-[12px] border border-[var(--color-border)] bg-white p-1.5 card-shadow">
+              <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-52 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 card-shadow">
                 <Link
                   href="/clients/new"
                   className="flex items-center gap-2 rounded-[8px] px-2.5 py-2 text-[13px] font-medium hover:bg-[var(--color-bg)]"
@@ -183,7 +183,7 @@ export default function ClientsPage() {
         </div>
       )}
 
-      <div className="space-y-4 px-6 py-4">
+      <div className="space-y-4 px-4 py-4 sm:px-6">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[220px] flex-1">
@@ -192,13 +192,13 @@ export default function ClientsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по имени, телефону, email…"
-              className="w-full rounded-[12px] border border-[var(--color-border)] bg-white py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
+              className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
             />
           </div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-[12px] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
+            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
           >
             <option value="">Тип клиента</option>
             <option value="individual">{clientTypeLabels.individual}</option>
@@ -207,7 +207,7 @@ export default function ClientsPage() {
           <select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}
-            className="rounded-[12px] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
+            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
           >
             <option value="">Канал привлечения</option>
             {acquisitionChannels.map((c) => (
@@ -219,7 +219,7 @@ export default function ClientsPage() {
           <select
             value={ratingFilter}
             onChange={(e) => setRatingFilter(e.target.value)}
-            className="rounded-[12px] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
+            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
           >
             <option value="">Выберите рейтинг</option>
             {[5, 4, 3, 2, 1].map((r) => (
@@ -231,7 +231,7 @@ export default function ClientsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow sm:grid-cols-4">
           <StatItem value={stats.count} label="кол-во клиентов" />
           <StatItem value={`${stats.repeatPct}%`} label="с повторными арендами" />
           <StatItem value={stats.withOverdue} label="с просрочками" highlight={stats.withOverdue > 0} />
@@ -239,7 +239,7 @@ export default function ClientsPage() {
         </div>
 
         {/* Table */}
-        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white card-shadow">
+        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
@@ -284,7 +284,7 @@ export default function ClientsPage() {
                           e.preventDefault();
                           if (confirm(`Удалить клиента «${c.name}»?`)) void deleteClient(c.id);
                         }}
-                        className="hidden rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-white hover:text-[#C0272D] group-hover:block"
+                        className="hidden rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[#C0272D] group-hover:block"
                         title="Удалить"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

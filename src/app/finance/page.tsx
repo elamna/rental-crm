@@ -10,8 +10,10 @@ import {
   ShieldCheck, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
+import { PeriodPicker } from "@/components/ui/period-picker";
+import { periodQuery, type PeriodValue } from "@/lib/period";
 
-type Period = "week" | "month" | "year" | "all";
+
 type TxType = "all" | "income" | "expense" | "penalty" | "deposit";
 
 interface Summary {
@@ -34,10 +36,6 @@ interface FinanceData {
   dailyChart: DayChart[];
 }
 
-const PERIOD_LABELS: Record<Period, string> = {
-  week: "7 дней", month: "30 дней", year: "12 месяцев", all: "Всё время",
-};
-
 const TYPE_LABELS: Record<TxType, string> = {
   all: "Все", income: "Доходы", expense: "Расходы", penalty: "Штрафы", deposit: "Залоги",
 };
@@ -50,7 +48,7 @@ const TX_STYLES: Record<string, { color: string; bg: string; sign: string }> = {
 };
 
 export default function FinancePage() {
-  const [period, setPeriod] = useState<Period>("month");
+  const [period, setPeriod] = useState<PeriodValue>({ key: "month" });
   const [typeFilter, setTypeFilter] = useState<TxType>("all");
   const [data, setData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +56,7 @@ export default function FinancePage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/finance?period=${period}`)
+    fetch(`/api/finance?${periodQuery(period)}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); });
   }, [period]);
@@ -76,24 +74,17 @@ export default function FinancePage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
+      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="font-display text-[20px] font-bold">Финансы</h1>
             <p className="text-[13px] text-[var(--color-text-muted)]">Доходы, расходы и движение средств</p>
           </div>
-          <div className="flex items-center gap-1 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg)] p-1">
-            {(["week", "month", "year", "all"] as Period[]).map((p) => (
-              <button key={p} onClick={() => setPeriod(p)}
-                className={`rounded-[8px] px-3 py-1.5 text-[12.5px] font-medium transition ${period === p ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}>
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
-          </div>
+          <PeriodPicker value={period} onChange={setPeriod} />
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-5">
+      <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
         {loading ? (
           <div className="flex h-64 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
@@ -114,7 +105,7 @@ export default function FinancePage() {
 
             {/* График */}
             {data.dailyChart.length > 1 && (
-              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <h2 className="mb-4 text-[15px] font-semibold">Движение средств</h2>
                 <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={data.dailyChart} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
@@ -152,13 +143,13 @@ export default function FinancePage() {
             )}
 
             {/* Транзакции */}
-            <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white card-shadow">
+            <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
               <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-5 py-4">
                 <h2 className="text-[15px] font-semibold">Транзакции</h2>
                 <div className="flex gap-1 ml-auto">
                   {(["all", "income", "expense", "penalty", "deposit"] as TxType[]).map((t) => (
                     <button key={t} onClick={() => setTypeFilter(t)}
-                      className={`rounded-[8px] px-2.5 py-1 text-[12px] font-medium transition ${typeFilter === t ? "bg-[var(--color-primary)] text-white" : "border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"}`}>
+                      className={`rounded-[8px] px-2.5 py-1 text-[12px] font-medium transition ${typeFilter === t ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"}`}>
                       {TYPE_LABELS[t]}
                     </button>
                   ))}
@@ -239,7 +230,7 @@ function FinCard({ icon: Icon, label, value, color, sub }: {
   };
   const s = colorMap[color] ?? colorMap.info;
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{label}</p>

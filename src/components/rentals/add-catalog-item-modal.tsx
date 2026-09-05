@@ -52,8 +52,8 @@ export function AddCatalogItemModal({
   const selectedCount = selected.size;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white card-shadow flex flex-col" style={{ maxHeight: "85vh" }}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="flex w-full max-w-md flex-col rounded-t-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow safe-bottom sm:rounded-[var(--radius-card)]" style={{ maxHeight: "88dvh" }}>
         {/* Шапка */}
         <div className="flex items-center justify-between p-5 pb-3 shrink-0">
           <h3 className="text-[15px] font-semibold">Добавить товар из каталога</h3>
@@ -97,7 +97,7 @@ export function AddCatalogItemModal({
                   >
                     {/* Чекбокс */}
                     <div className={`grid h-5 w-5 shrink-0 place-items-center rounded-[5px] border-2 transition ${isSelected ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-[var(--color-border)]"}`}>
-                      {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                      {isSelected && <Check className="h-3 w-3 text-[var(--color-on-primary)]" strokeWidth={3} />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-medium">{item.name}</div>
@@ -136,7 +136,7 @@ export function AddCatalogItemModal({
           <button
             onClick={submitAll}
             disabled={selectedCount === 0}
-            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
           >
             {selectedCount > 0 ? `Добавить ${selectedCount} товар${selectedCount > 1 ? "а" : ""}` : "Выберите товары"}
           </button>

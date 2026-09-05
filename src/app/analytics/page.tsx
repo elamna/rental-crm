@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, Users, Package, ClipboardList, AlertCircle, Wrench, CreditCard, ArrowUpRight } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
-
-type Period = "week" | "month" | "year" | "all";
+import { PeriodPicker } from "@/components/ui/period-picker";
+import { periodQuery, type Granularity, type PeriodValue } from "@/lib/period";
 
 interface AnalyticsData {
   period: string;
+  granularity: Granularity;
   summary: {
     totalRevenue: number; totalRentals: number; activeRentals: number;
     overdueRentals: number; totalDebt: number; newClients: number;
@@ -27,54 +28,42 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Завершено", overdue: "Просрочено", stolen: "Украдено", cancelled: "Отменено",
 };
 const STATUS_COLORS: Record<string, string> = {
-  request: "#94A3B8", booked: "#6D4AFF", active: "#10B981",
+  request: "#A8A599", booked: "#2B5FD9", active: "#0E7C66",
   completed: "#3B82F6", overdue: "#EF4444", stolen: "#1F0A0A", cancelled: "#94A3B8",
 };
 
-const PERIOD_LABELS: Record<Period, string> = {
-  week: "7 дней", month: "30 дней", year: "12 месяцев", all: "Всё время",
-};
-
 export default function AnalyticsPage() {
-  const [period, setPeriod] = useState<Period>("month");
+  const [period, setPeriod] = useState<PeriodValue>({ key: "month" });
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/analytics?period=${period}`)
+    fetch(`/api/analytics?${periodQuery(period)}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); });
   }, [period]);
 
-  const chartData = period === "year"
-    ? data?.revenueByMonth.map((d) => ({ label: formatMonth(d.month), revenue: d.revenue, count: d.count }))
-    : data?.revenueByDay.map((d) => ({ label: formatDay(d.day), revenue: d.revenue, count: d.count }));
+  // Шаг графика задаёт сервер: сутки — по часам, длинный период — по месяцам
+  const chartData = data?.revenueByDay.map((d) => ({
+    label: formatBucket(d.day, data.granularity),
+    revenue: d.revenue,
+    count: d.count,
+  }));
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
+      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="font-display text-[20px] font-bold">Аналитика</h1>
             <p className="text-[13px] text-[var(--color-text-muted)]">Ключевые показатели бизнеса</p>
           </div>
-          {/* Переключатель периода */}
-          <div className="flex items-center gap-1 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg)] p-1">
-            {(["week", "month", "year", "all"] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`rounded-[8px] px-3 py-1.5 text-[12.5px] font-medium transition ${period === p ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
-          </div>
+          <PeriodPicker value={period} onChange={setPeriod} />
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
         {loading ? (
           <div className="flex h-64 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
@@ -92,7 +81,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* График выручки */}
-            <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+            <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
               <h2 className="mb-4 text-[15px] font-semibold">Выручка за период</h2>
               {chartData && chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={240}>
@@ -111,7 +100,7 @@ export default function AnalyticsPage() {
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {/* Аренды по статусам */}
-              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <h2 className="mb-4 text-[15px] font-semibold">Аренды по статусам</h2>
                 {data.byStatus.length > 0 ? (
                   <div className="flex items-center gap-6">
@@ -139,7 +128,7 @@ export default function AnalyticsPage() {
               </div>
 
               {/* Количество аренд по дням */}
-              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <h2 className="mb-4 text-[15px] font-semibold">Количество аренд</h2>
                 {chartData && chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={160}>
@@ -157,7 +146,7 @@ export default function AnalyticsPage() {
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {/* Топ клиентов */}
-              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <h2 className="mb-4 text-[15px] font-semibold">Топ клиентов</h2>
                 {data.topClients.length > 0 ? (
                   <div className="space-y-2">
@@ -182,7 +171,7 @@ export default function AnalyticsPage() {
               </div>
 
               {/* Топ инвентаря */}
-              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+              <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <h2 className="mb-4 text-[15px] font-semibold">Популярный инвентарь</h2>
                 {data.topInventory.length > 0 ? (
                   <div className="space-y-2">
@@ -229,7 +218,7 @@ function KpiCard({ icon: Icon, label, value, color, sub }: {
     warning: "bg-[#FEF6E3] text-[#B8860B]",
   };
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{label}</p>
@@ -256,9 +245,14 @@ function EmptyList({ text }: { text: string }) {
   return <p className="py-4 text-center text-[13px] text-[var(--color-text-muted)]">{text}</p>;
 }
 
-function formatDay(iso: string) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+function formatBucket(value: string, granularity: Granularity) {
+  if (granularity === "hour") {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? value : d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  }
+  if (granularity === "month") return formatMonth(value);
+  const d = new Date(value + "T00:00:00");
+  return isNaN(d.getTime()) ? value : d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
 function formatMonth(ym: string) {

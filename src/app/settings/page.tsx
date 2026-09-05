@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import type { CompanySettings } from "@/lib/repo";
-import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench } from "lucide-react";
+import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor } from "lucide-react";
+import { useTheme, type ThemeChoice } from "@/components/layout/theme-provider";
+import { cn } from "@/lib/utils";
 
 const EMPTY: CompanySettings = {
   company_name: "", company_bin: "", company_address: "",
@@ -11,6 +13,54 @@ const EMPTY: CompanySettings = {
   company_bik: "", company_account: "", company_director: "",
   company_logo_url: "", currency: "₸", city: "",
 };
+
+const THEME_OPTIONS: { value: ThemeChoice; label: string; hint: string; icon: React.ElementType }[] = [
+  { value: "light", label: "Светлая", hint: "Тёплый песочный интерфейс", icon: Sun },
+  { value: "dark", label: "Тёмная", hint: "Чёрный фон, мятный акцент", icon: Moon },
+  { value: "system", label: "Как в системе", hint: "Следовать настройке устройства", icon: Monitor },
+];
+
+function ThemePicker() {
+  const { theme, resolved, setTheme } = useTheme();
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {THEME_OPTIONS.map((o) => {
+          const active = theme === o.value;
+          const Icon = o.icon;
+          return (
+            <button
+              key={o.value}
+              onClick={() => setTheme(o.value)}
+              className={cn(
+                "flex flex-col items-start gap-2 rounded-[12px] border p-3.5 text-left transition",
+                active
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]"
+                  : "border-[var(--color-border)] hover:border-[var(--color-primary)]"
+              )}
+            >
+              <span
+                className={cn(
+                  "grid h-8 w-8 place-items-center rounded-[10px]",
+                  active ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "bg-[var(--color-bg)] text-[var(--color-text-muted)]"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="text-[13.5px] font-semibold">{o.label}</span>
+              <span className="text-[11.5px] leading-tight text-[var(--color-text-muted)]">{o.hint}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-[12px] text-[var(--color-text-muted)]">
+        Тема сохраняется в этом браузере и не влияет на других пользователей.
+        {theme === "system" && ` Сейчас применена ${resolved === "dark" ? "тёмная" : "светлая"}.`}
+      </p>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { user, can } = useAuth();
@@ -55,14 +105,14 @@ export default function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
+      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="font-display text-[20px] font-bold">Настройки</h1>
             <p className="text-[13px] text-[var(--color-text-muted)]">Данные компании, реквизиты и параметры системы</p>
           </div>
           {isAdmin && (
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-60">
               <Save className="h-4 w-4" />
               {saving ? "Сохранение…" : saved ? "Сохранено ✓" : "Сохранить"}
             </button>
@@ -70,8 +120,13 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto max-w-2xl space-y-6">
+
+          {/* Оформление — настройка браузера, доступна всем */}
+          <Section icon={Palette} title="Оформление">
+            <ThemePicker />
+          </Section>
 
           {/* Логотип */}
           <Section icon={Building2} title="Логотип компании">
@@ -97,7 +152,7 @@ export default function SettingsPage() {
 
           {/* Основные данные */}
           <Section icon={Building2} title="Основные данные">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="col-span-2 block">
                 <span className="field-label">Название компании / ИП</span>
                 <input value={settings.company_name} onChange={(e) => set("company_name", e.target.value)} className="crm-input" placeholder="ИП Иванов Иван Иванович" disabled={!isAdmin} />
@@ -131,7 +186,7 @@ export default function SettingsPage() {
 
           {/* Контакты */}
           <Section icon={Phone} title="Контакты">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="field-label">Телефон</span>
                 <input value={settings.company_phone} onChange={(e) => set("company_phone", e.target.value)} className="crm-input" placeholder="+7 700 000 00 00" disabled={!isAdmin} />
@@ -145,7 +200,7 @@ export default function SettingsPage() {
 
           {/* Банковские реквизиты */}
           <Section icon={CreditCard} title="Банковские реквизиты">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="col-span-2 block">
                 <span className="field-label">Банк</span>
                 <input value={settings.company_bank} onChange={(e) => set("company_bank", e.target.value)} className="crm-input" placeholder="АО «Kaspi Bank»" disabled={!isAdmin} />
@@ -198,7 +253,7 @@ export default function SettingsPage() {
 
 function Section({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
       <div className="mb-4 flex items-center gap-2.5">
         <div className="grid h-8 w-8 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
           <Icon className="h-4 w-4" />

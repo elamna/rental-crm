@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCan } from "@/components/auth/auth-provider";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { cn } from "@/lib/utils";
 import { Package, PackageX, Plus } from "lucide-react";
 import { ProductsTab } from "@/components/catalog/products-tab";
@@ -23,6 +24,7 @@ type TabKey = (typeof tabs)[number]["key"];
 
 export default function CatalogPage() {
   const canEdit = useCan("catalog.edit");
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<TabKey>("products");
   const [showInactive, setShowInactive] = useState(false);
   const [addKit, setAddKit] = useState(false);
@@ -30,9 +32,9 @@ export default function CatalogPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-[var(--color-border)] bg-white/70 px-6 pt-3 backdrop-blur">
-        <div className="flex flex-wrap items-center gap-3">
-          <nav className="flex flex-1 flex-wrap items-center gap-1">
+      <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-6 pt-3 backdrop-blur">
+        <div className={cn("flex", isMobile ? "flex-col gap-1" : "items-center gap-3")}>
+          <nav className={cn("-mx-1 flex items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", !isMobile && "min-w-0 flex-1")}>
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -41,7 +43,7 @@ export default function CatalogPage() {
                   if (t.key !== "products") setShowInactive(false);
                 }}
                 className={cn(
-                  "relative px-3.5 pb-3 pt-1.5 text-[13.5px] font-semibold transition",
+                  "relative shrink-0 whitespace-nowrap px-3.5 pb-3 pt-1.5 text-[13.5px] font-semibold transition",
                   tab === t.key ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 )}
               >
@@ -51,17 +53,17 @@ export default function CatalogPage() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 pb-2.5">
+          <div className={cn("flex shrink-0 items-center gap-2 pb-2.5", isMobile && "overflow-x-auto")}>
             {/* Кнопка «Видео» появится, когда будут записаны видеоинструкции */}
 
             {tab === "products" && (
               <button
                 onClick={() => setShowInactive((v) => !v)}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-[10px] border px-3.5 py-2 text-[13px] font-semibold transition",
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3.5 py-2 text-[13px] font-semibold transition",
                   showInactive
                     ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
-                    : "border-[var(--color-border)] bg-white text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                 )}
               >
                 {showInactive ? <Package className="h-3.5 w-3.5" /> : <PackageX className="h-3.5 w-3.5" />}
@@ -72,7 +74,7 @@ export default function CatalogPage() {
             {canEdit && tab === "products" && (
               <Link
                 href="/catalog/new"
-                className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_14px_-4px_rgba(109,74,255,0.7)] transition hover:bg-[var(--color-primary-hover)]"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
               >
                 <Plus className="h-3.5 w-3.5" /> Добавить
               </Link>
@@ -80,7 +82,7 @@ export default function CatalogPage() {
             {canEdit && tab === "kits" && (
               <button
                 onClick={() => setAddKit(true)}
-                className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_14px_-4px_rgba(109,74,255,0.7)] transition hover:bg-[var(--color-primary-hover)]"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
               >
                 <Plus className="h-3.5 w-3.5" /> Добавить комплект
               </button>
@@ -88,7 +90,7 @@ export default function CatalogPage() {
             {canEdit && tab === "services" && (
               <button
                 onClick={() => setAddService(true)}
-                className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_14px_-4px_rgba(109,74,255,0.7)] transition hover:bg-[var(--color-primary-hover)]"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
               >
                 <Plus className="h-3.5 w-3.5" /> Создать услугу
               </button>
@@ -97,7 +99,7 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
         {tab === "products" && <ProductsTab showInactive={showInactive} />}
         {tab === "kits" && <KitsTab editing={addKit} onCloseEditor={() => setAddKit(false)} />}
         {tab === "services" && <ServicesTab editing={addService} onCloseEditor={() => setAddService(false)} />}

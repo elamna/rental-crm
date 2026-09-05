@@ -56,9 +56,9 @@ export function ServicesTab({ editing, onCloseEditor }: { editing: boolean; onCl
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <SearchInput value={search} onChange={setSearch} className="flex-1" />
-        <div className="ml-auto">
+      <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+        <SearchInput value={search} onChange={setSearch} className="col-span-2 sm:flex-1" />
+        <div className="col-span-2 sm:ml-auto">
           <ExportButton onClick={handleExport} />
         </div>
       </div>

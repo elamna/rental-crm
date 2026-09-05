@@ -69,9 +69,9 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
       <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius-card)] bg-white p-6 shadow-xl"
+        className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-4 pb-8 shadow-xl safe-bottom sm:rounded-[var(--radius-card)] sm:p-6 sm:pb-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-start justify-between">
@@ -92,7 +92,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
               </span>
               <input value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Алмазное бурение (бур)" />
             </label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Категория</span>
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="crm-input">
@@ -139,7 +139,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
         ) : (
           <div className="space-y-2">
             {lines.map((l) => (
-              <div key={l.id} className="grid grid-cols-[1fr_130px_70px_90px_28px] items-center gap-2">
+              <div key={l.id} className="grid grid-cols-[1fr_28px] items-center gap-2 sm:grid-cols-[1fr_130px_70px_90px_28px]">
                 <input
                   value={l.name}
                   onChange={(e) => setLine(l.id, { name: e.target.value })}
@@ -201,7 +201,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
           <button
             disabled={!canSave}
             onClick={save}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving ? "Сохранение…" : "Сохранить"}
           </button>

@@ -21,7 +21,7 @@ export function FilterBar({
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           placeholder="Поиск по клиенту, номеру, телефону…"
-          className="w-full rounded-[12px] border border-[var(--color-border)] bg-white py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
+          className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
         />
       </div>
 
@@ -30,12 +30,12 @@ export function FilterBar({
       <FilterPill label="Статус оплаты" />
       <FilterPill label="Доставка" />
 
-      <button className="flex items-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+      <button className="flex items-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
         <SlidersHorizontal className="h-3.5 w-3.5" />
         Ещё
       </button>
 
-      <div className="ml-auto flex items-center gap-1 rounded-[12px] border border-[var(--color-border)] bg-white p-1">
+      <div className="ml-auto flex items-center gap-1 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
         <button
           onClick={() => onView("list")}
           className={`grid h-7 w-7 place-items-center rounded-[8px] transition ${
@@ -59,7 +59,7 @@ export function FilterBar({
 
 function FilterPill({ label, icon: Icon }: { label: string; icon?: React.ElementType }) {
   return (
-    <button className="flex items-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+    <button className="flex items-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
       {Icon && <Icon className="h-3.5 w-3.5" />}
       {label}
       <ChevronDown className="h-3.5 w-3.5" />

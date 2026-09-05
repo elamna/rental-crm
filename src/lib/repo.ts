@@ -1,5 +1,5 @@
 import { db, logActivity } from "./db";
-import { Client, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalStatus, Service, ServiceTariff, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 function newId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -20,6 +20,12 @@ interface ClientRow {
   document_issued_by: string | null;
   document_issued_at: string | null;
   document_expires_at: string | null;
+  bin: string | null;
+  legal_address: string | null;
+  company_director: string | null;
+  bank_account: string | null;
+  bank: string | null;
+  bik: string | null;
   acquisition_channel: string | null;
   discount: number | null;
   rating: number | null;
@@ -47,6 +53,12 @@ function clientRowToDomain(row: ClientRow, rentalRows: { total: number; paid: nu
     documentIssuedBy: row.document_issued_by ?? undefined,
     documentIssuedAt: row.document_issued_at ?? undefined,
     documentExpiresAt: row.document_expires_at ?? undefined,
+    bin: row.bin ?? undefined,
+    legalAddress: row.legal_address ?? undefined,
+    companyDirector: row.company_director ?? undefined,
+    bankAccount: row.bank_account ?? undefined,
+    bank: row.bank ?? undefined,
+    bik: row.bik ?? undefined,
     acquisitionChannel: row.acquisition_channel ?? undefined,
     discount: row.discount ?? undefined,
     rating: row.rating ?? undefined,
@@ -80,12 +92,25 @@ export function getClient(id: string): Client | null {
   return clientRowToDomain(row, rentalSummariesForClient(row.id));
 }
 
+/**
+ * Поиск клиента по телефону без учёта форматирования: +7 707 370-51-31 и
+ * 87073705131 — один и тот же человек. Тянем только id и телефон, сравниваем в JS:
+ * в SQLite нет регулярных выражений, а цепочка REPLACE всё равно не пошла бы по индексу.
+ */
+export function findClientByPhone(phone: string): Client | null {
+  const digits = phone.replace(/D/g, "").slice(-10);
+  if (digits.length < 10) return null;
+  const rows = db.prepare(`SELECT id, phone FROM clients`).all() as { id: string; phone: string }[];
+  const hit = rows.find((r) => r.phone.replace(/D/g, "").slice(-10) === digits);
+  return hit ? getClient(hit.id) : null;
+}
+
 export function createClient(input: Partial<Client>): Client {
   const id = newId("cl");
   const createdAt = new Date().toISOString();
   db.prepare(
-    `INSERT INTO clients (id, name, type, phone, email, photo_url, iin, birth_date, document_number, document_issued_by, document_issued_at, document_expires_at, acquisition_channel, discount, rating, blacklisted, created_at)
-     VALUES (@id, @name, @type, @phone, @email, @photoUrl, @iin, @birthDate, @documentNumber, @documentIssuedBy, @documentIssuedAt, @documentExpiresAt, @acquisitionChannel, @discount, @rating, @blacklisted, @createdAt)`
+    `INSERT INTO clients (id, name, type, phone, email, photo_url, iin, birth_date, document_number, document_issued_by, document_issued_at, document_expires_at, bin, legal_address, company_director, bank_account, bank, bik, acquisition_channel, discount, rating, blacklisted, created_at)
+     VALUES (@id, @name, @type, @phone, @email, @photoUrl, @iin, @birthDate, @documentNumber, @documentIssuedBy, @documentIssuedAt, @documentExpiresAt, @bin, @legalAddress, @companyDirector, @bankAccount, @bank, @bik, @acquisitionChannel, @discount, @rating, @blacklisted, @createdAt)`
   ).run({
     id,
     name: input.name ?? "",
@@ -99,6 +124,12 @@ export function createClient(input: Partial<Client>): Client {
     documentIssuedBy: input.documentIssuedBy ?? null,
     documentIssuedAt: input.documentIssuedAt ?? null,
     documentExpiresAt: input.documentExpiresAt ?? null,
+    bin: input.bin ?? null,
+    legalAddress: input.legalAddress ?? null,
+    companyDirector: input.companyDirector ?? null,
+    bankAccount: input.bankAccount ?? null,
+    bank: input.bank ?? null,
+    bik: input.bik ?? null,
     acquisitionChannel: input.acquisitionChannel ?? null,
     discount: input.discount ?? null,
     rating: input.rating ?? null,
@@ -115,6 +146,7 @@ export function updateClient(id: string, patch: Partial<Client>) {
   db.prepare(
     `UPDATE clients SET name=@name, type=@type, phone=@phone, email=@email, photo_url=@photo_url, iin=@iin, birth_date=@birth_date,
      document_number=@document_number, document_issued_by=@document_issued_by, document_issued_at=@document_issued_at, document_expires_at=@document_expires_at,
+     bin=@bin, legal_address=@legal_address, company_director=@company_director, bank_account=@bank_account, bank=@bank, bik=@bik,
      acquisition_channel=@acquisition_channel, discount=@discount, rating=@rating, blacklisted=@blacklisted WHERE id=@id`
   ).run({
     id,
@@ -129,6 +161,12 @@ export function updateClient(id: string, patch: Partial<Client>) {
     document_issued_by: patch.documentIssuedBy ?? existing.document_issued_by,
     document_issued_at: patch.documentIssuedAt ?? existing.document_issued_at,
     document_expires_at: patch.documentExpiresAt ?? existing.document_expires_at,
+    bin: patch.bin ?? existing.bin,
+    legal_address: patch.legalAddress ?? existing.legal_address,
+    company_director: patch.companyDirector ?? existing.company_director,
+    bank_account: patch.bankAccount ?? existing.bank_account,
+    bank: patch.bank ?? existing.bank,
+    bik: patch.bik ?? existing.bik,
     acquisition_channel: patch.acquisitionChannel ?? existing.acquisition_channel,
     discount: patch.discount ?? existing.discount,
     rating: patch.rating ?? existing.rating,
@@ -216,7 +254,7 @@ export function createInventoryItem(input: Partial<InventoryItem>): InventoryIte
   ).run({
     id,
     name: input.name ?? "",
-    sku: input.sku ?? null,
+    sku: input.sku?.trim() || nextSku(),
     category: input.category ?? null,
     subcategory: input.subcategory ?? null,
     serialNumber: input.serialNumber ?? null,
@@ -275,8 +313,8 @@ export function createInventoryItems(input: Partial<InventoryItem>, quantity: nu
   const created: InventoryItem[] = [];
   const count = Math.max(1, Math.floor(quantity || 1));
   for (let i = 0; i < count; i++) {
-    const sku = input.sku && count === 1 ? input.sku : nextSku();
-    created.push(createInventoryItem({ ...input, sku }));
+    // Свой артикул на каждую единицу: заданный вручную подходит только одной из них
+    created.push(createInventoryItem({ ...input, sku: count === 1 ? input.sku : undefined }));
   }
   return created;
 }
@@ -504,6 +542,7 @@ interface RentalRow {
   delivery: number;
   auto_penalty_enabled: number;
   penalty_rate_per_hour: number | null;
+  paused_at: string | null;
   items_json: string;
   deposit_json: string | null;
   penalties_json: string;
@@ -519,12 +558,14 @@ function rentalRowToDomain(row: RentalRow): Rental | null {
   if (!client) return null;
   return {
     id: row.id,
-    number: row.number,
     status: row.status as RentalStatus,
     paymentStatus: row.payment_status as Rental["paymentStatus"],
     branch: row.branch ?? "",
-    startDate: "",
-    endDate: "",
+    // У аренд, созданных до сквозной нумерации, номер лежит с решёткой — убираем,
+    // чтобы «№» ставился только в интерфейсе
+    number: row.number.replace(/^№/, ""),
+    startDate: (row.start_at ?? "").slice(0, 10),
+    endDate: (row.end_at ?? "").slice(0, 10),
     startAt: row.start_at,
     endAt: row.end_at,
     rentalPeriod: (row.rental_period ?? undefined) as Rental["rentalPeriod"],
@@ -541,6 +582,7 @@ function rentalRowToDomain(row: RentalRow): Rental | null {
     expenses: JSON.parse(row.expenses_json || "[]"),
     documents: JSON.parse(row.documents_json || "[]"),
     notes: JSON.parse(row.notes_json || "[]"),
+    pausedAt: row.paused_at ?? undefined,
     autoPenaltyEnabled: !!row.auto_penalty_enabled,
     penaltyRatePerHour: row.penalty_rate_per_hour ?? undefined,
     createdAt: row.created_at,
@@ -604,8 +646,32 @@ function applyInventoryLock(items: InventoryLine[], status: "rented" | "availabl
   }
 }
 
+/**
+ * Следующий номер аренды — сквозной счётчик по порядку создания.
+ * Счётчик лежит отдельной строкой в company_settings и только растёт:
+ * MAX(number) не годится, потому что старые аренды пронумерованы обрывком
+ * времени (№806978), а COUNT(*) дал бы дубли после удаления аренды.
+ */
+const nextRentalNumber = db.transaction((): string => {
+  const row = db.prepare(`SELECT value FROM company_settings WHERE key = 'rental_counter'`).get() as
+    | { value: string }
+    | undefined;
+
+  // Первый запуск после перехода на сквозную нумерацию — продолжаем с числа уже созданных
+  const next = row ? Number(row.value) + 1 : ((db.prepare(`SELECT COUNT(*) AS c FROM rentals`).get() as { c: number }).c + 1);
+
+  db.prepare(
+    `INSERT INTO company_settings (key, value) VALUES ('rental_counter', ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).run(String(next));
+
+  return String(next);
+});
+
 export function createRental(input: Rental): Rental {
   const now = new Date().toISOString();
+  // Номер присваивает сервер: на клиенте два менеджера могли бы получить одинаковый
+  input = { ...input, number: nextRentalNumber() };
   db.prepare(
     `INSERT INTO rentals (id, number, status, payment_status, branch, start_at, end_at, rental_period, client_id, total, paid,
       booked_by_name, issued_by_name, comment, delivery, auto_penalty_enabled, penalty_rate_per_hour,
@@ -616,15 +682,23 @@ export function createRental(input: Rental): Rental {
   ).run(toRentalRow(input, now, now));
 
   applyInventoryLock(input.items, "rented");
-  logActivity(`Оформлена аренда ${input.number}`);
+  logRentalEvent({
+    rentalId: input.id,
+    type: "created",
+    title: "Создал",
+    details: input.items.map((i) => i.name).join(", ") || undefined,
+    actorName: input.bookedBy?.name,
+  });
+  logActivity(`Оформлена аренда №${input.number}`);
   return getRental(input.id)!;
 }
 
-export function updateRental(id: string, patch: Partial<Rental>) {
+export function updateRental(id: string, patch: Partial<Rental>, options: { silent?: boolean; actorName?: string } = {}) {
   const existingRow = db.prepare(`SELECT * FROM rentals WHERE id = ?`).get(id) as RentalRow | undefined;
   if (!existingRow) return null;
   const existing = rentalRowToDomain(existingRow)!;
-  const merged: Rental = { ...existing, ...patch, client: patch.client ?? existing.client };
+  // Номер аренды не перезаписываем пустым: его присвоил сервер при создании
+  const merged: Rental = { ...existing, ...patch, number: patch.number || existing.number, client: patch.client ?? existing.client };
   const now = new Date().toISOString();
   db.prepare(
     `UPDATE rentals SET number=@number, status=@status, payment_status=@payment_status, branch=@branch, start_at=@start_at, end_at=@end_at,
@@ -637,7 +711,267 @@ export function updateRental(id: string, patch: Partial<Rental>) {
   if (merged.status === "completed" || merged.status === "cancelled") {
     applyInventoryLock(merged.items, "available");
   }
-  return getRental(id);
+
+  const updated = getRental(id);
+  // silent — при откате: там своё событие, иначе история зациклится
+  if (updated && !options.silent) diffRentalToEvents(existing, updated, options.actorName);
+  return updated;
+}
+
+// ---------- История аренды и паузы ----------
+
+interface RentalEventRow {
+  id: string;
+  rental_id: string;
+  type: string;
+  title: string;
+  details: string | null;
+  actor_name: string | null;
+  before_json: string | null;
+  reverted: number;
+  created_at: string;
+}
+
+export function logRentalEvent(input: {
+  rentalId: string;
+  type: RentalEvent["type"];
+  title: string;
+  details?: string;
+  actorName?: string;
+  before?: Record<string, unknown>;
+}) {
+  db.prepare(
+    `INSERT INTO rental_events (id, rental_id, type, title, details, actor_name, before_json, reverted, created_at)
+     VALUES (@id, @rentalId, @type, @title, @details, @actorName, @beforeJson, 0, @createdAt)`
+  ).run({
+    id: newId("rev"),
+    rentalId: input.rentalId,
+    type: input.type,
+    title: input.title,
+    details: input.details ?? null,
+    actorName: input.actorName ?? null,
+    beforeJson: input.before ? JSON.stringify(input.before) : null,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export function listRentalEvents(rentalId: string): RentalEvent[] {
+  const rows = db
+    .prepare(`SELECT * FROM rental_events WHERE rental_id = ? ORDER BY created_at`)
+    .all(rentalId) as RentalEventRow[];
+  return rows.map((r) => ({
+    id: r.id,
+    rentalId: r.rental_id,
+    type: r.type as RentalEvent["type"],
+    title: r.title,
+    details: r.details ?? undefined,
+    actorName: r.actor_name ?? undefined,
+    before: r.before_json ? (JSON.parse(r.before_json) as Record<string, unknown>) : undefined,
+    reverted: !!r.reverted,
+    createdAt: r.created_at,
+  }));
+}
+
+const STATUS_EVENT_TITLES: Record<string, string> = {
+  request: "Вернул в черновик",
+  booked: "Бронировал",
+  active: "Выдал инвентарь",
+  completed: "Завершил аренду",
+  overdue: "Просрочена",
+  stolen: "Отметил кражу",
+  cancelled: "Отменил аренду",
+};
+
+/**
+ * Сравнивает аренду до и после изменения и пишет в историю только то,
+ * что реально поменялось. Один разбор в updateRental вместо десятка
+ * ручных вызовов по всему интерфейсу — иначе часть действий неизбежно забыли бы.
+ */
+function diffRentalToEvents(before: Rental, after: Rental, actorName?: string) {
+  const rentalId = after.id;
+
+  if (before.status !== after.status) {
+    logRentalEvent({
+      rentalId,
+      type: "status",
+      title: STATUS_EVENT_TITLES[after.status] ?? `Статус: ${after.status}`,
+      details: after.items.map((i) => `${i.name}${i.sku ? ` (${i.sku})` : ""}`).join(", ") || undefined,
+      actorName,
+      before: { status: before.status },
+    });
+  }
+
+  if (before.paid !== after.paid) {
+    const delta = after.paid - before.paid;
+    logRentalEvent({
+      rentalId,
+      type: "payment",
+      title: delta > 0 ? "Принял оплату" : "Вернул средства",
+      details: `${formatAmount(Math.abs(delta))} · было ${formatAmount(before.paid)}, стало ${formatAmount(after.paid)}`,
+      actorName,
+      before: { paid: before.paid, paymentStatus: before.paymentStatus },
+    });
+  }
+
+  if (before.total !== after.total) {
+    logRentalEvent({
+      rentalId,
+      type: "total",
+      title: after.total < before.total ? "Применил скидку" : "Изменил сумму",
+      details: `было ${formatAmount(before.total)}, стало ${formatAmount(after.total)}`,
+      actorName,
+      before: { total: before.total },
+    });
+  }
+
+  const beforeItems = before.items.map((i) => i.id).join("|");
+  const afterItems = after.items.map((i) => i.id).join("|");
+  if (beforeItems !== afterItems) {
+    logRentalEvent({
+      rentalId,
+      type: "items",
+      title: after.items.length > before.items.length ? "Добавил позиции" : "Убрал позиции",
+      details: after.items.map((i) => i.name).join(", ") || "состав пуст",
+      actorName,
+      before: { items: before.items, total: before.total },
+    });
+  }
+
+  if (before.startAt !== after.startAt || before.endAt !== after.endAt) {
+    logRentalEvent({
+      rentalId,
+      type: "dates",
+      title: "Изменил даты",
+      details: `${formatDateShort(after.startAt)} — ${formatDateShort(after.endAt)}`,
+      actorName,
+      before: { startAt: before.startAt, endAt: before.endAt },
+    });
+  }
+}
+
+function formatAmount(v: number) {
+  return `${new Intl.NumberFormat("ru-RU").format(v)} ₸`;
+}
+
+function formatDateShort(iso?: string) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "—" : d.toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Откат ошибочного действия: возвращаем полям значения из before.
+ * Само событие помечается откаченным, а факт отката тоже попадает в историю —
+ * ничего из журнала не исчезает.
+ */
+export function revertRentalEvent(eventId: string, actorName?: string): Rental | null {
+  const row = db.prepare(`SELECT * FROM rental_events WHERE id = ?`).get(eventId) as RentalEventRow | undefined;
+  if (!row || row.reverted || !row.before_json) return null;
+
+  const before = JSON.parse(row.before_json) as Partial<Rental>;
+  const updated = updateRental(row.rental_id, before, { silent: true });
+  if (!updated) return null;
+
+  db.prepare(`UPDATE rental_events SET reverted = 1 WHERE id = ?`).run(eventId);
+  logRentalEvent({
+    rentalId: row.rental_id,
+    type: "revert",
+    title: "Отменил действие",
+    details: `«${row.title}» от ${formatDateShort(row.created_at)}`,
+    actorName,
+  });
+  return updated;
+}
+
+// ---------- Паузы ----------
+
+interface RentalPauseRow {
+  id: string;
+  rental_id: string;
+  started_at: string;
+  ended_at: string | null;
+  reason: string | null;
+  actor_name: string | null;
+}
+
+function pauseRowToDomain(r: RentalPauseRow): RentalPause {
+  const end = r.ended_at ? new Date(r.ended_at).getTime() : Date.now();
+  const hours = Math.max(0, (end - new Date(r.started_at).getTime()) / 3600000);
+  return {
+    id: r.id,
+    rentalId: r.rental_id,
+    startedAt: r.started_at,
+    endedAt: r.ended_at ?? undefined,
+    reason: r.reason ?? undefined,
+    actorName: r.actor_name ?? undefined,
+    hours: Math.round(hours * 10) / 10,
+  };
+}
+
+export function listRentalPauses(rentalId: string): RentalPause[] {
+  const rows = db
+    .prepare(`SELECT * FROM rental_pauses WHERE rental_id = ? ORDER BY started_at DESC`)
+    .all(rentalId) as RentalPauseRow[];
+  return rows.map(pauseRowToDomain);
+}
+
+export function pauseRental(rentalId: string, actorName?: string, reason?: string): Rental | null {
+  const rental = getRental(rentalId);
+  if (!rental || rental.pausedAt) return rental;
+
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO rental_pauses (id, rental_id, started_at, ended_at, reason, actor_name)
+     VALUES (?, ?, ?, NULL, ?, ?)`
+  ).run(newId("pau"), rentalId, now, reason ?? null, actorName ?? null);
+  db.prepare(`UPDATE rentals SET paused_at = ?, updated_at = ? WHERE id = ?`).run(now, now, rentalId);
+
+  logRentalEvent({ rentalId, type: "paused", title: "Поставил на паузу", details: reason, actorName });
+  return getRental(rentalId);
+}
+
+/**
+ * Снятие с паузы сдвигает дату окончания на длительность простоя:
+ * иначе клиент, у которого работы встали не по его вине, получил бы просрочку.
+ */
+export function resumeRental(rentalId: string, actorName?: string): Rental | null {
+  const rental = getRental(rentalId);
+  if (!rental || !rental.pausedAt) return rental;
+
+  const now = new Date();
+  const pausedMs = now.getTime() - new Date(rental.pausedAt).getTime();
+
+  db.prepare(`UPDATE rental_pauses SET ended_at = ? WHERE rental_id = ? AND ended_at IS NULL`).run(now.toISOString(), rentalId);
+
+  const newEnd = rental.endAt ? new Date(new Date(rental.endAt).getTime() + pausedMs).toISOString() : null;
+  db.prepare(`UPDATE rentals SET paused_at = NULL, end_at = COALESCE(?, end_at), updated_at = ? WHERE id = ?`).run(
+    newEnd,
+    now.toISOString(),
+    rentalId
+  );
+
+  const hours = Math.round((pausedMs / 3600000) * 10) / 10;
+  logRentalEvent({
+    rentalId,
+    type: "resumed",
+    title: "Снял с паузы",
+    details: `Простой ${hours} ч, дата возврата сдвинута`,
+    actorName,
+  });
+  return getRental(rentalId);
+}
+
+/** Полное удаление аренды: снимаем блокировку инвентаря и чистим связанные записи */
+export function deleteRental(id: string) {
+  const rental = getRental(id);
+  if (!rental) return;
+
+  applyInventoryLock(rental.items, "available");
+  db.prepare(`DELETE FROM rental_events WHERE rental_id = ?`).run(id);
+  db.prepare(`DELETE FROM rental_pauses WHERE rental_id = ?`).run(id);
+  db.prepare(`DELETE FROM rental_documents WHERE rental_id = ?`).run(id);
+  db.prepare(`DELETE FROM rentals WHERE id = ?`).run(id);
+  logActivity(`Удалена аренда №${rental.number}`);
 }
 
 // ---------- Activity ----------
@@ -654,7 +988,8 @@ export function listActivity(limit = 50) {
 
 export function applyOverdueAndPenalties(): { markedOverdue: number; penaltiesAdded: number } {
   const now = Date.now();
-  const active = db.prepare(`SELECT * FROM rentals WHERE status IN ('active','booked','overdue')`).all() as RentalRow[];
+  // Аренда на паузе не просрочивается: часы простоя не по вине клиента
+  const active = db.prepare(`SELECT * FROM rentals WHERE status IN ('active','booked','overdue') AND paused_at IS NULL`).all() as RentalRow[];
   let markedOverdue = 0;
   let penaltiesAdded = 0;
 
@@ -1099,12 +1434,12 @@ export function renderTemplate(template: string, rental: Rental): string {
     "{{client_document_expires_at}}": client.documentExpiresAt ?? "",
     "{{client_birth_date}}": client.birthDate ?? "",
     "{{client_document_issued_by}}": client.documentIssuedBy ?? "",
-    "{{client_bin}}": client.iin ?? "",
-    "{{client_address}}": "",
-    "{{client_director}}": client.name,
-    "{{client_account}}": "",
-    "{{client_bik}}": "",
-    "{{client_bank}}": "",
+    "{{client_bin}}": client.bin ?? client.iin ?? "",
+    "{{client_address}}": client.legalAddress ?? "",
+    "{{client_director}}": client.companyDirector || client.name,
+    "{{client_account}}": client.bankAccount ?? "",
+    "{{client_bik}}": client.bik ?? "",
+    "{{client_bank}}": client.bank ?? "",
 
     // Продукты (первый товар для одиночных переменных)
     "{{product_index}}": rental.items[0] ? "1" : "",
@@ -1136,6 +1471,408 @@ export function renderTemplate(template: string, rental: Rental): string {
   return result;
 }
 
+
+// ---------- Воронка: заявки ----------
+
+interface LeadRow {
+  id: string;
+  number: number;
+  title: string;
+  client_name: string | null;
+  phone: string | null;
+  amount: number;
+  manager_id: string | null;
+  source: string | null;
+  needed_at: string | null;
+  unavailable: number;
+  status: string;
+  notes: string | null;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  manager_name?: string | null;
+}
+
+function leadRowToDomain(row: LeadRow): Lead {
+  return {
+    id: row.id,
+    number: row.number,
+    title: row.title,
+    clientName: row.client_name ?? undefined,
+    phone: row.phone ?? undefined,
+    amount: row.amount,
+    managerId: row.manager_id ?? undefined,
+    managerName: row.manager_name ?? undefined,
+    source: row.source ?? undefined,
+    neededAt: row.needed_at ?? undefined,
+    unavailable: !!row.unavailable,
+    status: row.status as Lead["status"],
+    notes: row.notes ?? undefined,
+    closedAt: row.closed_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+const LEAD_SELECT = `
+  SELECT l.*, u.name AS manager_name
+  FROM leads l
+  LEFT JOIN app_users u ON u.id = l.manager_id
+`;
+
+export interface LeadFilter {
+  /** open — доска; won/lost — архив закрытых */
+  status?: Lead["status"];
+  managerId?: string;
+  source?: string;
+  /** Диапазон по дате, когда инструмент нужен клиенту */
+  from?: string;
+  to?: string;
+  search?: string;
+  limit?: number;
+}
+
+/**
+ * Доска отдаёт только открытые заявки. Закрытые запрашиваются отдельно —
+ * иначе через полгода в браузер уезжали бы тысячи мёртвых карточек.
+ */
+export function listLeads(filter: LeadFilter = {}): Lead[] {
+  const where: string[] = [];
+  const params: Record<string, unknown> = { limit: filter.limit ?? 500 };
+
+  where.push("l.status = @status");
+  params.status = filter.status ?? "open";
+
+  if (filter.managerId) {
+    where.push("l.manager_id = @managerId");
+    params.managerId = filter.managerId;
+  }
+  if (filter.source) {
+    where.push("l.source = @source");
+    params.source = filter.source;
+  }
+  if (filter.from) {
+    where.push("l.needed_at >= @from");
+    params.from = filter.from;
+  }
+  if (filter.to) {
+    where.push("l.needed_at <= @to");
+    params.to = filter.to;
+  }
+  if (filter.search) {
+    where.push("(LOWER(l.title) LIKE @q OR LOWER(COALESCE(l.client_name, '')) LIKE @q OR COALESCE(l.phone, '') LIKE @q OR CAST(l.number AS TEXT) LIKE @q)");
+    params.q = `%${filter.search.toLowerCase()}%`;
+  }
+
+  const rows = db
+    .prepare(`${LEAD_SELECT} WHERE ${where.join(" AND ")} ORDER BY COALESCE(l.needed_at, l.created_at), l.number DESC LIMIT @limit`)
+    .all(params) as LeadRow[];
+
+  return rows.map(leadRowToDomain);
+}
+
+export function getLead(id: string): Lead | null {
+  const row = db.prepare(`${LEAD_SELECT} WHERE l.id = ?`).get(id) as LeadRow | undefined;
+  return row ? leadRowToDomain(row) : null;
+}
+
+function nextLeadNumber(): number {
+  const row = db.prepare(`SELECT COALESCE(MAX(number), 0) AS n FROM leads`).get() as { n: number };
+  return row.n + 1;
+}
+
+export function createLead(input: Partial<Lead>): Lead {
+  const id = newId("lead");
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO leads (id, number, title, client_name, phone, amount, manager_id, source, needed_at, unavailable, status, notes, closed_at, created_at, updated_at)
+     VALUES (@id, @number, @title, @clientName, @phone, @amount, @managerId, @source, @neededAt, @unavailable, @status, @notes, NULL, @createdAt, @updatedAt)`
+  ).run({
+    id,
+    number: nextLeadNumber(),
+    title: input.title ?? "",
+    clientName: input.clientName ?? null,
+    phone: input.phone ?? null,
+    amount: input.amount ?? 0,
+    managerId: input.managerId ?? null,
+    source: input.source ?? null,
+    neededAt: input.neededAt ?? null,
+    unavailable: input.unavailable ? 1 : 0,
+    status: input.status ?? "open",
+    notes: input.notes ?? null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  logActivity(`Создана заявка «${input.title}»`);
+  return getLead(id)!;
+}
+
+export function updateLead(id: string, patch: Partial<Lead>): Lead | null {
+  const existing = getLead(id);
+  if (!existing) return null;
+  const now = new Date().toISOString();
+  const status = patch.status ?? existing.status;
+
+  db.prepare(
+    `UPDATE leads SET title=@title, client_name=@clientName, phone=@phone, amount=@amount, manager_id=@managerId,
+     source=@source, needed_at=@neededAt, unavailable=@unavailable, status=@status, notes=@notes,
+     closed_at=@closedAt, updated_at=@updatedAt WHERE id=@id`
+  ).run({
+    id,
+    title: patch.title ?? existing.title,
+    clientName: patch.clientName !== undefined ? patch.clientName || null : existing.clientName ?? null,
+    phone: patch.phone !== undefined ? patch.phone || null : existing.phone ?? null,
+    amount: patch.amount ?? existing.amount,
+    managerId: patch.managerId !== undefined ? patch.managerId || null : existing.managerId ?? null,
+    source: patch.source !== undefined ? patch.source || null : existing.source ?? null,
+    neededAt: patch.neededAt !== undefined ? patch.neededAt || null : existing.neededAt ?? null,
+    unavailable: (patch.unavailable ?? existing.unavailable) ? 1 : 0,
+    status,
+    notes: patch.notes !== undefined ? patch.notes || null : existing.notes ?? null,
+    // Момент закрытия ставится один раз, при возврате на доску сбрасывается
+    closedAt: status === "open" ? null : existing.closedAt ?? now,
+    updatedAt: now,
+  });
+  return getLead(id);
+}
+
+export function deleteLead(id: string) {
+  db.prepare(`DELETE FROM leads WHERE id = ?`).run(id);
+}
+
+/** Итоги для шапки доски — считаются в SQL, а не перебором карточек */
+export function leadTotals(filter: LeadFilter = {}): { count: number; amount: number } {
+  const status = filter.status ?? "open";
+  const row = db
+    .prepare(`SELECT COUNT(*) AS count, COALESCE(SUM(amount), 0) AS amount FROM leads WHERE status = ?`)
+    .get(status) as { count: number; amount: number };
+  return row;
+}
+
+// ---------- Темп: задачи сотрудников ----------
+
+interface TaskRow {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  assignee_id: string | null;
+  created_by_id: string | null;
+  due_at: string | null;
+  done_at: string | null;
+  points: number;
+  created_at: string;
+  updated_at: string;
+  assignee_name?: string | null;
+  created_by_name?: string | null;
+}
+
+function taskRowToDomain(row: TaskRow, viewers: string[]): Task {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description ?? undefined,
+    status: row.status as TaskStatus,
+    priority: row.priority as TaskPriority,
+    assigneeId: row.assignee_id ?? undefined,
+    assigneeName: row.assignee_name ?? undefined,
+    createdById: row.created_by_id ?? undefined,
+    createdByName: row.created_by_name ?? undefined,
+    dueAt: row.due_at ?? undefined,
+    doneAt: row.done_at ?? undefined,
+    points: row.points,
+    visibleTo: viewers,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** Зрители сразу для пачки задач — иначе получился бы запрос на каждую карточку */
+function viewersFor(taskIds: string[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  if (taskIds.length === 0) return map;
+  const placeholders = taskIds.map(() => "?").join(",");
+  const rows = db
+    .prepare(`SELECT task_id, user_id FROM task_viewers WHERE task_id IN (${placeholders})`)
+    .all(...taskIds) as { task_id: string; user_id: string }[];
+  for (const r of rows) {
+    const list = map.get(r.task_id) ?? [];
+    list.push(r.user_id);
+    map.set(r.task_id, list);
+  }
+  return map;
+}
+
+const TASK_SELECT = `
+  SELECT t.*, a.name AS assignee_name, c.name AS created_by_name
+  FROM tasks t
+  LEFT JOIN app_users a ON a.id = t.assignee_id
+  LEFT JOIN app_users c ON c.id = t.created_by_id
+`;
+
+const TASK_ORDER = `
+  ORDER BY
+    CASE t.status WHEN 'todo' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'review' THEN 2 WHEN 'done' THEN 3 ELSE 4 END,
+    CASE t.priority WHEN 'high' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END,
+    COALESCE(t.due_at, t.created_at)
+`;
+
+/**
+ * Задачи, которые пользователю разрешено видеть.
+ * Фильтр стоит в SQL, а не на клиенте: рядовой сотрудник не должен получать
+ * чужие задачи даже в сетевом ответе.
+ */
+export function listTasks(userId: string, canManageAll: boolean, limit = 300): Task[] {
+  const rows = canManageAll
+    ? (db.prepare(`${TASK_SELECT} ${TASK_ORDER} LIMIT ?`).all(limit) as TaskRow[])
+    : (db
+        .prepare(
+          `${TASK_SELECT}
+           WHERE t.assignee_id = @uid
+              OR t.created_by_id = @uid
+              OR EXISTS (SELECT 1 FROM task_viewers v WHERE v.task_id = t.id AND v.user_id = @uid)
+           ${TASK_ORDER} LIMIT @limit`
+        )
+        .all({ uid: userId, limit }) as TaskRow[]);
+
+  const viewers = viewersFor(rows.map((r) => r.id));
+  return rows.map((r) => taskRowToDomain(r, viewers.get(r.id) ?? []));
+}
+
+export function getTask(id: string): Task | null {
+  const row = db.prepare(`${TASK_SELECT} WHERE t.id = ?`).get(id) as TaskRow | undefined;
+  if (!row) return null;
+  return taskRowToDomain(row, viewersFor([id]).get(id) ?? []);
+}
+
+/** Может ли пользователь видеть конкретную задачу */
+export function canSeeTask(task: Task, userId: string, canManageAll: boolean) {
+  return canManageAll || task.assigneeId === userId || task.createdById === userId || task.visibleTo.includes(userId);
+}
+
+function replaceViewers(taskId: string, viewers: string[]) {
+  db.prepare(`DELETE FROM task_viewers WHERE task_id = ?`).run(taskId);
+  if (viewers.length === 0) return;
+  const ins = db.prepare(`INSERT OR IGNORE INTO task_viewers (task_id, user_id) VALUES (?, ?)`);
+  const many = db.transaction((ids: string[]) => ids.forEach((uid) => ins.run(taskId, uid)));
+  many(viewers);
+}
+
+export function createTask(input: Partial<Task>, createdById: string): Task {
+  const id = newId("task");
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO tasks (id, title, description, status, priority, assignee_id, created_by_id, due_at, done_at, points, created_at, updated_at)
+     VALUES (@id, @title, @description, @status, @priority, @assigneeId, @createdById, @dueAt, @doneAt, @points, @createdAt, @updatedAt)`
+  ).run({
+    id,
+    title: input.title ?? "",
+    description: input.description ?? null,
+    status: input.status ?? "todo",
+    priority: input.priority ?? "normal",
+    assigneeId: input.assigneeId ?? null,
+    createdById,
+    dueAt: input.dueAt ?? null,
+    doneAt: input.status === "done" ? now : null,
+    points: input.points ?? 1,
+    createdAt: now,
+    updatedAt: now,
+  });
+  replaceViewers(id, input.visibleTo ?? []);
+  logActivity(`Поставлена задача «${input.title}»`);
+  return getTask(id)!;
+}
+
+export function updateTask(id: string, patch: Partial<Task>): Task | null {
+  const existing = getTask(id);
+  if (!existing) return null;
+  const now = new Date().toISOString();
+  const status = patch.status ?? existing.status;
+
+  // Отметка времени выполнения ставится один раз — по ней считается KPI
+  let doneAt = existing.doneAt ?? null;
+  if (status === "done" && !doneAt) doneAt = now;
+  if (status !== "done") doneAt = null;
+
+  db.prepare(
+    `UPDATE tasks SET title=@title, description=@description, status=@status, priority=@priority,
+     assignee_id=@assigneeId, due_at=@dueAt, done_at=@doneAt, points=@points, updated_at=@updatedAt WHERE id=@id`
+  ).run({
+    id,
+    title: patch.title ?? existing.title,
+    description: patch.description ?? existing.description ?? null,
+    status,
+    priority: patch.priority ?? existing.priority,
+    assigneeId: patch.assigneeId !== undefined ? patch.assigneeId || null : existing.assigneeId ?? null,
+    dueAt: patch.dueAt !== undefined ? patch.dueAt || null : existing.dueAt ?? null,
+    doneAt,
+    points: patch.points ?? existing.points,
+    updatedAt: now,
+  });
+
+  if (patch.visibleTo) replaceViewers(id, patch.visibleTo);
+  return getTask(id);
+}
+
+export function deleteTask(id: string) {
+  db.prepare(`DELETE FROM task_viewers WHERE task_id = ?`).run(id);
+  db.prepare(`DELETE FROM tasks WHERE id = ?`).run(id);
+}
+
+/**
+ * KPI считается одним агрегатом в SQLite, а не переносом всех задач на клиент:
+ * при тысячах задач второй вариант положил бы страницу.
+ */
+export function taskKpi(fromIso: string | null, onlyUserId?: string): TaskKpiRow[] {
+  const rows = db
+    .prepare(
+      `SELECT u.id AS user_id, u.name AS user_name,
+              COUNT(t.id) AS assigned,
+              SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) AS done,
+              SUM(CASE WHEN t.status = 'done' AND (t.due_at IS NULL OR t.done_at <= t.due_at) THEN 1 ELSE 0 END) AS on_time,
+              SUM(CASE WHEN t.status = 'done' AND t.due_at IS NOT NULL AND t.done_at > t.due_at THEN 1 ELSE 0 END) AS late,
+              SUM(CASE WHEN t.status = 'done' THEN t.points ELSE 0 END) AS points,
+              AVG(CASE WHEN t.status = 'done' THEN (julianday(t.done_at) - julianday(t.created_at)) * 24 END) AS avg_hours
+       FROM app_users u
+       LEFT JOIN tasks t
+         ON t.assignee_id = u.id
+        AND (@from IS NULL OR t.created_at >= @from)
+       WHERE u.is_active = 1 AND (@onlyUser IS NULL OR u.id = @onlyUser)
+       GROUP BY u.id, u.name
+       ORDER BY points DESC, done DESC, u.name`
+    )
+    .all({ from: fromIso, onlyUser: onlyUserId ?? null }) as {
+    user_id: string;
+    user_name: string;
+    assigned: number;
+    done: number;
+    on_time: number;
+    late: number;
+    points: number;
+    avg_hours: number | null;
+  }[];
+
+  return rows.map((r) => {
+    const assigned = r.assigned ?? 0;
+    const done = r.done ?? 0;
+    const onTime = r.on_time ?? 0;
+    // 60% — сколько задач закрыто, 40% — сколько из них уложились в срок
+    const doneRatio = assigned ? done / assigned : 0;
+    const onTimeRatio = done ? onTime / done : 0;
+    return {
+      userId: r.user_id,
+      userName: r.user_name,
+      assigned,
+      done,
+      onTime,
+      late: r.late ?? 0,
+      points: r.points ?? 0,
+      avgHours: r.avg_hours === null ? null : Math.round(r.avg_hours * 10) / 10,
+      score: assigned === 0 ? 0 : Math.round((doneRatio * 0.6 + onTimeRatio * 0.4) * 100),
+    };
+  });
+}
 
 // ---------- Пользователи (RBAC) ----------
 

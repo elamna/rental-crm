@@ -45,7 +45,7 @@ interface AppState {
 
   addInventoryCheck: (input: Partial<InventoryCheck>) => Promise<void>;
 
-  addRental: (rental: Rental) => Promise<void>;
+  addRental: (rental: Rental) => Promise<Rental>;
   updateRental: (id: string, patch: Partial<Rental>) => Promise<void>;
 
   addWorkshopTicket: (input: Partial<WorkshopTicket>) => Promise<WorkshopTicket>;
@@ -202,6 +202,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const clients = await api<Client[]>("/api/clients");
     set({ inventory, clients });
     get().refreshActivity();
+    return created;
   },
 
   updateRental: async (id, patch) => {

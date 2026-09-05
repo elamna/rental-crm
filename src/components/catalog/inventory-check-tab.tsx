@@ -127,7 +127,7 @@ export function InventoryCheckTab() {
             }}
             className={cn(
               "rounded-[8px] px-3.5 py-1.5 text-[12.5px] font-semibold transition",
-              sub === t.key ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+              sub === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
             )}
           >
             {t.label}
@@ -135,18 +135,18 @@ export function InventoryCheckTab() {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <SearchInput value={search} onChange={setSearch} className="flex-1" />
+      <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+        <SearchInput value={search} onChange={setSearch} className="col-span-2 sm:flex-1" />
         {sub === "list" && (
           <FilterSelect value={category} onChange={setCategory} placeholder="Категория" options={inventoryCategories.map((c) => ({ value: c, label: c }))} />
         )}
-        <div className="ml-auto">
+        <div className="col-span-2 sm:ml-auto">
           <ExportButton onClick={handleExport} />
         </div>
       </div>
 
       {sub === "list" && (
-        <div className="inline-flex flex-wrap gap-1 rounded-[10px] border border-[var(--color-border)] bg-white p-1 card-shadow">
+        <div className="inline-flex flex-wrap gap-1 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 card-shadow">
           {([
             { key: "all", label: "Все", count: units.length },
             { key: "ok", label: "Исправен", count: counts.ok },
@@ -231,7 +231,7 @@ export function InventoryCheckTab() {
                       <td className="px-4 py-3 text-[12.5px]">
                         {rental ? (
                           <Link href={`/rentals/${rental.id}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
-                            Аренда {rental.number}
+                            Аренда №{rental.number}
                           </Link>
                         ) : (
                           <span className="text-[var(--color-text-muted)]">—</span>
@@ -320,8 +320,8 @@ function CheckModal({ item, onClose }: { item: InventoryItem; onClose: () => voi
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-[var(--radius-card)] bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-4 pb-8 shadow-xl safe-bottom sm:rounded-[var(--radius-card)] sm:p-6 sm:pb-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h2 className="font-display text-[17px] font-bold">Проверка инвентаря</h2>
@@ -376,7 +376,7 @@ function CheckModal({ item, onClose }: { item: InventoryItem; onClose: () => voi
           <button
             disabled={saving}
             onClick={save}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
           >
             {saving ? "Сохранение…" : "Записать проверку"}
           </button>

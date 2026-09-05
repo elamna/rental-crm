@@ -18,6 +18,12 @@ export interface ClientFormValues {
   documentIssuedBy: string;
   documentIssuedAt: string;
   documentExpiresAt: string;
+  bin: string;
+  legalAddress: string;
+  companyDirector: string;
+  bankAccount: string;
+  bank: string;
+  bik: string;
   email: string;
   acquisitionChannel: string;
   discount: string;
@@ -35,6 +41,12 @@ const emptyValues: ClientFormValues = {
   documentIssuedBy: "",
   documentIssuedAt: "",
   documentExpiresAt: "",
+  bin: "",
+  legalAddress: "",
+  companyDirector: "",
+  bankAccount: "",
+  bank: "",
+  bik: "",
   email: "",
   acquisitionChannel: "",
   discount: "",
@@ -65,6 +77,12 @@ export function ClientForm({
           documentIssuedBy: initial.documentIssuedBy ?? "",
           documentIssuedAt: initial.documentIssuedAt ?? "",
           documentExpiresAt: initial.documentExpiresAt ?? "",
+          bin: initial.bin ?? "",
+          legalAddress: initial.legalAddress ?? "",
+          companyDirector: initial.companyDirector ?? "",
+          bankAccount: initial.bankAccount ?? "",
+          bank: initial.bank ?? "",
+          bik: initial.bik ?? "",
           email: initial.email ?? "",
           acquisitionChannel: initial.acquisitionChannel ?? "",
           discount: initial.discount?.toString() ?? "",
@@ -80,7 +98,7 @@ export function ClientForm({
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <div className="mx-auto max-w-3xl p-4 sm:p-6">
       <button
         onClick={() => router.back()}
         className="mb-4 flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-text)] transition hover:text-[var(--color-primary)]"
@@ -88,7 +106,7 @@ export function ClientForm({
         <ChevronLeft className="h-4 w-4" /> {title}
       </button>
 
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-6 card-shadow">
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 card-shadow">
         <h2 className="mb-4 text-[14px] font-semibold">Основная информация</h2>
         <div className="flex flex-col gap-4 sm:flex-row">
           <div className="flex-1 space-y-4">
@@ -100,7 +118,7 @@ export function ClientForm({
                 placeholder="Например, Иванов Иван"
               />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Тип клиента" required>
                 <select value={values.type} onChange={(e) => set("type", e.target.value as ClientType)} className="crm-input">
                   <option value="individual">Физ. лицо</option>
@@ -120,31 +138,54 @@ export function ClientForm({
         <div className="my-6 border-t border-[var(--color-border)]" />
 
         <h2 className="mb-4 text-[14px] font-semibold">Документ клиента</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="ИИН">
-            <input value={values.iin} onChange={(e) => set("iin", e.target.value)} className="crm-input" />
-          </Field>
-          <Field label="Дата рождения">
-            <input type="date" value={values.birthDate} onChange={(e) => set("birthDate", e.target.value)} className="crm-input" />
-          </Field>
-          <Field label="Номер документа">
-            <input value={values.documentNumber} onChange={(e) => set("documentNumber", e.target.value)} className="crm-input" />
-          </Field>
-          <Field label="Где или кем выдан">
-            <input value={values.documentIssuedBy} onChange={(e) => set("documentIssuedBy", e.target.value)} className="crm-input" />
-          </Field>
-          <Field label="Дата выдачи">
-            <input type="date" value={values.documentIssuedAt} onChange={(e) => set("documentIssuedAt", e.target.value)} className="crm-input" />
-          </Field>
-          <Field label="Дата истечения срока">
-            <input type="date" value={values.documentExpiresAt} onChange={(e) => set("documentExpiresAt", e.target.value)} className="crm-input" />
-          </Field>
-        </div>
+        {values.type === "company" ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="БИН">
+              <input value={values.bin} onChange={(e) => set("bin", e.target.value)} className="crm-input" maxLength={12} />
+            </Field>
+            <Field label="Юридический адрес (офис)">
+              <input value={values.legalAddress} onChange={(e) => set("legalAddress", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="Руководитель компании">
+              <input value={values.companyDirector} onChange={(e) => set("companyDirector", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="ИИК (Номер счёта)">
+              <input value={values.bankAccount} onChange={(e) => set("bankAccount", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="Банк">
+              <input value={values.bank} onChange={(e) => set("bank", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="БИК">
+              <input value={values.bik} onChange={(e) => set("bik", e.target.value)} className="crm-input" placeholder="БИК" />
+            </Field>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="ИИН">
+              <input value={values.iin} onChange={(e) => set("iin", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="Дата рождения">
+              <input type="date" value={values.birthDate} onChange={(e) => set("birthDate", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="Номер документа">
+              <input value={values.documentNumber} onChange={(e) => set("documentNumber", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="Где или кем выдан">
+              <input value={values.documentIssuedBy} onChange={(e) => set("documentIssuedBy", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="Дата выдачи">
+              <input type="date" value={values.documentIssuedAt} onChange={(e) => set("documentIssuedAt", e.target.value)} className="crm-input" />
+            </Field>
+            <Field label="Дата истечения срока">
+              <input type="date" value={values.documentExpiresAt} onChange={(e) => set("documentExpiresAt", e.target.value)} className="crm-input" />
+            </Field>
+          </div>
+        )}
 
         <div className="my-6 border-t border-[var(--color-border)]" />
 
         <h2 className="mb-4 text-[14px] font-semibold">Дополнительно</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Эл. почта">
             <input type="email" value={values.email} onChange={(e) => set("email", e.target.value)} className="crm-input" />
           </Field>
@@ -177,7 +218,7 @@ export function ClientForm({
           <button
             disabled={!canSubmit}
             onClick={() => onSubmit(values)}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Создать и сохранить
           </button>

@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { resolvePeriod } from "@/lib/period";
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const { searchParams } = req.nextUrl;
-  const period = searchParams.get("period") ?? "month";
-
-  const now = new Date();
-  let fromDate: Date;
-  if (period === "week") { fromDate = new Date(now); fromDate.setDate(now.getDate() - 7); }
-  else if (period === "month") { fromDate = new Date(now); fromDate.setMonth(now.getMonth() - 1); }
-  else if (period === "year") { fromDate = new Date(now); fromDate.setFullYear(now.getFullYear() - 1); }
-  else { fromDate = new Date("2000-01-01"); }
-  const from = fromDate.toISOString();
+  const { period, from, to, granularity } = resolvePeriod(req.nextUrl.searchParams);
 
   // Все аренды за период — JOIN с таблицей clients
   const rentals = db.prepare(`
@@ -23,9 +15,9 @@ export async function GET(req: NextRequest) {
            r.created_at, r.penalties_json, r.expenses_json, r.deposit_json
     FROM rentals r
     LEFT JOIN clients c ON c.id = r.client_id
-    WHERE r.created_at >= ? AND r.status NOT IN ('cancelled')
+    WHERE r.created_at >= ? AND r.created_at <= ? AND r.status NOT IN ('cancelled')
     ORDER BY r.created_at DESC
-  `).all(from) as {
+  `).all(from, to) as {
     id: string; number: string; client_name: string | null;
     paid: number; total: number; status: string; created_at: string;
     penalties_json: string; expenses_json: string; deposit_json: string | null;
@@ -95,7 +87,9 @@ export async function GET(req: NextRequest) {
 
   const byDay: Record<string, { income: number; expense: number }> = {};
   for (const t of transactions) {
-    const day = t.date.slice(0, 10);
+    // Сутки — по часам, длинный период — по месяцам, иначе по дням
+    const day =
+      granularity === "hour" ? `${t.date.slice(0, 13)}:00` : granularity === "month" ? t.date.slice(0, 7) : t.date.slice(0, 10);
     if (!byDay[day]) byDay[day] = { income: 0, expense: 0 };
     if (t.type === "income" || t.type === "penalty") byDay[day].income += t.amount;
     if (t.type === "expense") byDay[day].expense += t.amount;
@@ -103,6 +97,10 @@ export async function GET(req: NextRequest) {
   const dailyChart = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b)).map(([day, v]) => ({ day, ...v }));
 
   return NextResponse.json({
+    period,
+    granularity,
+    from,
+    to,
     summary: { totalIncome, totalExpenses, totalPenalties, totalDeposits, totalDebt, netProfit: totalIncome - totalExpenses },
     transactions: transactions.slice(0, 200),
     dailyChart,

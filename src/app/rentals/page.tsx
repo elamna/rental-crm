@@ -34,28 +34,28 @@ export default function RentalsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div>
           <h1 className="font-display text-[20px] font-bold">Аренды</h1>
           <p className="text-[13px] text-[var(--color-text-muted)]">Все текущие и прошедшие аренды инструмента</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             <Video className="h-3.5 w-3.5" /> Видео
           </button>
-          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             <Download className="h-3.5 w-3.5" /> Экспорт
           </button>
           <Link
             href="/rentals/new"
-            className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_14px_-4px_rgba(109,74,255,0.7)] transition hover:bg-[var(--color-primary-hover)]"
+            className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
           >
             + Новая аренда
           </Link>
         </div>
       </header>
 
-      <div className="space-y-3 border-b border-[var(--color-border)] bg-white px-6 py-3">
+      <div className="space-y-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3">
         <StatusTabs rentals={allRentals} active={tab} onChange={setTab} />
         <FilterBar search={search} onSearch={setSearch} view={view} onView={setView} />
       </div>

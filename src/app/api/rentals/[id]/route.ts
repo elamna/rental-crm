@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRental, updateRental } from "@/lib/repo";
+import { getRental, updateRental, deleteRental } from "@/lib/repo";
 import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 
 // При открытии карточки просроченной аренды — пересчитываем total по фактическим дням
 function recalcIfOverdue(id: string) {
@@ -56,4 +57,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const rental = updateRental(id, patch);
   if (!rental) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(rental);
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    await requireAuth("rentals.edit");
+    deleteRental(id);
+    return NextResponse.json({ ok: true });
+  } catch (e: unknown) {
+    const err = e as { status?: number; message?: string };
+    return NextResponse.json({ error: err.message }, { status: err.status ?? 500 });
+  }
 }

@@ -121,8 +121,8 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <SearchInput value={search} onChange={setSearch} className="flex-1" />
+      <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+        <SearchInput value={search} onChange={setSearch} className="col-span-2 sm:flex-1" />
         <FilterSelect value={branch} onChange={setBranch} placeholder="Пункт проката" options={branches.map((b) => ({ value: b, label: b }))} />
         <FilterSelect value={category} onChange={setCategory} placeholder="Категория" options={inventoryCategories.map((c) => ({ value: c, label: c }))} />
         <FilterSelect
@@ -132,7 +132,7 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
           options={Object.entries(inventoryStatusLabels).map(([k, v]) => ({ value: k, label: v }))}
         />
         <Checkbox checked={onlyFree} onChange={setOnlyFree} label="Только свободные" />
-        <div className="ml-auto">
+        <div className="col-span-2 sm:ml-auto">
           <ExportButton onClick={handleExport} />
         </div>
       </div>
@@ -152,7 +152,7 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
 
       <TableCard>
         <table className="w-full border-collapse">
-          <thead className="border-b border-[var(--color-border)] bg-white">
+          <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
             <tr>
               <Th className="w-10" />
               <Th sortable active={sort === "name"} dir={dir} onSort={() => toggleSort("name")}>

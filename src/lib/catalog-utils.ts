@@ -12,7 +12,7 @@ export interface ProductGroup {
   key: string;
   name: string;
   category: string;
-  /** Артикул: общий, если совпадает у всех единиц, иначе префикс */
+  /** Артикул: общий у всех единиц, иначе диапазон «первый…последний» */
   sku: string;
   photoUrl?: string;
   price: number;
@@ -62,7 +62,6 @@ export function groupProducts(inventory: InventoryItem[], rentals: Rental[]): Pr
     g.units.push(item);
     g.total += 1;
     if (!g.photoUrl && item.photoUrl) g.photoUrl = item.photoUrl;
-    if (item.sku && g.sku && item.sku !== g.sku) g.sku = commonSkuPrefix(g.sku, item.sku);
 
     switch (item.status) {
       case "available":
@@ -83,14 +82,17 @@ export function groupProducts(inventory: InventoryItem[], rentals: Rental[]): Pr
     }
   }
 
-  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "ru"));
+  const groups = [...map.values()];
+  for (const g of groups) g.sku = skuLabel(g.units.map((u) => u.sku).filter(Boolean));
+  return groups.sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
 
-function commonSkuPrefix(a: string, b: string) {
-  let i = 0;
-  while (i < a.length && i < b.length && a[i] === b[i]) i++;
-  const prefix = a.slice(0, i).replace(/[.\-_\s]+$/, "");
-  return prefix || "—";
+/** Один артикул на группу: сам артикул, если он один, иначе диапазон */
+function skuLabel(skus: string[]) {
+  const unique = [...new Set(skus)].sort((a, b) => a.localeCompare(b, "ru", { numeric: true }));
+  if (unique.length === 0) return "";
+  if (unique.length === 1) return unique[0];
+  return `${unique[0]}…${unique[unique.length - 1]}`;
 }
 
 /** Единицы, которые не сдаются в аренду: украдены или списаны */

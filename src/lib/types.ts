@@ -57,13 +57,20 @@ export interface Client {
   phone: string;
   email?: string;
   photoUrl?: string;
-  // Документ клиента
+  // Документ клиента (физ. лицо)
   iin?: string;
   birthDate?: string;
   documentNumber?: string;
   documentIssuedBy?: string;
   documentIssuedAt?: string;
   documentExpiresAt?: string;
+  // Реквизиты (юр. лицо)
+  bin?: string;
+  legalAddress?: string;
+  companyDirector?: string;
+  bankAccount?: string; // ИИК
+  bank?: string;
+  bik?: string;
   // Дополнительно
   acquisitionChannel?: string;
   discount?: number;
@@ -108,6 +115,8 @@ export interface Rental {
   expenses?: { type: string; amount: number }[];
   documents?: string[];
   notes?: string[];
+  /** Момент постановки на паузу; null — аренда идёт */
+  pausedAt?: string;
   autoPenaltyEnabled?: boolean;
   penaltyRatePerHour?: number;
   createdAt?: string;
@@ -179,6 +188,8 @@ export type Permission =
   | "workshop.view" | "workshop.edit"
   | "documents.view" | "documents.edit"
   | "blacklist.view"
+  | "tasks.view" | "tasks.manage"
+  | "leads.view" | "leads.edit"
   | "analytics.view"
   | "finance.view"
   | "settings.view"
@@ -192,6 +203,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   "workshop.view", "workshop.edit",
   "documents.view", "documents.edit",
   "blacklist.view",
+  "tasks.view", "tasks.manage",
+  "leads.view", "leads.edit",
   "analytics.view",
   "finance.view",
   "settings.view",
@@ -211,6 +224,10 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "documents.view": "Документы — просмотр",
   "documents.edit": "Документы — редактирование",
   "blacklist.view": "Чёрный список — просмотр",
+  "tasks.view": "Темп — свои задачи",
+  "tasks.manage": "Темп — все задачи и KPI",
+  "leads.view": "Воронка — просмотр заявок",
+  "leads.edit": "Воронка — создание и изменение",
   "analytics.view": "Аналитика — просмотр",
   "finance.view": "Финансы — просмотр",
   "settings.view": "Настройки — просмотр",
@@ -286,4 +303,125 @@ export interface InventoryCheck {
   checkedByName: string;
   comment?: string;
   createdAt: string;
+}
+
+// ---------- Темп: задачи сотрудников и KPI ----------
+
+export type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
+export type TaskPriority = "low" | "normal" | "high";
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: "Новая",
+  in_progress: "В работе",
+  review: "На проверке",
+  done: "Выполнена",
+  cancelled: "Отменена",
+};
+
+export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
+  low: "Низкий",
+  normal: "Обычный",
+  high: "Высокий",
+};
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assigneeId?: string;
+  assigneeName?: string;
+  createdById?: string;
+  createdByName?: string;
+  dueAt?: string;
+  doneAt?: string;
+  /** Вес задачи в KPI: мелкая — 1, крупная — 3 и т.д. */
+  points: number;
+  /** Кому ещё открыт просмотр, кроме исполнителя и постановщика */
+  visibleTo: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Строка KPI по сотруднику за период */
+export interface TaskKpiRow {
+  userId: string;
+  userName: string;
+  assigned: number;
+  done: number;
+  onTime: number;
+  late: number;
+  points: number;
+  /** Среднее время выполнения, часы */
+  avgHours: number | null;
+  /** Сводная оценка 0–100: доля выполненных и доля сделанных в срок */
+  score: number;
+}
+
+// ---------- Воронка: заявки ----------
+
+/** Заявка живёт на доске, пока открыта; закрытая уходит в выигранные или проигранные */
+export type LeadStatus = "open" | "won" | "lost";
+
+export interface Lead {
+  id: string;
+  /** Порядковый номер для менеджеров: №4171 */
+  number: number;
+  /** Что нужно клиенту — заголовок карточки */
+  title: string;
+  clientName?: string;
+  phone?: string;
+  /** Сумма сделки */
+  amount: number;
+  managerId?: string;
+  managerName?: string;
+  /** Канал привлечения: Whatsapp, Сарафанка и т.д. */
+  source?: string;
+  /** Когда инструмент нужен клиенту — по этой дате карточка сама встаёт в колонку */
+  neededAt?: string;
+  /** Инструмента нет в наличии — карточка стоит в отдельной колонке независимо от даты */
+  unavailable: boolean;
+  status: LeadStatus;
+  notes?: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ---------- История аренды и паузы ----------
+
+export type RentalEventType =
+  | "created" | "status" | "payment" | "total" | "items" | "dates"
+  | "paused" | "resumed" | "revert";
+
+/**
+ * Запись в истории аренды. before хранит значения полей ДО изменения —
+ * по ним делается откат ошибочного действия.
+ */
+export interface RentalEvent {
+  id: string;
+  rentalId: string;
+  type: RentalEventType;
+  /** Человекочитаемо: «Выдал инвентарь» */
+  title: string;
+  /** Подробности: список товаров, сумма и т.п. */
+  details?: string;
+  actorName?: string;
+  before?: Record<string, unknown>;
+  /** Событие уже откатили — повторно откатить нельзя */
+  reverted: boolean;
+  createdAt: string;
+}
+
+export interface RentalPause {
+  id: string;
+  rentalId: string;
+  startedAt: string;
+  /** null — пауза ещё идёт */
+  endedAt?: string;
+  reason?: string;
+  actorName?: string;
+  /** Длительность в часах, считается при чтении */
+  hours: number;
 }

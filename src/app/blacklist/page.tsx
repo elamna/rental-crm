@@ -29,18 +29,18 @@ export default function BlacklistPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
+      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-6 py-4 backdrop-blur">
         <h1 className="font-display text-[20px] font-bold">Чёрный список</h1>
         <p className="text-[13px] text-[var(--color-text-muted)]">
           Клиенты с ограничением доступа к аренде — попадают сюда автоматически (например, при краже товара) или вручную
         </p>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {!hydrated ? (
           <p className="text-[13px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : blacklisted.length === 0 ? (
-          <div className="mx-auto mt-16 max-w-md rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white p-8 text-center card-shadow">
+          <div className="mx-auto mt-16 max-w-md rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center card-shadow">
             <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[14px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
               <Ban className="h-6 w-6" />
             </div>
@@ -54,7 +54,7 @@ export default function BlacklistPage() {
             {blacklisted.map((c) => {
               const stolenCount = stolenByClient.get(c.id) ?? 0;
               return (
-                <div key={c.id} className="rounded-[var(--radius-card)] border border-[#F3B7B7] bg-white p-4 card-shadow">
+                <div key={c.id} className="rounded-[var(--radius-card)] border border-[#F3B7B7] bg-[var(--color-surface)] p-4 card-shadow">
                   <div className="flex items-start justify-between gap-2">
                     <Link href={`/clients/${c.id}`} className="min-w-0">
                       <div className="truncate text-[14px] font-semibold hover:underline">{c.name}</div>

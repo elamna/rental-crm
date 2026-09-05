@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { branches, rentalPeriods, depositTypeLabels } from "@/lib/mock-data";
 import { Client, InventoryLine, LineCategory, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
 import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, durationDays } from "@/lib/utils";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { QuickClientModal } from "@/components/clients/quick-client-modal";
 import { AddCatalogBundleModal } from "@/components/rentals/add-catalog-bundle-modal";
 import { AddCatalogItemModal } from "@/components/rentals/add-catalog-item-modal";
@@ -34,6 +35,7 @@ import {
   Building2,
   X,
   CreditCard,
+  FileSignature,
 } from "lucide-react";
 
 function toLocalInputValue(d: Date) {
@@ -49,6 +51,7 @@ const tabDefs: { key: "all" | LineCategory; label: string }[] = [
 ];
 
 export default function NewRentalPage() {
+  const isMobile = useIsMobile();
   const router = useRouter();
   const { user: sessionUser } = useAuth();
   const clients = useAppStore((s) => s.clients);
@@ -57,7 +60,7 @@ export default function NewRentalPage() {
   const updateRental = useAppStore((s) => s.updateRental);
 
   const [rentalId] = useState(() => `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-  const [number] = useState(() => `№${Date.now().toString().slice(-6)}`);
+  const [number, setNumber] = useState("");
   const [persisted, setPersisted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -76,6 +79,39 @@ export default function NewRentalPage() {
 
   const [startAt, setStartAt] = useState(() => toLocalInputValue(new Date()));
   const [endAt, setEndAt] = useState(() => toLocalInputValue(new Date(Date.now() + 24 * 3600 * 1000)));
+
+  // Оформление по заявке из воронки: /rentals/new?client=…&lead=…&title=…&needed=…
+  // Параметры читаем из window, а не через useSearchParams — тот требует
+  // обёртки в Suspense и ломает пререндер страницы на сборке.
+  const [fromLead, setFromLead] = useState<{ id: string; title: string } | null>(null);
+  const [pendingClientId, setPendingClientId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const leadId = params.get("lead");
+    const clientId = params.get("client");
+    const needed = params.get("needed");
+
+    if (leadId) setFromLead({ id: leadId, title: params.get("title") ?? "" });
+    if (clientId) setPendingClientId(clientId);
+    if (needed) {
+      const d = new Date(needed);
+      if (!isNaN(d.getTime())) {
+        setStartAt(toLocalInputValue(d));
+        setEndAt(toLocalInputValue(new Date(d.getTime() + 24 * 3600 * 1000)));
+      }
+    }
+  }, []);
+
+  // Клиент подставляется, когда стор догрузит список
+  useEffect(() => {
+    if (!pendingClientId) return;
+    const found = clients.find((c) => c.id === pendingClientId);
+    if (found) {
+      setSelectedClient(found);
+      setPendingClientId(null);
+    }
+  }, [pendingClientId, clients]);
   const [branch, setBranch] = useState("Атырау");
   const [period, setPeriod] = useState<RentalPeriod>("daily");
 
@@ -182,7 +218,8 @@ export default function NewRentalPage() {
     try {
       const rental = buildRental(status);
       if (!persisted) {
-        await addRental(rental);
+        const created = await addRental(rental);
+        setNumber(created.number);
         setPersisted(true);
       } else {
         await updateRental(rentalId, rental);
@@ -201,7 +238,16 @@ export default function NewRentalPage() {
   }
 
   async function handleBook() {
-    if (await persist("booked")) router.push(`/rentals/${rentalId}`);
+    if (!(await persist("booked"))) return;
+    // Заявка из воронки отработала — закрываем её как успешную
+    if (fromLead) {
+      await fetch(`/api/leads/${fromLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "won" }),
+      }).catch(() => {});
+    }
+    router.push(`/rentals/${rentalId}`);
   }
 
   function addItem(category: LineCategory, values: { name: string; pricePerDay: number; qty: number; inventoryItemId?: string }) {
@@ -225,13 +271,13 @@ export default function NewRentalPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-[var(--color-border)] bg-white/70 px-6 py-4 backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div className="flex items-center gap-3">
           <button onClick={() => router.back()} className="grid h-8 w-8 place-items-center rounded-[10px] border border-[var(--color-border)] transition hover:bg-[var(--color-bg)]">
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-[18px] font-bold">Аренда {number}</h1>
+            <h1 className="font-display text-[18px] font-bold">{number ? `Аренда №${number}` : "Новая аренда"}</h1>
             <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold", st.bg, st.text)}>
               <span className={cn("h-1.5 w-1.5 rounded-full", st.dot)} />
               {statusLabels.request}
@@ -244,7 +290,7 @@ export default function NewRentalPage() {
               <MoreHorizontal className="h-4 w-4" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-56 rounded-[12px] border border-[var(--color-border)] bg-white p-1.5 card-shadow">
+              <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-56 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 card-shadow">
                 <Link href="/rentals" className="block rounded-[8px] px-2.5 py-2 text-[13px] font-medium text-[#C0272D] hover:bg-[#FDECEC]">
                   Отменить и выйти без сохранения
                 </Link>
@@ -256,16 +302,28 @@ export default function NewRentalPage() {
           <button
             onClick={handleSaveDraft}
             disabled={saving}
-            className="rounded-[10px] border border-[var(--color-border)] bg-white px-4 py-2 text-[13px] font-medium transition hover:bg-[var(--color-bg)] disabled:opacity-50"
+            className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-[13px] font-medium transition hover:bg-[var(--color-bg)] disabled:opacity-50"
           >
             {saving ? "Сохранение…" : "Сохранить изменения"}
           </button>
         </div>
       </header>
 
-      <div className="flex flex-1 gap-5 overflow-y-auto px-6 py-5">
+      <div className={cn("flex flex-1 gap-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5", isMobile && "flex-col")}>
         <div className="min-w-0 flex-1 space-y-4">
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+          {fromLead && (
+            <div className="flex items-start gap-2.5 rounded-[var(--radius-card)] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-4 py-3">
+              <FileSignature className="mt-[2px] h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+              <div className="text-[12.5px]">
+                <div className="font-semibold text-[var(--color-primary)]">Оформление по заявке из воронки</div>
+                <div className="text-[var(--color-text-muted)]">
+                  Клиент подставлен{fromLead.title ? `, клиенту нужен: ${fromLead.title}` : ""}. Заявка закроется как
+                  успешная после бронирования.
+                </div>
+              </div>
+            </div>
+          )}
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <h2 className="mb-3 text-[14px] font-semibold">Клиент</h2>
             {selectedClient ? (
               <>
@@ -299,7 +357,7 @@ export default function NewRentalPage() {
                   {clientStolenRentals.length > 0 ? (
                     <div className="mt-2 space-y-2">
                       {clientStolenRentals.map((r) => (
-                        <div key={r.id} className="rounded-[8px] bg-white/70 px-3 py-2 text-[12.5px]">
+                        <div key={r.id} className="rounded-[8px] bg-[var(--color-surface)]/70 px-3 py-2 text-[12.5px]">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-semibold text-[#C0272D]">Аренда №{r.number}</span>
                             <span className="font-semibold text-[#C0272D]">{formatMoney(r.total)}</span>
@@ -331,7 +389,7 @@ export default function NewRentalPage() {
                     className="w-full rounded-[10px] border border-[var(--color-border)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none focus:border-[var(--color-primary)]"
                   />
                   {filteredClients.length > 0 && (
-                    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-64 overflow-y-auto rounded-[10px] border border-[var(--color-border)] bg-white card-shadow">
+                    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-64 overflow-y-auto rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
                       {filteredClients.map((c) => (
                         <button
                           key={c.id}
@@ -359,14 +417,14 @@ export default function NewRentalPage() {
                     </div>
                   )}
                   {clientQuery.trim() && filteredClients.length === 0 && (
-                    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2.5 text-[12.5px] text-[var(--color-text-muted)] card-shadow">
+                    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[12.5px] text-[var(--color-text-muted)] card-shadow">
                       Клиент не найден
                     </div>
                   )}
                 </div>
                 <button
                   onClick={() => setShowClientModal(true)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[#16151F] px-3.5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-black"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[var(--color-text)] px-3.5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-black"
                 >
                   <UserPlus className="h-4 w-4" /> Новый клиент
                 </button>
@@ -374,14 +432,14 @@ export default function NewRentalPage() {
             )}
           </section>
 
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[14px] font-semibold">Аренда</h2>
               <span className="rounded-full bg-[var(--color-bg)] px-3 py-1 text-[12px] font-medium text-[var(--color-text-muted)]">
                 Длительность: {duration} {periodSuffix}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Начало аренды" required>
                 <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className="crm-input" />
               </Field>
@@ -407,7 +465,7 @@ export default function NewRentalPage() {
             </div>
           </section>
 
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 card-shadow">
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-3 flex items-center gap-1 rounded-[10px] bg-[var(--color-bg)] p-1">
               {tabDefs.map((t) => (
                 <button
@@ -415,11 +473,11 @@ export default function NewRentalPage() {
                   onClick={() => setTab(t.key)}
                   className={cn(
                     "flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[12.5px] font-semibold transition",
-                    tab === t.key ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                    tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
                   )}
                 >
                   {t.label}
-                  <span className={cn("rounded-full px-1.5 py-0.5 text-[11px]", tab === t.key ? "bg-[var(--color-primary-soft)]" : "bg-white")}>
+                  <span className={cn("rounded-full px-1.5 py-0.5 text-[11px]", tab === t.key ? "bg-[var(--color-primary-soft)]" : "bg-[var(--color-surface)]")}>
                     {countFor(t.key)}
                   </span>
                 </button>
@@ -445,7 +503,7 @@ export default function NewRentalPage() {
                     {catItems.length > 0 ? (
                       <div className="space-y-1.5">
                         {catItems.map((item) => (
-                          <div key={item.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 hover:border-[var(--color-primary-soft)]">
+                          <div key={item.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 hover:border-[var(--color-primary-soft)]">
                             {/* Иконка */}
                             <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
                               <span className="text-[10px] font-bold">{item.qty}</span>
@@ -487,17 +545,17 @@ export default function NewRentalPage() {
           </section>
         </div>
 
-        <div className="w-[340px] shrink-0 space-y-3">
+        <div className={cn("space-y-3", isMobile ? "w-full" : "w-[340px] shrink-0")}>
           <button
             onClick={handleBook}
             disabled={saving}
-            className="w-full rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-white shadow-[0_4px_14px_-4px_rgba(109,74,255,0.7)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="w-full rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             {saving ? "Сохранение…" : "Забронировать аренду →"}
           </button>
           {saveError && <p className="text-center text-[12.5px] text-[#C0272D]">{saveError}</p>}
 
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             {/* Строки сумм */}
             <div className="mb-3 space-y-1.5 text-[13px]">
               <div className="flex items-center justify-between">
@@ -562,7 +620,7 @@ export default function NewRentalPage() {
             />
           )}
 
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <button onClick={() => setDocsOpen((v) => !v)} className="flex w-full items-center justify-between">
               <span className="flex items-center gap-2 text-[13.5px] font-semibold">
                 <FileText className="h-4 w-4 text-[var(--color-primary)]" /> Документы
@@ -589,7 +647,7 @@ export default function NewRentalPage() {
             )}
           </div>
 
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-[13.5px] font-semibold">
                 <ShieldCheck className="h-4 w-4 text-[var(--color-primary)]" /> Залог
@@ -633,7 +691,7 @@ export default function NewRentalPage() {
                       setDepositDraft({ type: "money", amount: "" });
                     }
                   }}
-                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                 >
                   Сохранить залог
                 </button>
@@ -641,7 +699,7 @@ export default function NewRentalPage() {
             )}
           </div>
 
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-[13.5px] font-semibold">
                 <AlertOctagon className="h-4 w-4 text-[var(--color-primary)]" /> Штраф
@@ -688,7 +746,7 @@ export default function NewRentalPage() {
                       setPenaltyDraft({ reason: "", amount: "" });
                     }
                   }}
-                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                 >
                   Добавить штраф
                 </button>
@@ -696,7 +754,7 @@ export default function NewRentalPage() {
             )}
           </div>
 
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-[13.5px] font-semibold">
                 <Receipt className="h-4 w-4 text-[var(--color-primary)]" /> Расходы
@@ -735,7 +793,7 @@ export default function NewRentalPage() {
                       setExpenseDraft({ type: "", amount: "" });
                     }
                   }}
-                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                 >
                   Добавить расход
                 </button>
@@ -743,7 +801,7 @@ export default function NewRentalPage() {
             )}
           </div>
 
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-4 card-shadow">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <span className="flex items-center gap-2 text-[13.5px] font-semibold">
               <MessageSquare className="h-4 w-4 text-[var(--color-primary)]" /> Заметки и файлы
             </span>
@@ -762,7 +820,7 @@ export default function NewRentalPage() {
                       setNoteDraft("");
                     }
                   }}
-                  className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[13px] font-semibold text-white hover:bg-[var(--color-primary-hover)]"
+                  className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[13px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                 >
                   +
                 </button>
@@ -833,11 +891,11 @@ function BlacklistWarningModal({
 
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-[460px] overflow-hidden rounded-[20px] bg-white shadow-2xl">
+      <div className="w-full max-w-[460px] overflow-hidden rounded-[20px] bg-[var(--color-surface)] shadow-2xl">
         {/* Шапка */}
         <div className="bg-[#C0272D] px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/20">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--color-surface)]/20">
               <Siren className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -929,13 +987,13 @@ function BlacklistWarningModal({
           </p>
           <button
             onClick={onConfirm}
-            className="w-full rounded-[10px] border-2 border-[#C0272D] bg-white py-2.5 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
+            className="w-full rounded-[10px] border-2 border-[#C0272D] bg-[var(--color-surface)] py-2.5 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
           >
             Да, оформить аренду (беру ответственность)
           </button>
           <button
             onClick={onCancel}
-            className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)]"
+            className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)]"
           >
             Отмена — выбрать другого клиента
           </button>
@@ -972,8 +1030,8 @@ function NewRentalPaymentModal({
   const amount = parseFloat(amountStr.replace(/\s/g, "").replace(",", ".")) || 0;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-      <div className="w-full max-w-[380px] overflow-hidden rounded-[20px] bg-white card-shadow">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+      <div className="w-full max-w-[380px] overflow-hidden rounded-[20px] bg-[var(--color-surface)] card-shadow">
         {/* Шапка */}
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
           <h3 className="text-[15px] font-bold">Оплатить сейчас</h3>
@@ -1033,7 +1091,7 @@ function NewRentalPaymentModal({
           <button
             onClick={() => onPay(amount, method)}
             disabled={amount <= 0}
-            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-white transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             <CreditCard className="h-4 w-4" />
             {amount > 0 ? `Принять оплату ${amount.toLocaleString("ru-RU")} ₸` : "Принять оплату"}
