@@ -1,5 +1,5 @@
 import { db, logActivity } from "./db";
-import { Client, DocumentTemplate, InventoryItem, InventoryLine, Rental, RentalDocument, RentalStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalStatus, Service, ServiceTariff, WorkshopLine, WorkshopTicket } from "./types";
 
 function newId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -257,6 +257,231 @@ export function updateInventoryItem(id: string, patch: Partial<InventoryItem>) {
 
 export function deleteInventoryItem(id: string) {
   db.prepare(`DELETE FROM inventory_items WHERE id = ?`).run(id);
+}
+
+/** Следующий свободный артикул вида QS.0123 (нумерация продолжает уже существующие). */
+export function nextSku(prefix = "QS"): string {
+  const rows = db.prepare(`SELECT sku FROM inventory_items WHERE sku LIKE ?`).all(`${prefix}.%`) as { sku: string | null }[];
+  let max = 0;
+  for (const r of rows) {
+    const m = /\.(\d+)/.exec(r.sku ?? "");
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `${prefix}.${String(max + 1).padStart(4, "0")}`;
+}
+
+/** Создаёт сразу несколько одинаковых единиц продукта, каждой — свой артикул. */
+export function createInventoryItems(input: Partial<InventoryItem>, quantity: number): InventoryItem[] {
+  const created: InventoryItem[] = [];
+  const count = Math.max(1, Math.floor(quantity || 1));
+  for (let i = 0; i < count; i++) {
+    const sku = input.sku && count === 1 ? input.sku : nextSku();
+    created.push(createInventoryItem({ ...input, sku }));
+  }
+  return created;
+}
+
+// ---------- Каталог: комплекты ----------
+
+interface KitRow {
+  id: string;
+  name: string;
+  category: string | null;
+  photo_url: string | null;
+  price: number;
+  lines_json: string;
+  notes: string | null;
+  created_at: string;
+}
+
+function kitRowToDomain(row: KitRow): Kit {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category ?? "",
+    photoUrl: row.photo_url ?? undefined,
+    price: row.price,
+    lines: JSON.parse(row.lines_json || "[]") as KitLine[],
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export function listKits(): Kit[] {
+  const rows = db.prepare(`SELECT * FROM kits ORDER BY created_at DESC`).all() as KitRow[];
+  return rows.map(kitRowToDomain);
+}
+
+export function getKit(id: string): Kit | null {
+  const row = db.prepare(`SELECT * FROM kits WHERE id = ?`).get(id) as KitRow | undefined;
+  return row ? kitRowToDomain(row) : null;
+}
+
+export function createKit(input: Partial<Kit>): Kit {
+  const id = newId("kit");
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO kits (id, name, category, photo_url, price, lines_json, notes, created_at)
+     VALUES (@id, @name, @category, @photoUrl, @price, @linesJson, @notes, @createdAt)`
+  ).run({
+    id,
+    name: input.name ?? "",
+    category: input.category ?? null,
+    photoUrl: input.photoUrl ?? null,
+    price: input.price ?? 0,
+    linesJson: JSON.stringify(input.lines ?? []),
+    notes: input.notes ?? null,
+    createdAt,
+  });
+  logActivity(`Добавлен комплект «${input.name}»`);
+  return getKit(id)!;
+}
+
+export function updateKit(id: string, patch: Partial<Kit>) {
+  const existing = getKit(id);
+  if (!existing) return null;
+  const merged = { ...existing, ...patch };
+  db.prepare(
+    `UPDATE kits SET name=@name, category=@category, photo_url=@photoUrl, price=@price, lines_json=@linesJson, notes=@notes WHERE id=@id`
+  ).run({
+    id,
+    name: merged.name,
+    category: merged.category || null,
+    photoUrl: merged.photoUrl ?? null,
+    price: merged.price,
+    linesJson: JSON.stringify(merged.lines ?? []),
+    notes: merged.notes ?? null,
+  });
+  return getKit(id);
+}
+
+export function deleteKit(id: string) {
+  db.prepare(`DELETE FROM kits WHERE id = ?`).run(id);
+}
+
+// ---------- Каталог: услуги ----------
+
+interface ServiceRow {
+  id: string;
+  name: string;
+  category: string | null;
+  tariffs_json: string;
+  notes: string | null;
+  created_at: string;
+}
+
+function serviceRowToDomain(row: ServiceRow): Service {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category ?? undefined,
+    tariffs: JSON.parse(row.tariffs_json || "[]") as ServiceTariff[],
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export function listServices(): Service[] {
+  const rows = db.prepare(`SELECT * FROM services ORDER BY created_at DESC`).all() as ServiceRow[];
+  return rows.map(serviceRowToDomain);
+}
+
+export function getService(id: string): Service | null {
+  const row = db.prepare(`SELECT * FROM services WHERE id = ?`).get(id) as ServiceRow | undefined;
+  return row ? serviceRowToDomain(row) : null;
+}
+
+export function createService(input: Partial<Service>): Service {
+  const id = newId("srv");
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO services (id, name, category, tariffs_json, notes, created_at)
+     VALUES (@id, @name, @category, @tariffsJson, @notes, @createdAt)`
+  ).run({
+    id,
+    name: input.name ?? "",
+    category: input.category ?? null,
+    tariffsJson: JSON.stringify(input.tariffs ?? []),
+    notes: input.notes ?? null,
+    createdAt,
+  });
+  logActivity(`Добавлена услуга «${input.name}»`);
+  return getService(id)!;
+}
+
+export function updateService(id: string, patch: Partial<Service>) {
+  const existing = getService(id);
+  if (!existing) return null;
+  const merged = { ...existing, ...patch };
+  db.prepare(`UPDATE services SET name=@name, category=@category, tariffs_json=@tariffsJson, notes=@notes WHERE id=@id`).run({
+    id,
+    name: merged.name,
+    category: merged.category ?? null,
+    tariffsJson: JSON.stringify(merged.tariffs ?? []),
+    notes: merged.notes ?? null,
+  });
+  return getService(id);
+}
+
+export function deleteService(id: string) {
+  db.prepare(`DELETE FROM services WHERE id = ?`).run(id);
+}
+
+// ---------- Инвентаризация ----------
+
+interface InventoryCheckRow {
+  id: string;
+  inventory_item_id: string;
+  condition: string;
+  checked_by_name: string | null;
+  comment: string | null;
+  created_at: string;
+}
+
+function checkRowToDomain(row: InventoryCheckRow): InventoryCheck {
+  return {
+    id: row.id,
+    inventoryItemId: row.inventory_item_id,
+    condition: row.condition as InventoryCheck["condition"],
+    checkedByName: row.checked_by_name ?? "",
+    comment: row.comment ?? undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export function listInventoryChecks(): InventoryCheck[] {
+  const rows = db.prepare(`SELECT * FROM inventory_checks ORDER BY created_at DESC`).all() as InventoryCheckRow[];
+  return rows.map(checkRowToDomain);
+}
+
+export function createInventoryCheck(input: Partial<InventoryCheck>): InventoryCheck {
+  const id = newId("chk");
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO inventory_checks (id, inventory_item_id, condition, checked_by_name, comment, created_at)
+     VALUES (@id, @inventoryItemId, @condition, @checkedByName, @comment, @createdAt)`
+  ).run({
+    id,
+    inventoryItemId: input.inventoryItemId ?? "",
+    condition: input.condition ?? "ok",
+    checkedByName: input.checkedByName ?? null,
+    comment: input.comment ?? null,
+    createdAt,
+  });
+
+  // «Сломан» — если единица свободна, отправляем её в ремонт (в аренде/украдена не трогаем)
+  if (input.condition === "broken" && input.inventoryItemId) {
+    const current = db.prepare(`SELECT status, name FROM inventory_items WHERE id = ?`).get(input.inventoryItemId) as
+      | { status: string; name: string }
+      | undefined;
+    if (current && current.status === "available") {
+      db.prepare(`UPDATE inventory_items SET status = 'repair' WHERE id = ?`).run(input.inventoryItemId);
+    }
+    if (current) logActivity(`Инвентаризация: «${current.name}» отмечен как сломан`);
+  }
+
+  const row = db.prepare(`SELECT * FROM inventory_checks WHERE id = ?`).get(id) as InventoryCheckRow;
+  return checkRowToDomain(row);
 }
 
 // ---------- Rentals ----------

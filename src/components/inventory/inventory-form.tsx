@@ -19,6 +19,8 @@ export interface InventoryFormValues {
   status: InventoryStatus;
   branch: string;
   notes: string;
+  /** Сколько одинаковых единиц создать (только при добавлении) */
+  quantity: string;
 }
 
 const emptyValues: InventoryFormValues = {
@@ -33,6 +35,7 @@ const emptyValues: InventoryFormValues = {
   status: "available",
   branch: "",
   notes: "",
+  quantity: "1",
 };
 
 export function InventoryForm({
@@ -64,6 +67,7 @@ export function InventoryForm({
           status: initial.status ?? "available",
           branch: initial.branch ?? "",
           notes: initial.notes ?? "",
+          quantity: "1",
         }
       : {}),
   });
@@ -94,6 +98,15 @@ export function InventoryForm({
                 <input value={values.serialNumber} onChange={(e) => set("serialNumber", e.target.value)} className="crm-input" />
               </Field>
             </div>
+            {!initial && (
+              <Field label="Количество единиц">
+                <input type="number" min={1} value={values.quantity} onChange={(e) => set("quantity", e.target.value)} className="crm-input" />
+                <span className="mt-1 block text-[11.5px] text-[var(--color-text-muted)]">
+                  Больше одной — создадим отдельную единицу на каждый экземпляр, артикулы присвоятся автоматически
+                  (QS.0001, QS.0002…). В каталоге они свернутся в один продукт.
+                </span>
+              </Field>
+            )}
           </div>
           <PhotoUpload value={values.photoUrl} onChange={(url) => set("photoUrl", url)} />
         </div>

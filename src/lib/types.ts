@@ -236,3 +236,54 @@ export interface SessionUser {
   isAdmin: boolean;
   permissions: Permission[];
 }
+
+// ---------- Каталог: комплекты, услуги, инвентаризация ----------
+
+/** Позиция состава комплекта. inventoryName — привязка к продукту каталога по названию. */
+export interface KitLine {
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+  inventoryName?: string;
+}
+
+export interface Kit {
+  id: string;
+  name: string;
+  category: string;
+  photoUrl?: string;
+  /** Цена аренды комплекта за сутки */
+  price: number;
+  lines: KitLine[];
+  notes?: string;
+  createdAt: string;
+}
+
+export type ServiceTariffType = "day" | "once" | "period";
+
+export interface ServiceTariff {
+  type: ServiceTariffType;
+  price: number;
+}
+
+export interface Service {
+  id: string;
+  name: string;
+  category?: string;
+  tariffs: ServiceTariff[];
+  notes?: string;
+  createdAt: string;
+}
+
+export type InventoryCondition = "ok" | "broken";
+
+/** Запись инвентаризации: кто, когда и в каком состоянии принял единицу инвентаря. */
+export interface InventoryCheck {
+  id: string;
+  inventoryItemId: string;
+  condition: InventoryCondition;
+  checkedByName: string;
+  comment?: string;
+  createdAt: string;
+}

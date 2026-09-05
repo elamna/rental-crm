@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { Client, InventoryItem, Rental, WorkshopTicket } from "./types";
+import { Client, InventoryCheck, InventoryItem, Kit, Rental, Service, WorkshopTicket } from "./types";
 
 interface ActivityEntry {
   id: string;
@@ -13,6 +13,9 @@ interface AppState {
   clients: Client[];
   rentals: Rental[];
   inventory: InventoryItem[];
+  kits: Kit[];
+  services: Service[];
+  inventoryChecks: InventoryCheck[];
   workshopTickets: WorkshopTicket[];
   activity: ActivityEntry[];
   hydrated: boolean;
@@ -28,9 +31,19 @@ interface AppState {
   deleteClient: (id: string) => Promise<void>;
   importClients: (rows: Partial<Client>[]) => Promise<{ added: number; skipped: number }>;
 
-  addInventoryItem: (input: Partial<InventoryItem>) => Promise<InventoryItem>;
+  addInventoryItem: (input: Partial<InventoryItem> & { quantity?: number }) => Promise<InventoryItem>;
   updateInventoryItem: (id: string, patch: Partial<InventoryItem>) => Promise<void>;
   deleteInventoryItem: (id: string) => Promise<void>;
+
+  addKit: (input: Partial<Kit>) => Promise<Kit>;
+  updateKit: (id: string, patch: Partial<Kit>) => Promise<void>;
+  deleteKit: (id: string) => Promise<void>;
+
+  addService: (input: Partial<Service>) => Promise<Service>;
+  updateService: (id: string, patch: Partial<Service>) => Promise<void>;
+  deleteService: (id: string) => Promise<void>;
+
+  addInventoryCheck: (input: Partial<InventoryCheck>) => Promise<void>;
 
   addRental: (rental: Rental) => Promise<void>;
   updateRental: (id: string, patch: Partial<Rental>) => Promise<void>;
@@ -55,6 +68,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   clients: [],
   rentals: [],
   inventory: [],
+  kits: [],
+  services: [],
+  inventoryChecks: [],
   workshopTickets: [],
   activity: [],
   hydrated: false,
@@ -64,14 +80,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().hydrated || get().hydrating) return;
     set({ hydrating: true });
     try {
-      const [clients, rentals, inventory, workshopTickets, activity] = await Promise.all([
+      const [clients, rentals, inventory, kits, services, inventoryChecks, workshopTickets, activity] = await Promise.all([
         api<Client[]>("/api/clients"),
         api<Rental[]>("/api/rentals"),
         api<InventoryItem[]>("/api/inventory"),
+        api<Kit[]>("/api/kits"),
+        api<Service[]>("/api/services"),
+        api<InventoryCheck[]>("/api/inventory-checks"),
         api<WorkshopTicket[]>("/api/workshop"),
         api<ActivityEntry[]>("/api/activity"),
       ]);
-      set({ clients, rentals, inventory, workshopTickets, activity, hydrated: true, hydrating: false });
+      set({ clients, rentals, inventory, kits, services, inventoryChecks, workshopTickets, activity, hydrated: true, hydrating: false });
     } catch (err) {
       console.error("Не удалось загрузить данные с сервера", err);
       set({ hydrating: false });
@@ -113,10 +132,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addInventoryItem: async (input) => {
-    const item = await api<InventoryItem>("/api/inventory", { method: "POST", body: JSON.stringify(input) });
-    set((s) => ({ inventory: [item, ...s.inventory] }));
+    // При quantity > 1 сервер возвращает массив созданных единиц
+    const created = await api<InventoryItem | InventoryItem[]>("/api/inventory", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    const items = Array.isArray(created) ? created : [created];
+    set((s) => ({ inventory: [...items, ...s.inventory] }));
     get().refreshActivity();
-    return item;
+    return items[0];
   },
 
   updateInventoryItem: async (id, patch) => {
@@ -127,6 +151,47 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteInventoryItem: async (id) => {
     await api(`/api/inventory/${id}`, { method: "DELETE" });
     set((s) => ({ inventory: s.inventory.filter((i) => i.id !== id) }));
+  },
+
+  addKit: async (input) => {
+    const kit = await api<Kit>("/api/kits", { method: "POST", body: JSON.stringify(input) });
+    set((s) => ({ kits: [kit, ...s.kits] }));
+    get().refreshActivity();
+    return kit;
+  },
+
+  updateKit: async (id, patch) => {
+    const kit = await api<Kit>(`/api/kits/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+    set((s) => ({ kits: s.kits.map((k) => (k.id === id ? kit : k)) }));
+  },
+
+  deleteKit: async (id) => {
+    await api(`/api/kits/${id}`, { method: "DELETE" });
+    set((s) => ({ kits: s.kits.filter((k) => k.id !== id) }));
+  },
+
+  addService: async (input) => {
+    const service = await api<Service>("/api/services", { method: "POST", body: JSON.stringify(input) });
+    set((s) => ({ services: [service, ...s.services] }));
+    get().refreshActivity();
+    return service;
+  },
+
+  updateService: async (id, patch) => {
+    const service = await api<Service>(`/api/services/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+    set((s) => ({ services: s.services.map((x) => (x.id === id ? service : x)) }));
+  },
+
+  deleteService: async (id) => {
+    await api(`/api/services/${id}`, { method: "DELETE" });
+    set((s) => ({ services: s.services.filter((x) => x.id !== id) }));
+  },
+
+  addInventoryCheck: async (input) => {
+    const check = await api<InventoryCheck>("/api/inventory-checks", { method: "POST", body: JSON.stringify(input) });
+    // «Сломан» может перевести единицу в ремонт — перечитываем каталог
+    const inventory = await api<InventoryItem[]>("/api/inventory");
+    set((s) => ({ inventoryChecks: [check, ...s.inventoryChecks], inventory }));
   },
 
   addRental: async (rental) => {

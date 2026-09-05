@@ -109,9 +109,7 @@ export default function ClientsPage() {
           <p className="text-[13px] text-[var(--color-text-muted)]">База клиентов и история отношений</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
-            <Video className="h-3.5 w-3.5" /> Видео
-          </button>
+          {/* Видео — временно скрыто */}
 
           <div className="relative">
             <button

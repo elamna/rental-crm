@@ -9,7 +9,7 @@ import { branches, rentalPeriods, depositTypeLabels } from "@/lib/mock-data";
 import { Client, InventoryLine, LineCategory, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
 import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, durationDays } from "@/lib/utils";
 import { QuickClientModal } from "@/components/clients/quick-client-modal";
-import { AddLineItemModal } from "@/components/rentals/add-line-item-modal";
+import { AddCatalogBundleModal } from "@/components/rentals/add-catalog-bundle-modal";
 import { AddCatalogItemModal } from "@/components/rentals/add-catalog-item-modal";
 import {
   ArrowLeft,
@@ -251,9 +251,8 @@ export default function NewRentalPage() {
               </div>
             )}
           </div>
-          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-white px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
-            <Video className="h-3.5 w-3.5" /> Видео
-          </button>
+          {/* Видео — временно скрыто, будет добавлена ссылка на инструкцию */}
+          {/* <button className="..."><Video /> Видео</button> */}
           <button
             onClick={handleSaveDraft}
             disabled={saving}
@@ -787,7 +786,7 @@ export default function NewRentalPage() {
         <AddCatalogItemModal onClose={() => setAddModalCategory(null)} onAdd={(values) => addItem("product", values)} />
       )}
       {(addModalCategory === "kit" || addModalCategory === "service") && (
-        <AddLineItemModal category={addModalCategory} onClose={() => setAddModalCategory(null)} onAdd={(values) => addItem(addModalCategory, values)} />
+        <AddCatalogBundleModal category={addModalCategory} onClose={() => setAddModalCategory(null)} onAdd={(values) => addItem(addModalCategory, values)} />
       )}
 
       {/* Модалка предупреждения о чёрном списке */}
@@ -1026,10 +1025,7 @@ function NewRentalPaymentModal({
             />
           </div>
 
-          {/* Добавить способ оплаты */}
-          <button className="flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--color-primary)] hover:underline">
-            <Plus className="h-3.5 w-3.5" /> Добавить способ оплаты
-          </button>
+          {/* Добавить способ оплаты — будет добавлено позже */}
         </div>
 
         {/* Кнопка */}

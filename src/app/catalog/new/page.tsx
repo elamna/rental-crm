@@ -27,6 +27,7 @@ export default function NewInventoryItemPage() {
         status: values.status,
         branch: values.branch,
         notes: values.notes || undefined,
+        quantity: Math.max(1, Number(values.quantity) || 1),
       });
       router.push(`/catalog/${item.id}`);
     } catch (err) {

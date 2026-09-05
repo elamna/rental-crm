@@ -142,6 +142,37 @@ CREATE TABLE IF NOT EXISTS company_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS kits (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT,
+  photo_url TEXT,
+  price REAL NOT NULL DEFAULT 0,
+  lines_json TEXT NOT NULL DEFAULT '[]',
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS services (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT,
+  tariffs_json TEXT NOT NULL DEFAULT '[]',
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS inventory_checks (
+  id TEXT PRIMARY KEY,
+  inventory_item_id TEXT NOT NULL,
+  condition TEXT NOT NULL,
+  checked_by_name TEXT,
+  comment TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_checks_item ON inventory_checks(inventory_item_id);
 `);
 
 // Сид: настройки компании по умолчанию
