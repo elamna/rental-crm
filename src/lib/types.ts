@@ -247,7 +247,11 @@ export interface AppUser {
   login: string;
   name: string;
   position?: string;
-  isAdmin: boolean; // главный администратор — всегда полный доступ
+  /** Полный доступ ко всем разделам. Выдаётся главным администратором */
+  isAdmin: boolean;
+  /** Создатель системы: его нельзя удалить, заблокировать или разжаловать.
+   *  Только он раздаёт и забирает права администратора */
+  isOwner: boolean;
   isActive: boolean;
   permissions: Permission[];
   createdAt: string;
@@ -258,6 +262,7 @@ export interface SessionUser {
   login: string;
   name: string;
   isAdmin: boolean;
+  isOwner: boolean;
   permissions: Permission[];
 }
 

@@ -297,6 +297,20 @@ function ensureColumns(table: string, columns: Record<string, string>) {
 
 ensureColumns("rentals", { paused_at: "TEXT", paid_at: "TEXT" });
 
+ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0" });
+
+// Владелец — тот, кто создал систему. В базах, заведённых до появления роли,
+// им становится исходный «admin», иначе самый первый администратор
+{
+  const hasOwner = (db.prepare(`SELECT COUNT(*) AS c FROM app_users WHERE is_owner = 1`).get() as { c: number }).c > 0;
+  if (!hasOwner) {
+    const first = db
+      .prepare(`SELECT id FROM app_users WHERE login = 'admin' OR is_admin = 1 ORDER BY (login = 'admin') DESC, created_at LIMIT 1`)
+      .get() as { id: string } | undefined;
+    if (first) db.prepare(`UPDATE app_users SET is_owner = 1, is_admin = 1 WHERE id = ?`).run(first.id);
+  }
+}
+
 ensureColumns("clients", {
   bin: "TEXT",
   legal_address: "TEXT",

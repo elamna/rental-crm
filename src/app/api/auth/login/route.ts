@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
     login: user.login,
     name: user.name,
     isAdmin: user.isAdmin,
-    permissions: user.isAdmin ? [] : user.permissions,
+    isOwner: user.isOwner,
+    permissions: user.permissions,
   };
   await session.save();
   return NextResponse.json({ ok: true, user: session.user });

@@ -1,30 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, apiForbidden } from "@/lib/auth";
+import { requireAuth, apiError, ApiError, required } from "@/lib/auth";
 import { listUsers, createUser } from "@/lib/repo";
 
 export async function GET() {
   try {
-    const me = await requireAuth("users.view");
-    if (!me) return apiForbidden();
+    await requireAuth("users.view");
     return NextResponse.json(listUsers());
-  } catch (e: unknown) {
-    const err = e as { status?: number; message?: string };
-    return NextResponse.json({ error: err.message }, { status: err.status ?? 500 });
+  } catch (e) {
+    return apiError(e);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const me = await requireAuth("users.edit");
-    if (!me) return apiForbidden();
     const body = await req.json();
-    if (!body.login || !body.password || !body.name) {
-      return NextResponse.json({ error: "Укажите логин, пароль и имя" }, { status: 400 });
+    required(body.login, "логин");
+    required(body.password, "пароль");
+    required(body.name, "имя");
+
+    // Полный доступ раздаёт только главный администратор — иначе любой
+    // сотрудник с правом на пользователей поднял бы себе права
+    if (body.isAdmin && !me.isOwner) {
+      throw new ApiError(403, "Права администратора выдаёт только главный администратор");
     }
-    const user = await createUser(body);
-    return NextResponse.json(user, { status: 201 });
-  } catch (e: unknown) {
-    const err = e as { status?: number; message?: string };
-    return NextResponse.json({ error: err.message }, { status: err.status ?? 500 });
+
+    return NextResponse.json(await createUser(body), { status: 201 });
+  } catch (e) {
+    return apiError(e);
   }
 }

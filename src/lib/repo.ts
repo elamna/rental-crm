@@ -2263,6 +2263,7 @@ interface UserRow {
   name: string;
   position: string | null;
   is_admin: number;
+  is_owner: number;
   is_active: number;
   permissions_json: string;
   created_at: string;
@@ -2275,6 +2276,7 @@ function userRowToDomain(row: UserRow): AppUser {
     name: row.name,
     position: row.position ?? undefined,
     isAdmin: row.is_admin === 1,
+    isOwner: row.is_owner === 1,
     isActive: row.is_active === 1,
     permissions: JSON.parse(row.permissions_json || "[]") as Permission[],
     createdAt: row.created_at,
@@ -2298,37 +2300,55 @@ export function getUserByLogin(login: string): (AppUser & { passwordHash: string
 
 export async function createUser(input: {
   login: string; password: string; name: string;
-  position?: string; isActive?: boolean; permissions?: Permission[];
+  position?: string; isActive?: boolean; permissions?: Permission[]; isAdmin?: boolean;
 }): Promise<AppUser> {
   const id = newId("usr");
   const now = new Date().toISOString();
   const hash = await bcrypt.hash(input.password, 10);
   db.prepare(
-    `INSERT INTO app_users (id, login, password_hash, name, position, is_admin, is_active, permissions_json, created_at)
-     VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`
-  ).run(id, input.login, hash, input.name, input.position ?? null, input.isActive !== false ? 1 : 0, JSON.stringify(input.permissions ?? []), now);
+    `INSERT INTO app_users (id, login, password_hash, name, position, is_admin, is_owner, is_active, permissions_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`
+  ).run(
+    id,
+    input.login,
+    hash,
+    input.name,
+    input.position ?? null,
+    input.isAdmin ? 1 : 0,
+    input.isActive !== false ? 1 : 0,
+    // Галочки храним всегда: при полном доступе они не действуют, но если роль
+    // администратора заберут — человек вернётся к своим прежним правам
+    JSON.stringify(input.permissions ?? []),
+    now
+  );
   return getUser(id)!;
 }
 
 export async function updateUser(id: string, patch: {
   name?: string; position?: string; isActive?: boolean;
-  permissions?: Permission[]; password?: string;
+  permissions?: Permission[]; password?: string; isAdmin?: boolean;
 }): Promise<AppUser | null> {
   const existing = db.prepare(`SELECT * FROM app_users WHERE id = ?`).get(id) as UserRow | undefined;
   if (!existing) return null;
 
   // Запрет жил только в интерфейсе: через API главного администратора можно было
   // заблокировать и потерять доступ ко всей системе
-  if (existing.is_admin && patch.isActive === false) {
+  if (existing.is_owner && patch.isActive === false) {
     throw httpError(403, "Главного администратора нельзя заблокировать");
+  }
+  if (existing.is_owner && patch.isAdmin === false) {
+    throw httpError(403, "У главного администратора нельзя забрать полный доступ");
   }
 
   const passwordHash = patch.password ? await bcrypt.hash(patch.password, 10) : existing.password_hash;
+  const isAdmin = patch.isAdmin !== undefined ? patch.isAdmin : existing.is_admin === 1;
+
   db.prepare(
-    `UPDATE app_users SET name=?, position=?, is_active=?, permissions_json=?, password_hash=? WHERE id=?`
+    `UPDATE app_users SET name=?, position=?, is_admin=?, is_active=?, permissions_json=?, password_hash=? WHERE id=?`
   ).run(
     patch.name ?? existing.name,
     patch.position !== undefined ? patch.position : existing.position,
+    isAdmin ? 1 : 0,
     patch.isActive !== undefined ? (patch.isActive ? 1 : 0) : existing.is_active,
     JSON.stringify(patch.permissions ?? JSON.parse(existing.permissions_json)),
     passwordHash,
@@ -2338,8 +2358,9 @@ export async function updateUser(id: string, patch: {
 }
 
 export function deleteUser(id: string) {
-  const row = db.prepare(`SELECT is_admin FROM app_users WHERE id = ?`).get(id) as { is_admin: number } | undefined;
-  if (row?.is_admin) throw httpError(403, "Главного администратора нельзя удалить");
+  // Удалять нельзя только владельца: обычного администратора разжаловать и убрать можно
+  const row = db.prepare(`SELECT is_owner FROM app_users WHERE id = ?`).get(id) as { is_owner: number } | undefined;
+  if (row?.is_owner) throw httpError(403, "Главного администратора нельзя удалить");
   db.prepare(`DELETE FROM app_users WHERE id = ?`).run(id);
 }
 

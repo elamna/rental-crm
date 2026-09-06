@@ -2,15 +2,35 @@ import { cookies } from "next/headers";
 import { getIronSession } from "iron-session";
 import { sessionOptions } from "./session";
 import { Permission, SessionUser } from "./types";
+import { getUser } from "./repo";
 
 export async function getSession() {
   const cookieStore = await cookies();
   return getIronSession<{ user?: SessionUser }>(cookieStore, sessionOptions);
 }
 
+/**
+ * Кто сейчас в системе. Роль и права перечитываются из базы, а не берутся из
+ * cookie: иначе выданный руководителю админ-доступ (или наоборот блокировка)
+ * начинал бы действовать только после перезахода.
+ */
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const session = await getSession();
-  return session.user ?? null;
+  const stored = session.user;
+  if (!stored) return null;
+
+  const fresh = getUser(stored.id);
+  // Пользователя удалили или заблокировали — сессия больше не действует
+  if (!fresh || !fresh.isActive) return null;
+
+  return {
+    id: fresh.id,
+    login: fresh.login,
+    name: fresh.name,
+    isAdmin: fresh.isAdmin,
+    isOwner: fresh.isOwner,
+    permissions: fresh.permissions,
+  };
 }
 
 export function hasPermission(user: SessionUser, permission: Permission): boolean {

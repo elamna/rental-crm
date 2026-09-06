@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppUser, Permission, ALL_PERMISSIONS, PERMISSION_LABELS } from "@/lib/types";
-import { Plus, Pencil, Trash2, X, ShieldCheck, ShieldOff, KeyRound, Lock, Unlock } from "lucide-react";
+import { Plus, Pencil, Trash2, X, ShieldCheck, ShieldOff, KeyRound, Lock, Unlock, Check } from "lucide-react";
 
 // Группировка прав по разделам для UI
 const PERMISSION_GROUPS = [
@@ -51,13 +51,14 @@ export default function UsersPage() {
   useEffect(() => { load(); }, []);
 
   async function toggleActive(u: AppUser) {
-    if (u.isAdmin) return;
+    // Обычного администратора блокировать можно, главного — нет
+    if (u.isOwner) return;
     await fetch(`/api/users/${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !u.isActive }) });
     load();
   }
 
   async function deleteUser(u: AppUser) {
-    if (u.isAdmin) return;
+    if (u.isOwner || me?.id === u.id) return;
     if (!confirm(`Удалить пользователя «${u.name}»?`)) return;
     await fetch(`/api/users/${u.id}`, { method: "DELETE" });
     load();
@@ -105,7 +106,11 @@ export default function UsersPage() {
                         </div>
                         <div>
                           <div className="font-medium">{u.name}</div>
-                          {u.isAdmin && <span className="text-[11px] font-semibold text-[var(--color-primary)]">Главный администратор</span>}
+                          {u.isOwner ? (
+                            <span className="text-[11px] font-semibold text-[var(--color-primary)]">Главный администратор</span>
+                          ) : u.isAdmin ? (
+                            <span className="text-[11px] font-semibold text-[var(--color-primary)]">Администратор</span>
+                          ) : null}
                         </div>
                       </div>
                     </td>
@@ -125,8 +130,8 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        {/* Для администратора — только смена своего пароля */}
-                        {u.isAdmin && me?.id === u.id && (
+                        {/* Главного администратора не трогает никто: он сам меняет себе пароль */}
+                        {u.isOwner && me?.id === u.id && (
                           <button
                             onClick={() => { setSelected(u); setModal("password"); }}
                             className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
@@ -135,15 +140,19 @@ export default function UsersPage() {
                             <KeyRound className="h-3.5 w-3.5" />
                           </button>
                         )}
-                        {/* Для обычных пользователей — полный набор кнопок */}
-                        {can("users.edit") && !u.isAdmin && (
+                        {/* Все остальные, включая назначенных администраторов */}
+                        {can("users.edit") && !u.isOwner && (
                           <>
                             <button onClick={() => { setSelected(u); setModal("edit"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]" title="Редактировать"><Pencil className="h-3.5 w-3.5" /></button>
                             <button onClick={() => { setSelected(u); setModal("password"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title="Сменить пароль"><KeyRound className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => toggleActive(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title={u.isActive ? "Заблокировать" : "Разблокировать"}>
-                              {u.isActive ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-                            </button>
-                            <button onClick={() => deleteUser(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[#FDECEC] hover:text-[#C0272D]" title="Удалить"><Trash2 className="h-3.5 w-3.5" /></button>
+                            {me?.id !== u.id && (
+                              <button onClick={() => toggleActive(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title={u.isActive ? "Заблокировать" : "Разблокировать"}>
+                                {u.isActive ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                              </button>
+                            )}
+                            {me?.id !== u.id && (
+                              <button onClick={() => deleteUser(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[#FDECEC] hover:text-[#C0272D]" title="Удалить"><Trash2 className="h-3.5 w-3.5" /></button>
+                            )}
                           </>
                         )}
                       </div>
@@ -158,6 +167,7 @@ export default function UsersPage() {
 
       {(modal === "create" || modal === "edit") && (
         <UserModal
+          isOwner={!!me?.isOwner}
           user={selected}
           onClose={() => { setModal(null); setSelected(null); }}
           onSaved={() => { setModal(null); setSelected(null); load(); }}
@@ -177,7 +187,18 @@ export default function UsersPage() {
 
 // ─── Модалка создания/редактирования пользователя ───────────────────────────
 
-function UserModal({ user, onClose, onSaved }: { user: AppUser | null; onClose: () => void; onSaved: () => void }) {
+function UserModal({
+  user,
+  isOwner,
+  onClose,
+  onSaved,
+}: {
+  user: AppUser | null;
+  /** Открыл главный администратор — только он раздаёт полный доступ */
+  isOwner: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const isEdit = !!user;
   const [name, setName] = useState(user?.name ?? "");
   const [login, setLogin] = useState(user?.login ?? "");
@@ -185,6 +206,7 @@ function UserModal({ user, onClose, onSaved }: { user: AppUser | null; onClose: 
   const [position, setPosition] = useState(user?.position ?? "");
   const [isActive, setIsActive] = useState(user?.isActive ?? true);
   const [permissions, setPermissions] = useState<Permission[]>(user?.permissions ?? []);
+  const [isAdmin, setIsAdmin] = useState(user?.isAdmin ?? false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -200,6 +222,8 @@ function UserModal({ user, onClose, onSaved }: { user: AppUser | null; onClose: 
     setSaving(true);
     setError("");
     const body: Record<string, unknown> = { name, login, position, isActive, permissions };
+    // Роль отправляем только если её вообще можно менять — иначе сервер ответит 403
+    if (isOwner && !user?.isOwner) body.isAdmin = isAdmin;
     if (password) body.password = password;
     const res = await fetch(isEdit ? `/api/users/${user!.id}` : "/api/users", {
       method: isEdit ? "PATCH" : "POST",
@@ -244,10 +268,47 @@ function UserModal({ user, onClose, onSaved }: { user: AppUser | null; onClose: 
             </label>
           </div>
 
+          {/* Полный доступ */}
+          {isOwner && !user?.isOwner && (
+            <button
+              onClick={() => setIsAdmin((v) => !v)}
+              className={`flex w-full items-start gap-3 rounded-[12px] border p-3.5 text-left transition ${
+                isAdmin ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)] hover:border-[var(--color-primary)]"
+              }`}
+            >
+              <span
+                className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-[5px] border-2 ${
+                  isAdmin ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-[var(--color-border)]"
+                }`}
+              >
+                {isAdmin && <Check className="h-3 w-3 text-[var(--color-on-primary)]" strokeWidth={3} />}
+              </span>
+              <span>
+                <span className="block text-[13.5px] font-semibold">Права администратора</span>
+                <span className="block text-[12px] text-[var(--color-text-muted)]">
+                  Полный доступ ко всем разделам без отдельных галочек — для руководителя.
+                  Выдавать и забирать эту роль может только главный администратор.
+                </span>
+              </span>
+            </button>
+          )}
+
+          {user?.isOwner && (
+            <p className="rounded-[12px] bg-[var(--color-bg)] px-3.5 py-3 text-[12.5px] text-[var(--color-text-muted)]">
+              Это главный администратор: у него полный доступ, его нельзя заблокировать, удалить
+              или лишить прав.
+            </p>
+          )}
+
           {/* Права доступа */}
-          <div>
+          <div className={isAdmin || user?.isOwner ? "pointer-events-none opacity-40" : undefined}>
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[13.5px] font-semibold">Права доступа</span>
+              <span className="text-[13.5px] font-semibold">
+                Права доступа
+                {(isAdmin || user?.isOwner) && (
+                  <span className="ml-2 text-[12px] font-normal text-[var(--color-text-muted)]">не нужны при полном доступе</span>
+                )}
+              </span>
               <div className="flex gap-2">
                 <button onClick={selectAll} className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[12px] hover:bg-[var(--color-bg)]">
                   <ShieldCheck className="h-3.5 w-3.5" /> Выбрать все
@@ -263,14 +324,16 @@ function UserModal({ user, onClose, onSaved }: { user: AppUser | null; onClose: 
                   <span className="text-[13px] font-medium">{group.label}</span>
                   <div className="flex gap-3">
                     {group.permissions.map((p) => (
-                      <label key={p} className="flex items-center gap-1.5 text-[12.5px] text-[var(--color-text-muted)]">
+                      <label key={p} className="flex items-center gap-1.5 text-[12.5px] text-[var(--color-text-muted)] first-letter:uppercase">
                         <input
                           type="checkbox"
                           checked={permissions.includes(p)}
                           onChange={() => togglePerm(p)}
                           className="h-3.5 w-3.5 accent-[var(--color-primary)]"
                         />
-                        {p.endsWith(".edit") ? "Редактирование" : "Просмотр"}
+                        {/* Берём название из общего словаря: у «Темпа» вторая галочка
+                            не «.edit», и обе подписывались как «Просмотр» */}
+                        {PERMISSION_LABELS[p].split(" — ")[1] ?? PERMISSION_LABELS[p]}
                       </label>
                     ))}
                   </div>
