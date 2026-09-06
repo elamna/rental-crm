@@ -259,10 +259,61 @@ export function updateClient(id: string, patch: Partial<Client>) {
   return getClient(id);
 }
 
+/** Сколько аренд числится за клиентом — по ним включён внешний ключ */
+function rentalCountForClient(id: string) {
+  return (db.prepare(`SELECT COUNT(*) AS c FROM rentals WHERE client_id = ?`).get(id) as { c: number }).c;
+}
+
 export function deleteClient(id: string) {
   const c = getClient(id);
+  // Без этой проверки SQLite отдавал «500 Внутренняя ошибка» из-за внешнего ключа,
+  // и менеджер не понимал, почему клиент не удаляется
+  const rentals = rentalCountForClient(id);
+  if (rentals > 0) {
+    throw httpError(409, `У клиента ${rentals} аренд(ы). Сначала удалите их или выберите «Удалить вместе с арендами».`);
+  }
   db.prepare(`DELETE FROM clients WHERE id = ?`).run(id);
   if (c) logActivity(`Удалён клиент «${c.name}»`);
+}
+
+/**
+ * Массовое удаление клиентов — чтобы разом убрать наигранные тестовые записи.
+ * Клиента с арендами трогаем только по явному запросу: сначала уходят его аренды
+ * (инвентарь при этом освобождается), потом он сам. Остальных возвращаем списком
+ * пропущенных, чтобы человек видел, что именно не удалилось и почему.
+ */
+export function deleteClients(ids: string[], options: { withRentals?: boolean } = {}) {
+  const skipped: { id: string; name: string; rentals: number }[] = [];
+  let deleted = 0;
+  let deletedRentals = 0;
+
+  const run = db.transaction(() => {
+    for (const id of ids) {
+      const client = getClient(id);
+      if (!client) continue;
+      const rentals = rentalCountForClient(id);
+
+      if (rentals > 0 && !options.withRentals) {
+        skipped.push({ id, name: client.name, rentals });
+        continue;
+      }
+      if (rentals > 0) {
+        const rows = db.prepare(`SELECT id FROM rentals WHERE client_id = ?`).all(id) as { id: string }[];
+        for (const row of rows) {
+          deleteRental(row.id);
+          deletedRentals++;
+        }
+      }
+      db.prepare(`DELETE FROM clients WHERE id = ?`).run(id);
+      deleted++;
+    }
+  });
+  run();
+
+  if (deleted > 0) {
+    logActivity(`Удалено клиентов: ${deleted}${deletedRentals ? `, вместе с арендами: ${deletedRentals}` : ""}`);
+  }
+  return { deleted, deletedRentals, skipped };
 }
 
 export function importClients(rows: Partial<Client>[]): { added: number; skipped: number } {
@@ -1296,6 +1347,21 @@ export function deleteRental(id: string) {
   db.prepare(`DELETE FROM rental_documents WHERE rental_id = ?`).run(id);
   db.prepare(`DELETE FROM rentals WHERE id = ?`).run(id);
   logActivity(`Удалена аренда №${rental.number}`);
+}
+
+/** Массовое удаление аренд: одна транзакция вместо десятка запросов из браузера */
+export function deleteRentals(ids: string[]) {
+  let deleted = 0;
+  const run = db.transaction(() => {
+    for (const id of ids) {
+      const rental = getRental(id);
+      if (!rental) continue;
+      deleteRental(id);
+      deleted++;
+    }
+  });
+  run();
+  return { deleted };
 }
 
 // ---------- Activity ----------

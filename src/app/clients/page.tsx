@@ -7,6 +7,8 @@ import { acquisitionChannels, clientTypeLabels } from "@/lib/mock-data";
 import { formatMoney, cn } from "@/lib/utils";
 import { exportClientsToCSV, exportClientsToExcel, parseClientsFile } from "@/lib/client-io";
 import { RatingStars } from "@/components/clients/rating-stars";
+import { SelectionBar, SelectBox, ConfirmDeleteModal } from "@/components/common/selection-bar";
+import { useAuth } from "@/components/auth/auth-provider";
 import {
   Search,
   ChevronDown,
@@ -27,7 +29,10 @@ export default function ClientsPage() {
   const clients = useAppStore((s) => s.clients);
   const hydrated = useAppStore((s) => s.hydrated);
   const deleteClient = useAppStore((s) => s.deleteClient);
+  const deleteClients = useAppStore((s) => s.deleteClients);
   const importClients = useAppStore((s) => s.importClients);
+  const { can } = useAuth();
+  const canEdit = can("clients.edit");
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
@@ -37,6 +42,41 @@ export default function ClientsPage() {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Массовый выбор — чтобы разом убрать наигранные тестовые записи
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [alsoRentals, setAlsoRentals] = useState(false);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function removeSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setDeleting(true);
+    try {
+      const res = await deleteClients(ids, alsoRentals);
+      setSelected(new Set());
+      setConfirming(false);
+      const parts = [`Удалено клиентов: ${res.deleted}`];
+      if (res.deletedRentals) parts.push(`аренд: ${res.deletedRentals}`);
+      if (res.skipped.length) parts.push(`пропущено, есть аренды: ${res.skipped.length}`);
+      setImportMsg(parts.join(" · "));
+      setTimeout(() => setImportMsg(null), 6000);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Не удалось удалить клиентов");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const stats = useMemo(() => {
     const count = clients.length;
@@ -244,6 +284,21 @@ export default function ClientsPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[var(--color-border)] text-[12px] font-semibold text-[var(--color-text-muted)]">
+                  {canEdit && (
+                    <th className="w-10 px-4 py-3">
+                      <button
+                        onClick={() =>
+                          setSelected((prev) =>
+                            prev.size >= filtered.length ? new Set() : new Set(filtered.map((c) => c.id))
+                          )
+                        }
+                        title={selected.size >= filtered.length ? "Снять выделение" : "Выбрать всех"}
+                        className="grid place-items-center"
+                      >
+                        <SelectBox checked={filtered.length > 0 && selected.size >= filtered.length} />
+                      </button>
+                    </th>
+                  )}
                   <Th label="ФИО/Название компании" sortKey="name" sort={sort} onSort={toggleSort} />
                   <th className="px-4 py-3">Тип клиента</th>
                   <Th label="Сумма аренд" sortKey="totalSpent" sort={sort} onSort={toggleSort} />
@@ -258,7 +313,20 @@ export default function ClientsPage() {
               </thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id} className="group border-b border-[var(--color-border)] text-[13px] transition hover:bg-[var(--color-bg)]">
+                  <tr
+                    key={c.id}
+                    className={cn(
+                      "group border-b border-[var(--color-border)] text-[13px] transition hover:bg-[var(--color-bg)]",
+                      selected.has(c.id) && "bg-[var(--color-primary-soft)]"
+                    )}
+                  >
+                    {canEdit && (
+                      <td className="px-4 py-3">
+                        <button onClick={() => toggle(c.id)} className="grid place-items-center" title="Выбрать">
+                          <SelectBox checked={selected.has(c.id)} />
+                        </button>
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <Link href={`/clients/${c.id}`} className="flex items-center gap-2.5">
                         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[11px] font-bold text-[var(--color-primary)]">
@@ -317,6 +385,54 @@ export default function ClientsPage() {
           </div>
         </div>
       </div>
+
+      <SelectionBar
+        count={selected.size}
+        total={filtered.length}
+        busy={deleting}
+        noun={["клиент", "клиента", "клиентов"]}
+        onSelectAll={() => setSelected(new Set(filtered.map((c) => c.id)))}
+        onClear={() => setSelected(new Set())}
+        onDelete={() => setConfirming(true)}
+      />
+
+      {confirming && (() => {
+        // Клиент с арендами по умолчанию остаётся: удалить его можно только вместе с ними
+        const chosen = clients.filter((c) => selected.has(c.id));
+        const withRentals = chosen.filter((c) => c.totalRentals > 0);
+        const rentalCount = withRentals.reduce((sum, c) => sum + c.totalRentals, 0);
+        const lines = [`Выбрано клиентов: ${chosen.length}`];
+        if (withRentals.length > 0) {
+          lines.push(`Из них с арендами: ${withRentals.length} (всего аренд ${rentalCount})`);
+          lines.push(alsoRentals ? "Аренды будут удалены вместе с клиентами" : "Такие клиенты останутся — их аренды нужно удалить первыми");
+        }
+        return (
+          <ConfirmDeleteModal
+            title={`Удалить ${chosen.length} ${chosen.length === 1 ? "клиента" : "клиент(ов)"}?`}
+            lines={lines}
+            extra={
+              withRentals.length > 0 ? (
+                <button
+                  onClick={() => setAlsoRentals((v) => !v)}
+                  className="flex w-full items-start gap-2.5 rounded-[10px] border border-[var(--color-border)] p-3 text-left transition hover:border-[var(--color-primary)]"
+                >
+                  <SelectBox checked={alsoRentals} className="mt-0.5" />
+                  <span className="text-[12.5px]">
+                    Удалить вместе с арендами
+                    <span className="block text-[11.5px] text-[var(--color-text-muted)]">
+                      Уйдут {rentalCount} аренд(ы) со всей историей, инвентарь освободится
+                    </span>
+                  </span>
+                </button>
+              ) : undefined
+            }
+            busy={deleting}
+            confirmLabel="Удалить"
+            onCancel={() => setConfirming(false)}
+            onConfirm={removeSelected}
+          />
+        );
+      })()}
     </div>
   );
 }

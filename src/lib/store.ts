@@ -29,6 +29,11 @@ interface AppState {
   ) => Promise<Client>;
   updateClient: (id: string, patch: Partial<Client>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  /** Массовое удаление клиентов. withRentals — забрать заодно и их аренды */
+  deleteClients: (
+    ids: string[],
+    withRentals?: boolean
+  ) => Promise<{ deleted: number; deletedRentals: number; skipped: { id: string; name: string; rentals: number }[] }>;
   importClients: (rows: Partial<Client>[]) => Promise<{ added: number; skipped: number }>;
 
   addInventoryItem: (input: Partial<InventoryItem> & { quantity?: number }) => Promise<InventoryItem>;
@@ -47,6 +52,8 @@ interface AppState {
 
   addRental: (rental: Rental) => Promise<Rental>;
   updateRental: (id: string, patch: Partial<Rental>) => Promise<void>;
+  /** Массовое удаление аренд: чистка тестовых записей одной операцией */
+  deleteRentals: (ids: string[]) => Promise<{ deleted: number }>;
 
   addWorkshopTicket: (input: Partial<WorkshopTicket>) => Promise<WorkshopTicket>;
   updateWorkshopTicket: (id: string, patch: Partial<WorkshopTicket>) => Promise<void>;
@@ -119,6 +126,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     await api(`/api/clients/${id}`, { method: "DELETE" });
     set((s) => ({ clients: s.clients.filter((c) => c.id !== id) }));
     get().refreshActivity();
+  },
+
+  deleteClients: async (ids, withRentals) => {
+    const result = await api<{ deleted: number; deletedRentals: number; skipped: { id: string; name: string; rentals: number }[] }>(
+      "/api/clients/bulk-delete",
+      { method: "POST", body: JSON.stringify({ ids, withRentals: !!withRentals }) }
+    );
+    // Из списка убираем только тех, кого действительно удалили
+    const skipped = new Set(result.skipped.map((x) => x.id));
+    const removed = new Set(ids.filter((id) => !skipped.has(id)));
+    set((s) => ({
+      clients: s.clients.filter((c) => !removed.has(c.id)),
+      rentals: s.rentals.filter((r) => !removed.has(r.client.id)),
+    }));
+    if (result.deletedRentals > 0) {
+      const inventory = await api<InventoryItem[]>("/api/inventory");
+      set({ inventory });
+    }
+    get().refreshActivity();
+    return result;
   },
 
   importClients: async (rows) => {
@@ -211,6 +238,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ rentals: s.rentals.map((r) => (r.id === id ? updated : r)) }));
     const inventory = await api<InventoryItem[]>("/api/inventory");
     set({ inventory });
+  },
+
+  deleteRentals: async (ids) => {
+    const result = await api<{ deleted: number }>("/api/rentals/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    });
+    const removed = new Set(ids);
+    set((s) => ({ rentals: s.rentals.filter((r) => !removed.has(r.id)) }));
+    // Инвентарь освободился, а у клиентов пересчитались статистика и рейтинг
+    const [inventory, clients] = await Promise.all([
+      api<InventoryItem[]>("/api/inventory"),
+      api<Client[]>("/api/clients"),
+    ]);
+    set({ inventory, clients });
+    get().refreshActivity();
+    return result;
   },
 
   addWorkshopTicket: async (input) => {

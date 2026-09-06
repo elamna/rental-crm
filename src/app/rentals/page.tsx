@@ -5,9 +5,11 @@ import { useAppStore } from "@/lib/store";
 import { RentalCard } from "@/components/rentals/rental-card";
 import { StatusTabs, TabKey } from "@/components/rentals/status-tabs";
 import { FilterBar } from "@/components/rentals/filter-bar";
-import { isDebtorRental } from "@/lib/utils";
-import { Download, Video } from "lucide-react";
+import { cn, isDebtorRental } from "@/lib/utils";
+import { CheckSquare, Download, Video, X } from "lucide-react";
 import Link from "next/link";
+import { SelectionBar, ConfirmDeleteModal } from "@/components/common/selection-bar";
+import { useAuth } from "@/components/auth/auth-provider";
 
 export default function RentalsPage() {
   const allRentals = useAppStore((s) => s.rentals);
@@ -15,6 +17,44 @@ export default function RentalsPage() {
   const [tab, setTab] = useState<TabKey>("all");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
+
+  // Режим выбора: включается кнопкой, чтобы обычный клик по карточке по-прежнему открывал аренду
+  const { can } = useAuth();
+  const canEdit = can("rentals.edit");
+  const deleteRentals = useAppStore((s) => s.deleteRentals);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelection() {
+    setSelecting(false);
+    setSelected(new Set());
+  }
+
+  async function removeSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setDeleting(true);
+    try {
+      await deleteRentals(ids);
+      setConfirming(false);
+      exitSelection();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Не удалось удалить аренды");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     let list = allRentals;
@@ -47,6 +87,20 @@ export default function RentalsPage() {
           <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             <Download className="h-3.5 w-3.5" /> Экспорт
           </button>
+          {canEdit && (
+            <button
+              onClick={() => (selecting ? exitSelection() : setSelecting(true))}
+              className={cn(
+                "flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-[13px] font-medium transition",
+                selecting
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+              )}
+            >
+              {selecting ? <X className="h-3.5 w-3.5" /> : <CheckSquare className="h-3.5 w-3.5" />}
+              {selecting ? "Отменить выбор" : "Выбрать"}
+            </button>
+          )}
           <Link
             href="/rentals/new"
             className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
@@ -87,12 +141,42 @@ export default function RentalsPage() {
           >
             {filtered.map((r, i) => (
               <div key={r.id} className="animate-fade-in-up" style={{ animationDelay: `${Math.min(i * 25, 300)}ms` }}>
-                <RentalCard rental={r} draggable />
+                <RentalCard
+                  rental={r}
+                  draggable={!selecting}
+                  selectable={selecting}
+                  selected={selected.has(r.id)}
+                  onToggleSelect={() => toggle(r.id)}
+                />
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <SelectionBar
+        count={selected.size}
+        total={filtered.length}
+        busy={deleting}
+        noun={["аренда", "аренды", "аренд"]}
+        onSelectAll={() => setSelected(new Set(filtered.map((r) => r.id)))}
+        onClear={() => setSelected(new Set())}
+        onDelete={() => setConfirming(true)}
+      />
+
+      {confirming && (
+        <ConfirmDeleteModal
+          title={`Удалить ${selected.size} ${selected.size === 1 ? "аренду" : "аренд(ы)"}?`}
+          lines={[
+            "Вместе с арендой удалится её история и связанные документы",
+            "Инвентарь из этих аренд вернётся в каталог как свободный",
+          ]}
+          busy={deleting}
+          confirmLabel="Удалить"
+          onCancel={() => setConfirming(false)}
+          onConfirm={removeSelected}
+        />
+      )}
     </div>
   );
 }

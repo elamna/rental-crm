@@ -4,24 +4,40 @@ import { Rental } from "@/lib/types";
 import { cn, formatDateTimeDisplay, formatMoney, paymentLabels, paymentStyles, statusLabels, statusStyles, isOneTimeLine } from "@/lib/utils";
 import { Phone, Truck, ChevronDown, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { SelectBox } from "@/components/common/selection-bar";
 
-export function RentalCard({ rental, draggable }: { rental: Rental; draggable?: boolean }) {
+export function RentalCard({
+  rental,
+  draggable,
+  selectable,
+  selected,
+  onToggleSelect,
+}: {
+  rental: Rental;
+  draggable?: boolean;
+  /** Включён режим массового выбора: карточка не открывается, а отмечается */
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const st = statusStyles[rental.status];
   const pay = paymentStyles[rental.paymentStatus];
 
-  return (
-    <Link
-      href={`/rentals/${rental.id}`}
-      draggable={draggable}
-      className={cn(
-        "group block rounded-[var(--radius-card)] border bg-[var(--color-surface)] p-4 card-shadow card-shadow-hover transition-all duration-200 hover:-translate-y-[2px]",
-        st.border
-      )}
-    >
+  const className = cn(
+    "group block rounded-[var(--radius-card)] border bg-[var(--color-surface)] p-4 card-shadow card-shadow-hover transition-all duration-200",
+    selectable ? "cursor-pointer" : "hover:-translate-y-[2px]",
+    selected ? "border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30" : st.border
+  );
+
+  const body = (
+    <>
       <div className="flex items-start justify-between">
+        <span className="flex items-center gap-2">
+          {selectable && <SelectBox checked={!!selected} />}
         <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold", st.bg, st.text)}>
           <span className={cn("h-1.5 w-1.5 rounded-full", st.dot)} />
           {statusLabels[rental.status]}
+        </span>
         </span>
         <span className="text-[12px] font-medium text-[var(--color-text-muted)]">№{rental.number}</span>
       </div>
@@ -105,6 +121,21 @@ export function RentalCard({ rental, draggable }: { rental: Rental; draggable?: 
         Документ
         <ChevronDown className="h-3.5 w-3.5" />
       </button>
+    </>
+  );
+
+  // В режиме выбора ссылка мешала бы: клик должен отмечать карточку, а не уводить со страницы
+  if (selectable) {
+    return (
+      <div role="button" tabIndex={0} onClick={onToggleSelect} className={className}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/rentals/${rental.id}`} draggable={draggable} className={className}>
+      {body}
     </Link>
   );
 }
