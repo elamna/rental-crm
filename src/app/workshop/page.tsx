@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { InventoryItem, WorkshopLine, WorkshopReason, WorkshopStatus, WorkshopTicket } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
-import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Settings2, Wrench, X } from "lucide-react";
+import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Settings2, Wrench, X, Trash2 } from "lucide-react";
 
 const columns: { key: WorkshopStatus; label: string; dot: string; icon: React.ElementType }[] = [
   { key: "new", label: "Новая", dot: "bg-[#8B8F98]", icon: Circle },
@@ -24,6 +24,7 @@ export default function WorkshopPage() {
   const inventory = useAppStore((s) => s.inventory);
   const addWorkshopTicket = useAppStore((s) => s.addWorkshopTicket);
   const updateWorkshopTicket = useAppStore((s) => s.updateWorkshopTicket);
+  const deleteWorkshopTicket = useAppStore((s) => s.deleteWorkshopTicket);
   const [showNew, setShowNew] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -172,7 +173,17 @@ export default function WorkshopPage() {
                     <h2 className="mt-1 text-[16px] font-bold">{selected.inventoryItem?.name ?? "Оборудование"}</h2>
                     <p className="text-[12.5px] text-[var(--color-text-muted)]">{reasonLabels[selected.reason]} · {selected.title}</p>
                   </div>
-                  <Wrench className="h-5 w-5 text-[var(--color-primary)]" />
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Удалить заявку ${selected.number}?`)) return;
+                      await deleteWorkshopTicket(selected.id);
+                      setSelectedId(null);
+                    }}
+                    title="Удалить заявку"
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] text-[var(--color-text-muted)] transition hover:bg-[#FDECEC] hover:text-[#C0272D]"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
 
                 <div className="mb-4 grid grid-cols-2 gap-2">

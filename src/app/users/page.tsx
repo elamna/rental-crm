@@ -15,6 +15,7 @@ const PERMISSION_GROUPS = [
   { label: "Документы", permissions: ["documents.view", "documents.edit"] as Permission[] },
   { label: "Чёрный список", permissions: ["blacklist.view"] as Permission[] },
   { label: "Воронка (заявки)", permissions: ["leads.view", "leads.edit"] as Permission[] },
+  { label: "Доставка", permissions: ["delivery.view", "delivery.edit"] as Permission[] },
   { label: "Темп (задачи)", permissions: ["tasks.view", "tasks.manage"] as Permission[] },
   { label: "Аналитика", permissions: ["analytics.view"] as Permission[] },
   { label: "Финансы", permissions: ["finance.view"] as Permission[] },

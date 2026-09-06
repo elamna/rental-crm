@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, apiError } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 
@@ -11,6 +12,12 @@ const uploadsDir = process.env.UPLOADS_DIR
 const allowedExt = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".pdf"]);
 
 export async function POST(req: NextRequest) {
+  try {
+    await requireAuth();
+  } catch (e) {
+    return apiError(e);
+  }
+
   const formData = await req.formData();
   const file = formData.get("file");
 

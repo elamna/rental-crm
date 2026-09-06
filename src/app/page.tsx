@@ -27,15 +27,20 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     const active = rentals.filter((r) => r.status === "active").length;
     const overdue = rentals.filter((r) => r.status === "overdue");
+    // Считаем по дате оплаты, а не по дате начала аренды: вчерашняя аренда,
+    // оплаченная сегодня, должна попасть в сегодняшнюю выручку
     const revenueToday = rentals
-      .filter((r) => r.startDate.startsWith(today))
+      .filter((r) => (r.paidAt ?? "").startsWith(today))
       .reduce((s, r) => s + r.paid, 0);
     const revenueMonth = rentals.reduce((s, r) => s + r.paid, 0);
     return {
       active,
       overdueList: overdue,
       overdueCount: overdue.length,
-      expectedReturns: rentals.filter((r) => r.status === "active").length,
+      // Возвраты, которые ждём сегодня, а не просто все выданные аренды
+      expectedReturns: rentals.filter(
+        (r) => (r.status === "active" || r.status === "overdue") && (r.endAt ?? "").startsWith(today)
+      ).length,
       revenueToday,
       revenueMonth,
     };

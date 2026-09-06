@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, apiError, required, assertNonNegativeFields } from "@/lib/auth";
 import { listClients, createClient } from "@/lib/repo";
 
 export async function GET() {
-  return NextResponse.json(listClients());
+  try {
+    await requireAuth("clients.view");
+    return NextResponse.json(listClients());
+  } catch (e) {
+    return apiError(e);
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const client = createClient(body);
-  return NextResponse.json(client, { status: 201 });
+  try {
+    await requireAuth("clients.edit");
+    const body = await req.json();
+    body.name = required(body.name, "имя клиента");
+    assertNonNegativeFields(body, { discount: "Скидка" });
+    return NextResponse.json(createClient(body), { status: 201 });
+  } catch (e) {
+    return apiError(e);
+  }
 }

@@ -1,5 +1,12 @@
 import { db, logActivity } from "./db";
-import { Client, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+
+/** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
+function httpError(status: number, message: string) {
+  const err = new Error(message) as Error & { status: number };
+  err.status = status;
+  return err;
+}
 
 function newId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -294,6 +301,16 @@ export function updateInventoryItem(id: string, patch: Partial<InventoryItem>) {
 }
 
 export function deleteInventoryItem(id: string) {
+  // На товар могут ссылаться заявки мастерской — без проверки SQLite отдавал 500
+  // из-за внешнего ключа, и пользователь видел пустую ошибку
+  const tickets = (db.prepare(`SELECT COUNT(*) AS c FROM workshop_tickets WHERE inventory_item_id = ?`).get(id) as { c: number }).c;
+  if (tickets > 0) {
+    throw httpError(
+      409,
+      `Инструмент есть в заявках мастерской (${tickets}). Удалите заявки или переведите инструмент в статус «Списан».`
+    );
+  }
+  db.prepare(`DELETE FROM inventory_checks WHERE inventory_item_id = ?`).run(id);
   db.prepare(`DELETE FROM inventory_items WHERE id = ?`).run(id);
 }
 
@@ -543,6 +560,7 @@ interface RentalRow {
   auto_penalty_enabled: number;
   penalty_rate_per_hour: number | null;
   paused_at: string | null;
+  paid_at: string | null;
   items_json: string;
   deposit_json: string | null;
   penalties_json: string;
@@ -583,6 +601,7 @@ function rentalRowToDomain(row: RentalRow): Rental | null {
     documents: JSON.parse(row.documents_json || "[]"),
     notes: JSON.parse(row.notes_json || "[]"),
     pausedAt: row.paused_at ?? undefined,
+    paidAt: row.paid_at ?? undefined,
     autoPenaltyEnabled: !!row.auto_penalty_enabled,
     penaltyRatePerHour: row.penalty_rate_per_hour ?? undefined,
     createdAt: row.created_at,
@@ -693,13 +712,25 @@ export function createRental(input: Rental): Rental {
   return getRental(input.id)!;
 }
 
+/** Проставляет дату записям штрафов и расходов, у которых её ещё нет */
+function stampEntries<T extends { createdAt?: string }>(list: T[] | undefined, now: string): T[] {
+  return (list ?? []).map((e) => (e.createdAt ? e : { ...e, createdAt: now }));
+}
+
 export function updateRental(id: string, patch: Partial<Rental>, options: { silent?: boolean; actorName?: string } = {}) {
   const existingRow = db.prepare(`SELECT * FROM rentals WHERE id = ?`).get(id) as RentalRow | undefined;
   if (!existingRow) return null;
   const existing = rentalRowToDomain(existingRow)!;
   // Номер аренды не перезаписываем пустым: его присвоил сервер при создании
-  const merged: Rental = { ...existing, ...patch, number: patch.number || existing.number, client: patch.client ?? existing.client };
   const now = new Date().toISOString();
+  const merged: Rental = {
+    ...existing,
+    ...patch,
+    number: patch.number || existing.number,
+    client: patch.client ?? existing.client,
+    penalties: stampEntries(patch.penalties ?? existing.penalties, now),
+    expenses: stampEntries(patch.expenses ?? existing.expenses, now),
+  };
   db.prepare(
     `UPDATE rentals SET number=@number, status=@status, payment_status=@payment_status, branch=@branch, start_at=@start_at, end_at=@end_at,
      rental_period=@rental_period, client_id=@client_id, total=@total, paid=@paid, booked_by_name=@booked_by_name, issued_by_name=@issued_by_name,
@@ -707,6 +738,12 @@ export function updateRental(id: string, patch: Partial<Rental>, options: { sile
      items_json=@items_json, deposit_json=@deposit_json, penalties_json=@penalties_json, expenses_json=@expenses_json,
      documents_json=@documents_json, notes_json=@notes_json, updated_at=@updated_at WHERE id=@id`
   ).run(toRentalRow(merged, existingRow.created_at, now));
+
+  // Оплата изменилась — запоминаем когда. Иначе в финансах платёж попадал на дату
+  // создания аренды, и отчёты по периодам врали
+  if (merged.paid !== existing.paid) {
+    db.prepare(`UPDATE rentals SET paid_at = ? WHERE id = ?`).run(merged.paid > 0 ? now : null, id);
+  }
 
   if (merged.status === "completed" || merged.status === "cancelled") {
     applyInventoryLock(merged.items, "available");
@@ -999,7 +1036,7 @@ export function applyOverdueAndPenalties(): { markedOverdue: number; penaltiesAd
     if (now <= end) continue;
 
     const hoursLate = Math.floor((now - end) / 3600000);
-    let penalties = JSON.parse(row.penalties_json || "[]") as { reason: string; amount: number }[];
+    let penalties = JSON.parse(row.penalties_json || "[]") as { reason: string; amount: number; createdAt?: string }[];
 
     // Помечаем как просроченную
     if (row.status !== "overdue") {
@@ -1044,7 +1081,7 @@ export function applyOverdueAndPenalties(): { markedOverdue: number; penaltiesAd
       const hoursToCharge = hoursLate - alreadyChargedHours;
       if (hoursToCharge > 0) {
         for (let h = alreadyChargedHours + 1; h <= hoursLate; h++) {
-          penalties = [...penalties, { reason: `Авто-штраф за просрочку (час ${h})`, amount: row.penalty_rate_per_hour }];
+          penalties = [...penalties, { createdAt: new Date().toISOString(), reason: `Авто-штраф за просрочку (час ${h})`, amount: row.penalty_rate_per_hour }];
           penaltiesAdded++;
         }
         const addedTotal = hoursToCharge * row.penalty_rate_per_hour;
@@ -1110,6 +1147,23 @@ export function getWorkshopTicket(id: string): WorkshopTicket | null {
   return row ? workshopRowToDomain(row) : null;
 }
 
+/** Сквозной номер заявки: раньше был обрывок метки времени (WS-770073) */
+const nextWorkshopNumber = db.transaction((): string => {
+  const row = db.prepare(`SELECT value FROM company_settings WHERE key = 'workshop_counter'`).get() as { value: string } | undefined;
+  const next = row
+    ? Number(row.value) + 1
+    : (db.prepare(`SELECT COUNT(*) AS c FROM workshop_tickets`).get() as { c: number }).c + 1;
+  db.prepare(
+    `INSERT INTO company_settings (key, value) VALUES ('workshop_counter', ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).run(String(next));
+  return `WS-${next}`;
+});
+
+export function deleteWorkshopTicket(id: string) {
+  db.prepare(`DELETE FROM workshop_tickets WHERE id = ?`).run(id);
+}
+
 export function createWorkshopTicket(input: Partial<WorkshopTicket>): WorkshopTicket {
   const id = input.id ?? newId("ws");
   const now = new Date().toISOString();
@@ -1122,7 +1176,7 @@ export function createWorkshopTicket(input: Partial<WorkshopTicket>): WorkshopTi
      VALUES (@id, @number, @status, @reason, @inventory_item_id, @title, @description, @lines_json, @source_rental_id, @created_at, @updated_at)`
   ).run({
     id,
-    number: input.number ?? `WS-${Date.now().toString().slice(-6)}`,
+    number: input.number ?? nextWorkshopNumber(),
     status,
     reason,
     inventory_item_id: input.inventoryItemId,
@@ -1271,25 +1325,56 @@ export function renderTemplate(template: string, rental: Rental): string {
   const settings = getCompanySettings();
 
   // Функция для перевода числа в текст (рублей/тенге)
-  function numToText(n: number): string {
-    const units = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять",
-      "десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать",
-      "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать"];
+  /**
+   * Сумма прописью. Прошлая версия рекурсивно звала саму себя, а функция в конце
+   * дописывала «тенге» — получалось «четыре тенге тысяч(и) пятьсот тенге».
+   * Здесь разряды собираются отдельно, «тенге» добавляется один раз, склонения
+   * настоящие, тысячи женского рода («одна тысяча», «две тысячи»).
+   */
+  function numToText(value: number): string {
+    const n = Math.max(0, Math.floor(value));
+    if (n === 0) return "ноль тенге";
+
+    const unitsM = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"];
+    const unitsF = ["", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"];
+    const teens = ["десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать"];
     const tens = ["", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто"];
     const hundreds = ["", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот"];
-    if (n === 0) return "ноль";
-    if (n < 0) return "минус " + numToText(-n);
-    let result = "";
-    const mil = Math.floor(n / 1_000_000);
-    const tho = Math.floor((n % 1_000_000) / 1000);
-    const rem = Math.floor(n % 1000);
-    if (mil > 0) result += numToText(mil) + " миллион(ов) ";
-    if (tho > 0) result += numToText(tho) + " тысяч(и) ";
-    if (rem >= 100) { result += hundreds[Math.floor(rem / 100)] + " "; }
-    const r2 = rem % 100;
-    if (r2 >= 20) { result += tens[Math.floor(r2 / 10)] + " " + units[r2 % 10] + " "; }
-    else if (r2 > 0) { result += units[r2] + " "; }
-    return result.trim() + " тенге";
+
+    const plural = (num: number, one: string, few: string, many: string) => {
+      const mod100 = num % 100;
+      if (mod100 >= 11 && mod100 <= 14) return many;
+      const mod10 = num % 10;
+      if (mod10 === 1) return one;
+      if (mod10 >= 2 && mod10 <= 4) return few;
+      return many;
+    };
+
+    const group = (num: number, feminine: boolean): string[] => {
+      const words: string[] = [];
+      const h = Math.floor(num / 100);
+      const rest = num % 100;
+      if (h) words.push(hundreds[h]);
+      if (rest >= 10 && rest < 20) words.push(teens[rest - 10]);
+      else {
+        const t = Math.floor(rest / 10);
+        const u = rest % 10;
+        if (t) words.push(tens[t]);
+        if (u) words.push(feminine ? unitsF[u] : unitsM[u]);
+      }
+      return words;
+    };
+
+    const parts = [];
+    const millions = Math.floor(n / 1000000);
+    const thousands = Math.floor((n % 1000000) / 1000);
+    const rest = n % 1000;
+
+    if (millions) parts.push(...group(millions, false), plural(millions, "миллион", "миллиона", "миллионов"));
+    if (thousands) parts.push(...group(thousands, true), plural(thousands, "тысяча", "тысячи", "тысяч"));
+    if (rest) parts.push(...group(rest, false));
+
+    return parts.join(" ") + " тенге";
   }
 
   function fmt(n: number) { return n.toLocaleString("ru-RU") + " ₸"; }
@@ -1471,6 +1556,298 @@ export function renderTemplate(template: string, rental: Rental): string {
   return result;
 }
 
+
+// ---------- Доставка ----------
+
+interface DeliveryRow {
+  id: string;
+  number: number;
+  rental_id: string | null;
+  kind: string;
+  direction: string;
+  status: string;
+  courier_id: string | null;
+  deliver_by: string | null;
+  address_from: string | null;
+  address_to: string | null;
+  client_phone: string | null;
+  receiver_phone: string | null;
+  price: number;
+  comment: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  courier_name?: string | null;
+  rental_number?: string | null;
+  client_name?: string | null;
+  items_json?: string | null;
+}
+
+function deliveryRowToDomain(row: DeliveryRow): Delivery {
+  let items: Delivery["items"] = [];
+  try {
+    // Что везём — это позиции самой аренды, отдельно их не дублируем:
+    // иначе список в доставке разъезжался бы с составом аренды
+    items = (JSON.parse(row.items_json || "[]") as InventoryLine[]).map((i) => ({
+      name: i.name,
+      sku: i.sku ?? "",
+      qty: i.qty,
+    }));
+  } catch {
+    items = [];
+  }
+
+  return {
+    id: row.id,
+    number: row.number,
+    rentalId: row.rental_id ?? undefined,
+    rentalNumber: row.rental_number ?? undefined,
+    clientName: row.client_name ?? undefined,
+    kind: row.kind as Delivery["kind"],
+    direction: row.direction as Delivery["direction"],
+    status: row.status as Delivery["status"],
+    courierId: row.courier_id ?? undefined,
+    courierName: row.courier_name ?? undefined,
+    deliverBy: row.deliver_by ?? undefined,
+    addressFrom: row.address_from ?? undefined,
+    addressTo: row.address_to ?? undefined,
+    clientPhone: row.client_phone ?? undefined,
+    receiverPhone: row.receiver_phone ?? undefined,
+    price: row.price,
+    comment: row.comment ?? undefined,
+    startedAt: row.started_at ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    items,
+  };
+}
+
+const DELIVERY_SELECT = `
+  SELECT d.*, u.name AS courier_name, r.number AS rental_number, r.items_json, c.name AS client_name
+  FROM deliveries d
+  LEFT JOIN app_users u ON u.id = d.courier_id
+  LEFT JOIN rentals r ON r.id = d.rental_id
+  LEFT JOIN clients c ON c.id = r.client_id
+`;
+
+/** Сквозной номер доставки — как у аренд, счётчик только растёт */
+const nextDeliveryNumber = db.transaction((): number => {
+  const row = db.prepare(`SELECT value FROM company_settings WHERE key = 'delivery_counter'`).get() as
+    | { value: string }
+    | undefined;
+  const next = row
+    ? Number(row.value) + 1
+    : (db.prepare(`SELECT COUNT(*) AS c FROM deliveries`).get() as { c: number }).c + 1;
+  db.prepare(
+    `INSERT INTO company_settings (key, value) VALUES ('delivery_counter', ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).run(String(next));
+  return next;
+});
+
+export interface DeliveryFilter {
+  status?: Delivery["status"];
+  courierId?: string;
+  search?: string;
+  limit?: number;
+}
+
+export function listDeliveries(filter: DeliveryFilter = {}): Delivery[] {
+  const where: string[] = [];
+  const params: Record<string, unknown> = { limit: filter.limit ?? 300 };
+
+  if (filter.status) {
+    where.push("d.status = @status");
+    params.status = filter.status;
+  }
+  if (filter.courierId) {
+    where.push("d.courier_id = @courierId");
+    params.courierId = filter.courierId;
+  }
+  if (filter.search) {
+    where.push(
+      "(LOWER(COALESCE(d.address_to, '')) LIKE @q OR LOWER(COALESCE(d.address_from, '')) LIKE @q OR LOWER(COALESCE(c.name, '')) LIKE @q OR CAST(d.number AS TEXT) LIKE @q)"
+    );
+    params.q = `%${filter.search.toLowerCase()}%`;
+  }
+
+  const rows = db
+    .prepare(
+      `${DELIVERY_SELECT} ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+       ORDER BY COALESCE(d.deliver_by, d.created_at) LIMIT @limit`
+    )
+    .all(params) as DeliveryRow[];
+
+  return rows.map(deliveryRowToDomain);
+}
+
+/** Счётчики для вкладок — одним запросом, а не выборкой всех доставок */
+export function deliveryCounts(): Record<Delivery["status"], number> {
+  const rows = db.prepare(`SELECT status, COUNT(*) AS c FROM deliveries GROUP BY status`).all() as {
+    status: string;
+    c: number;
+  }[];
+  const counts: Record<Delivery["status"], number> = { new: 0, in_progress: 0, done: 0, cancelled: 0 };
+  for (const r of rows) counts[r.status as Delivery["status"]] = r.c;
+  return counts;
+}
+
+export function getDelivery(id: string): Delivery | null {
+  const row = db.prepare(`${DELIVERY_SELECT} WHERE d.id = ?`).get(id) as DeliveryRow | undefined;
+  return row ? deliveryRowToDomain(row) : null;
+}
+
+/** Доставки конкретной аренды — для блока в её карточке */
+export function listDeliveriesForRental(rentalId: string): Delivery[] {
+  const rows = db.prepare(`${DELIVERY_SELECT} WHERE d.rental_id = ? ORDER BY d.created_at`).all(rentalId) as DeliveryRow[];
+  return rows.map(deliveryRowToDomain);
+}
+
+export function createDelivery(input: Partial<Delivery>): Delivery {
+  const id = newId("dlv");
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO deliveries (id, number, rental_id, kind, direction, status, courier_id, deliver_by,
+       address_from, address_to, client_phone, receiver_phone, price, comment, created_at, updated_at)
+     VALUES (@id, @number, @rentalId, @kind, @direction, @status, @courierId, @deliverBy,
+       @addressFrom, @addressTo, @clientPhone, @receiverPhone, @price, @comment, @createdAt, @updatedAt)`
+  ).run({
+    id,
+    number: nextDeliveryNumber(),
+    rentalId: input.rentalId ?? null,
+    kind: input.kind ?? "delivery",
+    direction: input.direction ?? "to",
+    status: input.status ?? "new",
+    courierId: input.courierId ?? null,
+    deliverBy: input.deliverBy ?? null,
+    addressFrom: input.addressFrom ?? null,
+    addressTo: input.addressTo ?? null,
+    clientPhone: input.clientPhone ?? null,
+    receiverPhone: input.receiverPhone ?? null,
+    price: input.price ?? 0,
+    comment: input.comment ?? null,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const created = getDelivery(id)!;
+  logActivity(`Создана доставка №${created.number}`);
+  if (input.rentalId) {
+    logRentalEvent({
+      rentalId: input.rentalId,
+      type: "status",
+      title: "Назначил доставку",
+      details: `№${created.number}${created.addressTo ? ` → ${created.addressTo}` : ""}`,
+    });
+  }
+  return created;
+}
+
+export function updateDelivery(id: string, patch: Partial<Delivery>): Delivery | null {
+  const existing = getDelivery(id);
+  if (!existing) return null;
+
+  const now = new Date().toISOString();
+  const status = patch.status ?? existing.status;
+
+  // Отметки времени ставятся один раз и сбрасываются при откате статуса назад,
+  // иначе по ним нельзя было бы считать реальную длительность
+  const startedAt = status === "new" ? null : existing.startedAt ?? now;
+  const completedAt = status === "done" ? existing.completedAt ?? now : null;
+
+  db.prepare(
+    `UPDATE deliveries SET kind=@kind, direction=@direction, status=@status, courier_id=@courierId,
+     deliver_by=@deliverBy, address_from=@addressFrom, address_to=@addressTo, client_phone=@clientPhone,
+     receiver_phone=@receiverPhone, price=@price, comment=@comment, started_at=@startedAt,
+     completed_at=@completedAt, updated_at=@updatedAt WHERE id=@id`
+  ).run({
+    id,
+    kind: patch.kind ?? existing.kind,
+    direction: patch.direction ?? existing.direction,
+    status,
+    courierId: patch.courierId !== undefined ? patch.courierId || null : existing.courierId ?? null,
+    deliverBy: patch.deliverBy !== undefined ? patch.deliverBy || null : existing.deliverBy ?? null,
+    addressFrom: patch.addressFrom !== undefined ? patch.addressFrom || null : existing.addressFrom ?? null,
+    addressTo: patch.addressTo !== undefined ? patch.addressTo || null : existing.addressTo ?? null,
+    clientPhone: patch.clientPhone !== undefined ? patch.clientPhone || null : existing.clientPhone ?? null,
+    receiverPhone: patch.receiverPhone !== undefined ? patch.receiverPhone || null : existing.receiverPhone ?? null,
+    price: patch.price ?? existing.price,
+    comment: patch.comment !== undefined ? patch.comment || null : existing.comment ?? null,
+    startedAt,
+    completedAt,
+    updatedAt: now,
+  });
+
+  const updated = getDelivery(id)!;
+  if (existing.status !== status && updated.rentalId) {
+    const titles: Record<string, string> = {
+      new: "Вернул доставку в запросы",
+      in_progress: "Доставка в пути",
+      done: "Доставка выполнена",
+      cancelled: "Отменил доставку",
+    };
+    logRentalEvent({ rentalId: updated.rentalId, type: "status", title: titles[status] ?? "Доставка", details: `№${updated.number}` });
+  }
+  return updated;
+}
+
+export function deleteDelivery(id: string) {
+  db.prepare(`DELETE FROM deliveries WHERE id = ?`).run(id);
+}
+
+/** Сводка для кнопки «Аналитика» на странице доставок */
+export function deliveryStats(fromIso: string | null) {
+  const params = { from: fromIso };
+  const base = `FROM deliveries WHERE (@from IS NULL OR created_at >= @from)`;
+
+  const total = (db.prepare(`SELECT COUNT(*) AS c ${base}`).get(params) as { c: number }).c;
+  const done = (db.prepare(`SELECT COUNT(*) AS c ${base} AND status = 'done'`).get(params) as { c: number }).c;
+  const inProgress = (db.prepare(`SELECT COUNT(*) AS c ${base} AND status = 'in_progress'`).get(params) as { c: number }).c;
+  const revenue = (db.prepare(`SELECT COALESCE(SUM(price), 0) AS v ${base} AND status = 'done'`).get(params) as { v: number }).v;
+
+  // Просрочка: срок в прошлом, а доставка ещё не выполнена
+  const overdue = (
+    db
+      .prepare(`SELECT COUNT(*) AS c ${base} AND status IN ('new','in_progress') AND deliver_by IS NOT NULL AND deliver_by < @now`)
+      .get({ ...params, now: new Date().toISOString() }) as { c: number }
+  ).c;
+
+  // Среднее время от взятия в работу до завершения, часы
+  const avg = (
+    db
+      .prepare(
+        `SELECT AVG((julianday(completed_at) - julianday(started_at)) * 24) AS v ${base}
+         AND status = 'done' AND started_at IS NOT NULL AND completed_at IS NOT NULL`
+      )
+      .get(params) as { v: number | null }
+  ).v;
+
+  const byCourier = db
+    .prepare(
+      `SELECT COALESCE(u.name, 'Не назначен') AS courier,
+              COUNT(*) AS total,
+              SUM(CASE WHEN d.status = 'done' THEN 1 ELSE 0 END) AS done,
+              COALESCE(SUM(CASE WHEN d.status = 'done' THEN d.price ELSE 0 END), 0) AS revenue
+       FROM deliveries d
+       LEFT JOIN app_users u ON u.id = d.courier_id
+       WHERE (@from IS NULL OR d.created_at >= @from)
+       GROUP BY COALESCE(u.name, 'Не назначен')
+       ORDER BY done DESC, total DESC`
+    )
+    .all(params) as { courier: string; total: number; done: number; revenue: number }[];
+
+  return {
+    total,
+    done,
+    inProgress,
+    overdue,
+    revenue,
+    avgHours: avg === null ? null : Math.round(avg * 10) / 10,
+    byCourier,
+  };
+}
 
 // ---------- Воронка: заявки ----------
 
@@ -1939,6 +2316,13 @@ export async function updateUser(id: string, patch: {
 }): Promise<AppUser | null> {
   const existing = db.prepare(`SELECT * FROM app_users WHERE id = ?`).get(id) as UserRow | undefined;
   if (!existing) return null;
+
+  // Запрет жил только в интерфейсе: через API главного администратора можно было
+  // заблокировать и потерять доступ ко всей системе
+  if (existing.is_admin && patch.isActive === false) {
+    throw httpError(403, "Главного администратора нельзя заблокировать");
+  }
+
   const passwordHash = patch.password ? await bcrypt.hash(patch.password, 10) : existing.password_hash;
   db.prepare(
     `UPDATE app_users SET name=?, position=?, is_active=?, permissions_json=?, password_hash=? WHERE id=?`
@@ -1955,7 +2339,7 @@ export async function updateUser(id: string, patch: {
 
 export function deleteUser(id: string) {
   const row = db.prepare(`SELECT is_admin FROM app_users WHERE id = ?`).get(id) as { is_admin: number } | undefined;
-  if (row?.is_admin) throw new Error("Нельзя удалить главного администратора");
+  if (row?.is_admin) throw httpError(403, "Главного администратора нельзя удалить");
   db.prepare(`DELETE FROM app_users WHERE id = ?`).run(id);
 }
 

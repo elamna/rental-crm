@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, apiError, required } from "@/lib/auth";
 import { createWorkshopTicket, listWorkshopTickets } from "@/lib/repo";
 
 export async function GET() {
-  return NextResponse.json(listWorkshopTickets());
+  try {
+    await requireAuth("workshop.view");
+    return NextResponse.json(listWorkshopTickets());
+  } catch (e) {
+    return apiError(e);
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const input = await req.json();
-  if (!input.inventoryItemId) {
-    return NextResponse.json({ error: "inventoryItemId is required" }, { status: 400 });
+  try {
+    await requireAuth("workshop.edit");
+    const input = await req.json();
+    required(input.inventoryItemId, "единицу инвентаря");
+    required(input.title, "описание заявки");
+    return NextResponse.json(createWorkshopTicket(input), { status: 201 });
+  } catch (e) {
+    return apiError(e);
   }
-  const ticket = createWorkshopTicket(input);
-  return NextResponse.json(ticket, { status: 201 });
 }

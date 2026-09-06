@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRental, updateRental, deleteRental } from "@/lib/repo";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, apiError, assertNonNegativeFields } from "@/lib/auth";
 
 // При открытии карточки просроченной аренды — пересчитываем total по фактическим дням
 function recalcIfOverdue(id: string) {
@@ -44,19 +44,31 @@ function recalcIfOverdue(id: string) {
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  recalcIfOverdue(id);
-  const rental = getRental(id);
-  if (!rental) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(rental);
+  try {
+    await requireAuth("rentals.view");
+    const { id } = await params;
+    recalcIfOverdue(id);
+    const rental = getRental(id);
+    if (!rental) return NextResponse.json({ error: "Аренда не найдена" }, { status: 404 });
+    return NextResponse.json(rental);
+  } catch (e) {
+    return apiError(e);
+  }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const patch = await req.json();
-  const rental = updateRental(id, patch);
-  if (!rental) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(rental);
+  try {
+    const me = await requireAuth("rentals.edit");
+    const { id } = await params;
+    const patch = await req.json();
+    assertNonNegativeFields(patch, { total: "Сумма", paid: "Оплачено" });
+    // Автор изменения попадёт в историю аренды
+    const rental = updateRental(id, patch, { actorName: me.name });
+    if (!rental) return NextResponse.json({ error: "Аренда не найдена" }, { status: 404 });
+    return NextResponse.json(rental);
+  } catch (e) {
+    return apiError(e);
+  }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

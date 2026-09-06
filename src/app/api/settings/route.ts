@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, requireAuth, apiError } from "@/lib/auth";
 import { getCompanySettings, updateCompanySettings } from "@/lib/repo";
 
 export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+  try {
+    await requireAuth();
+  } catch (e) {
+    return apiError(e);
+  }
   return NextResponse.json(getCompanySettings());
 }
 

@@ -1,18 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, apiError, required, assertNonNegativeFields } from "@/lib/auth";
 import { listInventory, createInventoryItem, createInventoryItems } from "@/lib/repo";
 
 export async function GET() {
-  return NextResponse.json(listInventory());
+  try {
+    await requireAuth("catalog.view");
+    return NextResponse.json(listInventory());
+  } catch (e) {
+    return apiError(e);
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  // quantity > 1 — создаём несколько одинаковых единиц, каждой свой артикул
-  const quantity = Number(body.quantity ?? 1);
-  if (quantity > 1) {
-    const items = createInventoryItems(body, quantity);
-    return NextResponse.json(items, { status: 201 });
+  try {
+    await requireAuth("catalog.edit");
+    const body = await req.json();
+    body.name = required(body.name, "название инструмента");
+    assertNonNegativeFields(body, { rentalPricePerDay: "Стоимость аренды", purchasePrice: "Стоимость покупки" });
+
+    // quantity > 1 — создаём несколько одинаковых единиц, каждой свой артикул
+    const quantity = Number(body.quantity ?? 1);
+    if (quantity > 1) return NextResponse.json(createInventoryItems(body, quantity), { status: 201 });
+    return NextResponse.json(createInventoryItem(body), { status: 201 });
+  } catch (e) {
+    return apiError(e);
   }
-  const item = createInventoryItem(body);
-  return NextResponse.json(item, { status: 201 });
 }

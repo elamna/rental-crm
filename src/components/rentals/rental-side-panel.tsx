@@ -1,13 +1,14 @@
 "use client";
 
-import { Rental, DocumentTemplate, RentalDocument } from "@/lib/types";
+import { Rental, DocumentTemplate, RentalDocument, Delivery, DELIVERY_KIND_LABELS, DELIVERY_STATUS_LABELS } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
 import { DOCUMENT_CSS, buildPrintDocument } from "@/lib/document-styles";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
-import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { DeliveryModal } from "@/components/delivery/delivery-modal";
+import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check, Truck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 type PaymentMethod = "cash" | "kaspi_qr" | "company";
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -742,6 +743,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       {/* Documents */}
       <DocumentsSection rental={rental} />
 
+      <DeliverySection rental={rental} />
+
       {/* Deposit */}
       <Section icon={ShieldCheck} title="Залог">
         {rental.deposit ? (
@@ -1173,5 +1176,106 @@ function Row({ label, value, bold, valueClass }: { label: string; value: string;
       <span className="text-[var(--color-text-muted)]">{label}</span>
       <span className={`${bold ? "font-semibold" : ""} ${valueClass ?? ""}`}>{value}</span>
     </div>
+  );
+}
+
+/**
+ * Доставки по этой аренде. Данные грузятся точечно по rentalId, а не через общий
+ * стор: доставки нужны только на карточке аренды и в своём разделе.
+ */
+function DeliverySection({ rental }: { rental: Rental }) {
+  const { can } = useAuth();
+  const canEdit = can("delivery.edit");
+  const [items, setItems] = useState<Delivery[]>([]);
+  const [editing, setEditing] = useState<Delivery | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/deliveries?rentalId=${rental.id}`);
+    if (res.ok) setItems(await res.json());
+  }, [rental.id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (!can("delivery.view")) return null;
+
+  return (
+    <>
+      <Section
+        icon={Truck}
+        title="Доставка"
+        action={
+          canEdit ? (
+            <button
+              onClick={() => setCreating(true)}
+              title="Назначить доставку"
+              className="grid h-6 w-6 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          ) : undefined
+        }
+      >
+        {items.length === 0 ? (
+          canEdit ? (
+            <button
+              onClick={() => setCreating(true)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+            >
+              <Plus className="h-3.5 w-3.5" /> Назначить доставку
+            </button>
+          ) : (
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">Доставка не назначена</p>
+          )
+        ) : (
+          <div className="space-y-1.5">
+            {items.map((d) => {
+              const overdue =
+                d.deliverBy && (d.status === "new" || d.status === "in_progress") && new Date(d.deliverBy) < new Date();
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => canEdit && setEditing(d)}
+                  className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-left text-[12.5px] transition hover:border-[var(--color-primary)]"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">
+                      №{d.number} · {DELIVERY_KIND_LABELS[d.kind]}
+                    </span>
+                    <span className="block truncate text-[11.5px] text-[var(--color-text-muted)]">
+                      {d.addressTo || "адрес не указан"}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-[6px] px-2 py-0.5 text-[11px] font-semibold",
+                      d.status === "done"
+                        ? "bg-[#EAF7EE] text-[#1C8A46]"
+                        : overdue
+                          ? "bg-[#FDECEC] text-[#C0272D]"
+                          : "bg-[#FFF4E5] text-[#B8620A]"
+                    )}
+                  >
+                    {d.status === "done" ? "Выполнено" : overdue ? "Просрочено" : DELIVERY_STATUS_LABELS[d.status]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </Section>
+
+      {creating && (
+        <DeliveryModal
+          rentalId={rental.id}
+          defaults={{ clientPhone: rental.client?.phone, addressFrom: rental.branch }}
+          onClose={() => setCreating(false)}
+          onSaved={load}
+        />
+      )}
+      {editing && <DeliveryModal delivery={editing} rentalId={rental.id} onClose={() => setEditing(null)} onSaved={load} />}
+    </>
   );
 }

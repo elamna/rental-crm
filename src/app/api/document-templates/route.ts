@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, apiError, required } from "@/lib/auth";
 import { listDocumentTemplates, createDocumentTemplate } from "@/lib/repo";
 
 export async function GET() {
-  return NextResponse.json(listDocumentTemplates());
+  try {
+    await requireAuth("documents.view");
+    return NextResponse.json(listDocumentTemplates());
+  } catch (e) {
+    return apiError(e);
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const tpl = createDocumentTemplate(body);
-  return NextResponse.json(tpl, { status: 201 });
+  try {
+    await requireAuth("documents.edit");
+    const body = await req.json();
+    body.name = required(body.name, "название шаблона");
+    return NextResponse.json(createDocumentTemplate(body), { status: 201 });
+  } catch (e) {
+    return apiError(e);
+  }
 }

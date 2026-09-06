@@ -11,7 +11,7 @@ interface AnalyticsData {
   period: string;
   granularity: Granularity;
   summary: {
-    totalRevenue: number; totalRentals: number; activeRentals: number;
+    totalRevenue: number; totalRentals: number; activeRentals: number; bookedRentals: number;
     overdueRentals: number; totalDebt: number; newClients: number;
     totalClients: number; freeInventory: number; totalInventory: number;
     workshopActive: number;
@@ -73,7 +73,7 @@ export default function AnalyticsPage() {
             {/* KPI карточки */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               <KpiCard icon={TrendingUp} label="Выручка" value={formatMoney(data.summary.totalRevenue)} color="primary" sub={`${data.summary.totalRentals} аренд за период`} />
-              <KpiCard icon={CreditCard} label="Долги клиентов" value={formatMoney(data.summary.totalDebt)} color="danger" sub={`${data.summary.overdueRentals} просрочено`} />
+              <KpiCard icon={CreditCard} label="Долги клиентов" value={formatMoney(data.summary.totalDebt)} color="danger" sub={`${data.summary.bookedRentals} забронировано, ${data.summary.overdueRentals} просрочено`} />
               <KpiCard icon={ClipboardList} label="Активные аренды" value={String(data.summary.activeRentals)} color="success" sub={`${data.summary.overdueRentals} просрочено`} />
               <KpiCard icon={Users} label="Клиентов" value={String(data.summary.totalClients)} color="info" sub={`+${data.summary.newClients} за период`} />
               <KpiCard icon={Package} label="Инвентарь" value={`${data.summary.freeInventory} / ${data.summary.totalInventory}`} color="neutral" sub="свободно / всего" />

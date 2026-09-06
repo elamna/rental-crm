@@ -50,6 +50,7 @@ interface AppState {
 
   addWorkshopTicket: (input: Partial<WorkshopTicket>) => Promise<WorkshopTicket>;
   updateWorkshopTicket: (id: string, patch: Partial<WorkshopTicket>) => Promise<void>;
+  deleteWorkshopTicket: (id: string) => Promise<void>;
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -224,5 +225,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const ticket = await api<WorkshopTicket>(`/api/workshop/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
     const inventory = await api<InventoryItem[]>("/api/inventory");
     set((s) => ({ workshopTickets: s.workshopTickets.map((t) => (t.id === id ? ticket : t)), inventory }));
+  },
+
+  deleteWorkshopTicket: async (id) => {
+    await api(`/api/workshop/${id}`, { method: "DELETE" });
+    set((s) => ({ workshopTickets: s.workshopTickets.filter((t) => t.id !== id) }));
   },
 }));

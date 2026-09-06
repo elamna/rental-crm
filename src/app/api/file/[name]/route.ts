@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, apiError } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 
@@ -15,6 +16,12 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
 ) {
+  try {
+    await requireAuth();
+  } catch (e) {
+    return apiError(e);
+  }
+
   const { name } = await params;
   // Защита от path traversal
   const safe = path.basename(name);

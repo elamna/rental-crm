@@ -44,3 +44,37 @@ export function apiUnauthorized(message = "Не авторизован") {
 export function apiForbidden(message = "Нет доступа") {
   return Response.json({ error: message }, { status: 403 });
 }
+
+/**
+ * Единый ответ на ошибку API. ApiError отдаёт свой код (400/401/403),
+ * всё остальное — 500. Раньше роуты падали 500 даже на неверных данных.
+ */
+export function apiError(e: unknown) {
+  const err = e as { status?: number; message?: string };
+  const status = err?.status ?? 500;
+  if (status === 500) console.error("API error:", e);
+  return Response.json({ error: err?.message ?? "Внутренняя ошибка сервера" }, { status });
+}
+
+/** Обязательное текстовое поле */
+export function required(value: unknown, field: string): string {
+  const s = typeof value === "string" ? value.trim() : value == null ? "" : String(value).trim();
+  if (!s) throw new ApiError(400, `Укажите ${field}`);
+  return s;
+}
+
+/** Число, которое не может быть отрицательным (цены, оплаты, суммы) */
+export function nonNegative(value: unknown, field: string): number {
+  if (value === undefined || value === null || value === "") return 0;
+  const n = Number(value);
+  if (!Number.isFinite(n)) throw new ApiError(400, `${field}: нужно число`);
+  if (n < 0) throw new ApiError(400, `${field}: значение не может быть отрицательным`);
+  return n;
+}
+
+/** Проверка неотрицательности только если поле пришло в запросе */
+export function assertNonNegativeFields(body: Record<string, unknown>, fields: Record<string, string>) {
+  for (const [key, label] of Object.entries(fields)) {
+    if (body[key] !== undefined && body[key] !== null && body[key] !== "") nonNegative(body[key], label);
+  }
+}

@@ -228,6 +228,32 @@ CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 CREATE INDEX IF NOT EXISTS idx_leads_needed_at ON leads(needed_at);
 CREATE INDEX IF NOT EXISTS idx_leads_manager ON leads(manager_id);
 
+CREATE TABLE IF NOT EXISTS deliveries (
+  id TEXT PRIMARY KEY,
+  number INTEGER NOT NULL,
+  rental_id TEXT,
+  kind TEXT NOT NULL DEFAULT 'delivery',
+  direction TEXT NOT NULL DEFAULT 'to',
+  status TEXT NOT NULL DEFAULT 'new',
+  courier_id TEXT,
+  deliver_by TEXT,
+  address_from TEXT,
+  address_to TEXT,
+  client_phone TEXT,
+  receiver_phone TEXT,
+  price REAL NOT NULL DEFAULT 0,
+  comment TEXT,
+  started_at TEXT,
+  completed_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries(status);
+CREATE INDEX IF NOT EXISTS idx_deliveries_rental ON deliveries(rental_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_courier ON deliveries(courier_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_deliver_by ON deliveries(deliver_by);
+
 CREATE TABLE IF NOT EXISTS rental_events (
   id TEXT PRIMARY KEY,
   rental_id TEXT NOT NULL,
@@ -269,7 +295,7 @@ function ensureColumns(table: string, columns: Record<string, string>) {
   }
 }
 
-ensureColumns("rentals", { paused_at: "TEXT" });
+ensureColumns("rentals", { paused_at: "TEXT", paid_at: "TEXT" });
 
 ensureColumns("clients", {
   bin: "TEXT",

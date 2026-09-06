@@ -111,12 +111,15 @@ export interface Rental {
     amount?: number;
     returned: boolean;
   };
-  penalties?: { reason: string; amount: number }[];
-  expenses?: { type: string; amount: number }[];
+  // createdAt нужен финансам: без него операция попадала в отчёт на дату создания аренды
+  penalties?: { reason: string; amount: number; createdAt?: string }[];
+  expenses?: { type: string; amount: number; description?: string; createdAt?: string }[];
   documents?: string[];
   notes?: string[];
   /** Момент постановки на паузу; null — аренда идёт */
   pausedAt?: string;
+  /** Когда последний раз меняли оплату — по этой дате финансы относят платёж к периоду */
+  paidAt?: string;
   autoPenaltyEnabled?: boolean;
   penaltyRatePerHour?: number;
   createdAt?: string;
@@ -190,6 +193,7 @@ export type Permission =
   | "blacklist.view"
   | "tasks.view" | "tasks.manage"
   | "leads.view" | "leads.edit"
+  | "delivery.view" | "delivery.edit"
   | "analytics.view"
   | "finance.view"
   | "settings.view"
@@ -205,6 +209,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "blacklist.view",
   "tasks.view", "tasks.manage",
   "leads.view", "leads.edit",
+  "delivery.view", "delivery.edit",
   "analytics.view",
   "finance.view",
   "settings.view",
@@ -228,6 +233,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "tasks.manage": "Темп — все задачи и KPI",
   "leads.view": "Воронка — просмотр заявок",
   "leads.edit": "Воронка — создание и изменение",
+  "delivery.view": "Доставка — просмотр",
+  "delivery.edit": "Доставка — создание и выполнение",
   "analytics.view": "Аналитика — просмотр",
   "finance.view": "Финансы — просмотр",
   "settings.view": "Настройки — просмотр",
@@ -424,4 +431,60 @@ export interface RentalPause {
   actorName?: string;
   /** Длительность в часах, считается при чтении */
   hours: number;
+}
+
+// ---------- Доставка ----------
+
+/** Везём клиенту или забираем у него */
+export type DeliveryKind = "delivery" | "pickup";
+/** Куда едем: туда, обратно или туда и обратно одной ходкой */
+export type DeliveryDirection = "to" | "back" | "both";
+export type DeliveryStatus = "new" | "in_progress" | "done" | "cancelled";
+
+export const DELIVERY_KIND_LABELS: Record<DeliveryKind, string> = {
+  delivery: "Доставка",
+  pickup: "Вывоз",
+};
+
+export const DELIVERY_DIRECTION_LABELS: Record<DeliveryDirection, string> = {
+  to: "ТУДА",
+  back: "ОБРАТНО",
+  both: "ТУДА ОБРАТНО",
+};
+
+export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
+  new: "Новые запросы",
+  in_progress: "В процессе",
+  done: "Завершено",
+  cancelled: "Отменено",
+};
+
+export interface Delivery {
+  id: string;
+  /** Сквозной номер: №22 */
+  number: number;
+  rentalId?: string;
+  /** Номер аренды для карточки, подставляется при чтении */
+  rentalNumber?: string;
+  clientName?: string;
+  kind: DeliveryKind;
+  direction: DeliveryDirection;
+  status: DeliveryStatus;
+  /** Кто везёт */
+  courierId?: string;
+  courierName?: string;
+  /** Доставить до — по этому сроку считается просрочка */
+  deliverBy?: string;
+  addressFrom?: string;
+  addressTo?: string;
+  clientPhone?: string;
+  receiverPhone?: string;
+  price: number;
+  comment?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Что везём — берётся из позиций аренды */
+  items: { name: string; sku: string; qty: number }[];
 }

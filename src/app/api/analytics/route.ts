@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { requireAuth, apiError } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { bucketExpr, resolvePeriod } from "@/lib/period";
 
 export async function GET(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+  try {
+    await requireAuth("analytics.view");
+  } catch (e) {
+    return apiError(e);
+  }
 
   const { period, from, to, granularity } = resolvePeriod(req.nextUrl.searchParams);
 
@@ -19,7 +22,11 @@ export async function GET(req: NextRequest) {
   ).get(from, to) as { v: number }).v;
 
   const activeRentals = (db.prepare(
-    `SELECT COUNT(*) as v FROM rentals WHERE status IN ('active', 'booked', 'overdue')`
+    `SELECT COUNT(*) as v FROM rentals WHERE status = 'active'`
+  ).get() as { v: number }).v;
+
+  const bookedRentals = (db.prepare(
+    `SELECT COUNT(*) as v FROM rentals WHERE status = 'booked'`
   ).get() as { v: number }).v;
 
   const overdueRentals = (db.prepare(
@@ -91,7 +98,9 @@ export async function GET(req: NextRequest) {
     try {
       const items = JSON.parse(r.items_json || "[]") as { inventoryItemId?: string; name: string; qty: number; pricePerDay: number }[];
       for (const item of items) {
-        const key = item.inventoryItemId ?? item.name;
+        // Группируем по названию: одна и та же позиция, добавленная из каталога
+        // и вручную, раньше давала две строки в топе
+        const key = item.name.trim().toLowerCase();
         if (!inventoryCount[key]) inventoryCount[key] = { name: item.name, count: 0, revenue: 0 };
         inventoryCount[key].count += item.qty;
         inventoryCount[key].revenue += item.pricePerDay * item.qty;
@@ -119,7 +128,7 @@ export async function GET(req: NextRequest) {
     from,
     to,
     summary: {
-      totalRevenue, totalRentals, activeRentals, overdueRentals,
+      totalRevenue, totalRentals, activeRentals, bookedRentals, overdueRentals,
       totalDebt, newClients, totalClients, freeInventory, totalInventory,
       workshopActive,
     },
