@@ -6,6 +6,7 @@ import { useAppStore } from "@/lib/store";
 import { branches, inventoryCategories, inventoryStatusLabels } from "@/lib/mock-data";
 import { groupProducts, isInactiveUnit, exportRows, ProductGroup } from "@/lib/catalog-utils";
 import { cn, formatMoney } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, Tag } from "lucide-react";
 import { Checkbox, EmptyRow, ExportButton, FilterSelect, Pagination, Pill, SearchInput, StatBar, TableCard, Th, paginate } from "./shared";
 
@@ -192,17 +193,39 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
 }
 
 function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expanded: boolean; onToggle: () => void }) {
+  const router = useRouter();
   const single = group.units.length === 1;
   const brokenTotal = group.broken + group.repair;
 
+  /**
+   * Кликабельна вся строка, а не только текст названия: попасть в короткое слово
+   * мышью неудобно, и это читалось как «в товар нельзя зайти».
+   * У продукта из одной единицы строка ведёт в карточку, у нескольких — раскрывает список.
+   */
+  function openRow(e: React.MouseEvent) {
+    // Ctrl/⌘-клик и средняя кнопка оставляем браузеру: он откроет в новой вкладке
+    if (e.metaKey || e.ctrlKey || e.button !== 0) return;
+    if (single) router.push(`/catalog/${group.units[0].id}`);
+    else onToggle();
+  }
+
   return (
     <>
-      <tr className="border-b border-[var(--color-border)] transition last:border-0 hover:bg-[var(--color-bg)]">
+      <tr
+        onClick={openRow}
+        className="cursor-pointer border-b border-[var(--color-border)] transition last:border-0 hover:bg-[var(--color-bg)]"
+      >
         <td className="px-4 py-3">
           {single ? (
             <span className="block h-4 w-4" />
           ) : (
-            <button onClick={onToggle} className="grid h-5 w-5 place-items-center text-[var(--color-text-muted)] transition hover:text-[var(--color-primary)]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+              className="grid h-5 w-5 place-items-center text-[var(--color-text-muted)] transition hover:text-[var(--color-primary)]"
+            >
               {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </button>
           )}
@@ -222,7 +245,13 @@ function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expand
                 {group.name}
               </Link>
             ) : (
-              <button onClick={onToggle} className="text-left text-[13.5px] font-semibold transition hover:text-[var(--color-primary)]">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggle();
+                }}
+                className="text-left text-[13.5px] font-semibold transition hover:text-[var(--color-primary)]"
+              >
                 {group.name}
                 <span className="ml-2 text-[11.5px] font-medium text-[var(--color-text-muted)]">{group.total} ед.</span>
               </button>
@@ -242,7 +271,14 @@ function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expand
 
       {expanded &&
         group.units.map((u) => (
-          <tr key={u.id} className="border-b border-[var(--color-border)] bg-[var(--color-bg)]/60 last:border-0">
+          <tr
+            key={u.id}
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey) return;
+              router.push(`/catalog/${u.id}`);
+            }}
+            className="cursor-pointer border-b border-[var(--color-border)] bg-[var(--color-bg)]/60 transition last:border-0 hover:bg-[var(--color-bg)]"
+          >
             <td />
             <td className="px-4 py-2 pl-16">
               <Link href={`/catalog/${u.id}`} className="text-[12.5px] font-medium transition hover:text-[var(--color-primary)]">
