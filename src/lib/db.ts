@@ -363,7 +363,10 @@ ensureColumns("clients", {
   for (const [k, v] of Object.entries(defaults)) ins.run(k, v);
 }
 
-// Сид: создать главного администратора при первом запуске
+// Сид: создать главного администратора при первом запуске.
+// is_owner ставится сразу: блок миграции выше отрабатывает раньше этой вставки,
+// и на пустой базе владельца там ещё не из кого выбрать — без флага никто не смог
+// бы выдавать права администратора на свежей установке.
 (async () => {
   const existing = db.prepare(`SELECT id FROM app_users WHERE login = 'admin'`).get();
   if (!existing) {
@@ -371,10 +374,15 @@ ensureColumns("clients", {
     const hash = await bcrypt.hash("admin", 10);
     const now = new Date().toISOString();
     db.prepare(
-      `INSERT INTO app_users (id, login, password_hash, name, is_admin, is_active, permissions_json, created_at)
-       VALUES ('admin', 'admin', ?, 'Администратор', 1, 1, '[]', ?)`
+      `INSERT INTO app_users (id, login, password_hash, name, is_admin, is_owner, is_active, permissions_json, created_at)
+       VALUES ('admin', 'admin', ?, 'Администратор', 1, 1, 1, '[]', ?)`
     ).run(hash, now);
+    return;
   }
+
+  // База, заведённая до появления роли: владельца назначаем существующему админу
+  const hasOwner = (db.prepare(`SELECT COUNT(*) AS c FROM app_users WHERE is_owner = 1`).get() as { c: number }).c > 0;
+  if (!hasOwner) db.prepare(`UPDATE app_users SET is_owner = 1, is_admin = 1 WHERE id = ?`).run((existing as { id: string }).id);
 })();
 
 export function logActivity(text: string) {
