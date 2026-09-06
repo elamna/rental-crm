@@ -8,6 +8,7 @@ const categoryTitles: Record<LineCategory, string> = {
   product: "Добавить товар",
   kit: "Добавить комплект",
   service: "Добавить услугу",
+  shop: "Добавить товар магазина",
 };
 
 export function AddLineItemModal({

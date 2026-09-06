@@ -1,7 +1,7 @@
 "use client";
 
 import { Rental, RentalStatus } from "@/lib/types";
-import { cn, statusLabels } from "@/lib/utils";
+import { cn, statusLabels, isDebtorRental } from "@/lib/utils";
 
 export type TabKey = "all" | RentalStatus | "debtors" | "archive";
 
@@ -23,7 +23,7 @@ function countFor(rentals: Rental[], key: TabKey) {
     case "all":
       return rentals.length;
     case "debtors":
-      return rentals.filter((r) => (r.status === "active" || r.status === "overdue") && r.total - r.paid > 0).length;
+      return rentals.filter(isDebtorRental).length;
     case "archive":
       return 0;
     default:

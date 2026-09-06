@@ -35,7 +35,6 @@ export default function NewClientPage() {
         bik: values.bik || undefined,
         acquisitionChannel: values.acquisitionChannel || undefined,
         discount: values.discount ? Number(values.discount) : undefined,
-        rating: values.rating ? Number(values.rating) : undefined,
       });
       router.push(`/clients/${client.id}`);
     } catch (err) {

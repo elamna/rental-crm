@@ -202,16 +202,13 @@ export function ClientForm({
           <Field label="Постоянная скидка (%)">
             <input type="number" min={0} max={100} value={values.discount} onChange={(e) => set("discount", e.target.value)} className="crm-input" />
           </Field>
-          <Field label="Рейтинг">
-            <select value={values.rating} onChange={(e) => set("rating", e.target.value)} className="crm-input">
-              <option value="">Выберите рейтинг</option>
-              {[5, 4, 3, 2, 1].map((r) => (
-                <option key={r} value={r}>
-                  {r} ★
-                </option>
-              ))}
-            </select>
-          </Field>
+          {/* Рейтинг вручную не ставится: он складывается из истории аренд */}
+          <div className="sm:col-span-1">
+            <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Рейтинг</span>
+            <p className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2.5 text-[12.5px] text-[var(--color-text-muted)]">
+              Считается сам: как часто обращается, платит и возвращает в срок
+            </p>
+          </div>
         </div>
 
         <div className="mt-6 flex justify-end">

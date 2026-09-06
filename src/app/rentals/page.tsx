@@ -5,6 +5,7 @@ import { useAppStore } from "@/lib/store";
 import { RentalCard } from "@/components/rentals/rental-card";
 import { StatusTabs, TabKey } from "@/components/rentals/status-tabs";
 import { FilterBar } from "@/components/rentals/filter-bar";
+import { isDebtorRental } from "@/lib/utils";
 import { Download, Video } from "lucide-react";
 import Link from "next/link";
 
@@ -18,7 +19,7 @@ export default function RentalsPage() {
   const filtered = useMemo(() => {
     let list = allRentals;
     if (tab === "debtors")
-      list = list.filter((r) => (r.status === "active" || r.status === "overdue") && r.total - r.paid > 0);
+      list = list.filter(isDebtorRental);
     else if (tab !== "all" && tab !== "archive") list = list.filter((r) => r.status === tab);
     if (search.trim()) {
       const q = search.toLowerCase();

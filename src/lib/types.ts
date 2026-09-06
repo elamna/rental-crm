@@ -28,7 +28,8 @@ export type RentalStatus =
 
 export type PaymentStatus = "paid" | "pending" | "overdue" | "partial";
 
-export type LineCategory = "product" | "kit" | "service";
+/** «shop» — товар из магазина: продаётся навсегда, срок аренды на него не влияет */
+export type LineCategory = "product" | "kit" | "service" | "shop";
 
 export interface InventoryLine {
   id: string;
@@ -74,7 +75,10 @@ export interface Client {
   // Дополнительно
   acquisitionChannel?: string;
   discount?: number;
-  rating?: number; // 1-5, undefined = not rated
+  /** Звёзды 1–5. Считаются сами по истории аренд, вручную не выставляются */
+  rating?: number;
+  /** Из чего сложился рейтинг — показываем в подсказке, чтобы он не был магией */
+  ratingBreakdown?: ClientRatingBreakdown;
   // Derived / accumulated (computed from real rentals, 0 until rentals exist)
   totalRentals: number;
   totalSpent: number;
@@ -83,6 +87,22 @@ export interface Client {
   lastRentalDate?: string;
   createdAt: string;
   blacklisted?: boolean;
+}
+
+/** Расшифровка рейтинга: три составляющие, каждая 0–100 % */
+export interface ClientRatingBreakdown {
+  /** Как часто обращается: число завершённых аренд */
+  loyalty: number;
+  /** Платёжная дисциплина: доля полностью оплаченных аренд */
+  payment: number;
+  /** Возвраты в срок: доля аренд, закрытых не позже конца срока */
+  punctuality: number;
+  /** Сколько аренд участвовало в расчёте */
+  rentals: number;
+  /** Текущий долг по всем арендам, ₸ */
+  debt: number;
+  /** Сколько раз возвращали с опозданием */
+  lateReturns: number;
 }
 
 export type RentalPeriod = "hourly" | "daily" | "weekly" | "monthly";
@@ -118,6 +138,8 @@ export interface Rental {
   notes?: string[];
   /** Момент постановки на паузу; null — аренда идёт */
   pausedAt?: string;
+  /** Когда товар фактически вернули: по нему считается пунктуальность клиента */
+  returnedAt?: string;
   /** Когда последний раз меняли оплату — по этой дате финансы относят платёж к периоду */
   paidAt?: string;
   autoPenaltyEnabled?: boolean;
@@ -194,6 +216,7 @@ export type Permission =
   | "tasks.view" | "tasks.manage"
   | "leads.view" | "leads.edit"
   | "delivery.view" | "delivery.edit"
+  | "shop.view" | "shop.edit"
   | "analytics.view"
   | "finance.view"
   | "settings.view"
@@ -210,6 +233,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "tasks.view", "tasks.manage",
   "leads.view", "leads.edit",
   "delivery.view", "delivery.edit",
+  "shop.view", "shop.edit",
   "analytics.view",
   "finance.view",
   "settings.view",
@@ -235,6 +259,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "leads.edit": "Воронка — создание и изменение",
   "delivery.view": "Доставка — просмотр",
   "delivery.edit": "Доставка — создание и выполнение",
+  "shop.view": "Магазин — просмотр",
+  "shop.edit": "Магазин — приход и продажа",
   "analytics.view": "Аналитика — просмотр",
   "finance.view": "Финансы — просмотр",
   "settings.view": "Настройки — просмотр",
@@ -303,6 +329,30 @@ export interface Service {
   tariffs: ServiceTariff[];
   notes?: string;
   createdAt: string;
+}
+
+/**
+ * Товар магазина: продаётся безвозвратно, как хлеб в магазине. С каталогом
+ * аренды не связан ничем — свой инвентарный и серийный номер, свой остаток.
+ */
+export interface ShopProduct {
+  id: string;
+  name: string;
+  /** Инвентарный номер — уникален внутри магазина */
+  sku: string;
+  /** Серийный номер производителя */
+  serialNumber?: string;
+  category?: string;
+  /** Цена продажи, ₸ */
+  price: number;
+  /** Себестоимость — нужна финансам, чтобы видеть наценку */
+  purchaseCost?: number;
+  /** Остаток на складе, шт. */
+  qty: number;
+  photoUrl?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export type InventoryCondition = "ok" | "broken";

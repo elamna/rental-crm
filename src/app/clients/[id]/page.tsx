@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { clientTypeLabels } from "@/lib/mock-data";
 import { formatMoney } from "@/lib/utils";
-import { RatingStars } from "@/components/clients/rating-stars";
+import { RatingStars, RatingBreakdown } from "@/components/clients/rating-stars";
 import { RentalCard } from "@/components/rentals/rental-card";
 import { ArrowLeft, Phone, Mail, Calendar, Percent, ClipboardList, Trash2, Ban } from "lucide-react";
 
@@ -70,9 +70,12 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             {client.email && <InfoRow icon={Mail} label="Email" value={client.email} />}
             {client.birthDate && <InfoRow icon={Calendar} label="Дата рождения" value={client.birthDate} />}
             {client.discount ? <InfoRow icon={Percent} label="Постоянная скидка" value={`${client.discount}%`} /> : null}
-            <div className="mt-3 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
-              <span className="text-[12.5px] text-[var(--color-text-muted)]">Рейтинг</span>
-              <RatingStars rating={client.rating} />
+            <div className="mt-3 border-t border-[var(--color-border)] pt-3">
+              <div className="mb-2.5 flex items-center justify-between">
+                <span className="text-[12.5px] text-[var(--color-text-muted)]">Рейтинг</span>
+                <RatingStars rating={client.rating} size="lg" />
+              </div>
+              <RatingBreakdown breakdown={client.ratingBreakdown} />
             </div>
           </section>
 

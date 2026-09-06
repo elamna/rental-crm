@@ -4,14 +4,20 @@ import { use, useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { notFound, useRouter } from "next/navigation";
 import { RentalSidePanel } from "@/components/rentals/rental-side-panel";
-import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles } from "@/lib/utils";
+import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, isOneTimeLine } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { ArrowLeft, Search, Star, Phone, Mail, Plus, AlertTriangle, Pencil, MoreHorizontal, Pause, Play, History, Ban, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RentalHistoryModal, RentalPausesModal } from "@/components/rentals/rental-history";
 import Link from "next/link";
 
-const itemTabs = ["Все", "Продукты", "Комплекты", "Услуги"] as const;
+const itemTabs = [
+  { label: "Все", category: null },
+  { label: "Продукты", category: "product" },
+  { label: "Комплекты", category: "kit" },
+  { label: "Услуги", category: "service" },
+  { label: "Магазин", category: "shop" },
+] as const;
 
 export default function RentalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const isMobile = useIsMobile();
@@ -20,7 +26,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
   const hydrated = useAppStore((s) => s.hydrated);
   const updateRental = useAppStore((s) => s.updateRental);
   const rental = rentals.find((r) => r.id === id);
-  const [activeTab, setActiveTab] = useState<(typeof itemTabs)[number]>("Все");
+  const [activeTab, setActiveTab] = useState<(typeof itemTabs)[number]["label"]>("Все");
 
   const router = useRouter();
   const { can } = useAuth();
@@ -95,6 +101,15 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
     return notFound();
   }
   const st = statusStyles[rental.status];
+
+  // Вкладки над списком позиций теперь действительно фильтруют
+  const activeCategory = itemTabs.find((t) => t.label === activeTab)?.category ?? null;
+  const visibleLines = activeCategory
+    ? rental.items.filter((i) => (i.category ?? "product") === activeCategory)
+    : rental.items;
+  // Аренда тарифицируется по суткам, услуги и товары магазина — разово
+  const perDayTotal = rental.items.filter((i) => !isOneTimeLine(i)).reduce((sum, i) => sum + i.pricePerDay * i.qty, 0);
+  const oneTimeTotal = rental.items.filter(isOneTimeLine).reduce((sum, i) => sum + i.pricePerDay * i.qty, 0);
 
   function toInputValue(iso: string) {
     if (!iso) return "";
@@ -377,14 +392,14 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
               <div className="flex items-center gap-1 rounded-[10px] bg-[var(--color-bg)] p-1">
                 {itemTabs.map((t) => (
                   <button
-                    key={t}
-                    onClick={() => setActiveTab(t)}
+                    key={t.label}
+                    onClick={() => setActiveTab(t.label)}
                     className={cn(
                       "rounded-[8px] px-3 py-1.5 text-[12.5px] font-semibold transition",
-                      activeTab === t ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                      activeTab === t.label ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
                     )}
                   >
-                    {t}
+                    {t.label}
                   </button>
                 ))}
               </div>
@@ -398,7 +413,10 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
             </div>
 
             <div className="space-y-2">
-              {rental.items.map((item) => (
+              {visibleLines.length === 0 && (
+                <p className="py-4 text-center text-[12.5px] text-[var(--color-text-muted)]">В этой категории пусто</p>
+              )}
+              {visibleLines.map((item) => (
                 <div key={item.id} className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-3 py-2.5">
                   <div className="flex items-center gap-2 min-w-0">
                     {item.flagged && <AlertTriangle className="h-4 w-4 shrink-0 text-[#EF4444]" />}
@@ -407,7 +425,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                       <div className="text-[11.5px] text-[var(--color-text-muted)]">{item.sku} · {item.qty} шт</div>
                     </div>
                   </div>
-                  <div className="shrink-0 text-[13px] font-semibold">{formatMoney(item.pricePerDay)} / сутки</div>
+                  <div className="shrink-0 text-[13px] font-semibold">{formatMoney(item.pricePerDay)}{isOneTimeLine(item) ? " за шт." : " / сутки"}</div>
                 </div>
               ))}
             </div>
@@ -424,11 +442,17 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
               </button>
             </div>
 
-            <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
-              <span className="text-[13px] text-[var(--color-text-muted)]">Итого за сутки</span>
-              <span className="text-[16px] font-bold">
-                {formatMoney(rental.items.reduce((s, i) => s + i.pricePerDay, 0))}
-              </span>
+            <div className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-[var(--color-text-muted)]">Аренда за сутки</span>
+                <span className="text-[16px] font-bold">{formatMoney(perDayTotal)}</span>
+              </div>
+              {oneTimeTotal > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] text-[var(--color-text-muted)]">Разово (услуги и магазин)</span>
+                  <span className="text-[13.5px] font-semibold">{formatMoney(oneTimeTotal)}</span>
+                </div>
+              )}
             </div>
           </section>
         </div>

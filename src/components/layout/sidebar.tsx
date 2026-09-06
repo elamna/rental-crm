@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Boxes, Users, BarChart3,
-  Ban, FileText, Wallet, Wrench, Settings, Plus, Gauge, Filter, Truck,
+  Ban, FileText, Wallet, Wrench, Settings, Plus, Gauge, Filter, Truck, Store,
   ChevronsLeft, LogOut, UserCog, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ const mainNav: NavItem[] = [
   { href: "/", label: "Главная", icon: LayoutDashboard, permission: "dashboard.view" },
   { href: "/rentals", label: "Аренды", icon: ClipboardList, permission: "rentals.view" },
   { href: "/catalog", label: "Каталог", icon: Boxes, permission: "catalog.view" },
+  { href: "/shop", label: "Магазин", icon: Store, permission: "shop.view" },
   { href: "/workshop", label: "Мастерская", icon: Wrench, permission: "workshop.view" },
   { href: "/clients", label: "Клиенты", icon: Users, permission: "clients.view" },
   { href: "/funnel", label: "Воронка", icon: Filter, permission: "leads.view" },

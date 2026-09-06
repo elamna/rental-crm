@@ -247,14 +247,19 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
   const [returning, setReturning] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
-  const canReturn = isFullyPaid && (rental.status === "active" || rental.status === "overdue");
+  // Возврат не требует оплаты: инструмент нужно забрать в любом случае,
+  // а неоплаченный остаток останется висеть долгом на клиенте
+  const canReturn = rental.status === "active" || rental.status === "overdue";
+  const debt = Math.max(0, rental.total - rental.paid);
   const updateInventoryItem = useAppStore((s) => s.updateInventoryItem);
   const addWorkshopTicket = useAppStore((s) => s.addWorkshopTicket);
 
   // Состояние для каждого товара: выбран ли + его состояние
   type ItemCondition = "ok" | "maintenance" | "repair";
+  // Проданные товары магазина в возврат не попадают: они ушли насовсем
+  const returnableItems = rental.items.filter((i) => i.inventoryItemId && i.category !== "shop");
   const [returnItems, setReturnItems] = useState<Map<string, { selected: boolean; condition: ItemCondition }>>(
-    () => new Map(rental.items.filter((i) => i.inventoryItemId).map((i) => [i.inventoryItemId!, { selected: false, condition: "ok" }]))
+    () => new Map(returnableItems.map((i) => [i.inventoryItemId!, { selected: false, condition: "ok" }]))
   );
 
   function toggleReturnItem(id: string) {
@@ -276,7 +281,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   }
 
   async function handleReturn() {
-    const toReturn = rental.items.filter((i) => i.inventoryItemId && returnItems.get(i.inventoryItemId)?.selected);
+    const toReturn = returnableItems.filter((i) => returnItems.get(i.inventoryItemId!)?.selected);
     if (toReturn.length === 0) return;
 
     setReturning(true);
@@ -300,10 +305,10 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         }
       }
       // Если все товары возвращены — завершаем аренду, иначе оставляем активной
-      const allItems = rental.items.filter((i) => i.inventoryItemId);
-      const allReturned = allItems.every((i) => returnItems.get(i.inventoryItemId!)?.selected);
+      const allReturned = returnableItems.every((i) => returnItems.get(i.inventoryItemId!)?.selected);
       if (allReturned) {
-        await updateRental(rental.id, { status: "completed" });
+        // Долг при возврате не прощаем: аренда закрывается, клиент остаётся должником
+        await updateRental(rental.id, debt > 0 ? { status: "completed", paymentStatus: "overdue" } : { status: "completed" });
       }
       setShowReturnModal(false);
     } catch (err) {
@@ -325,7 +330,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
     setActionError(null);
     try {
       // Возвращаем товары в каталог (требуют проверки)
-      for (const item of rental.items) {
+      for (const item of returnableItems) {
         if (!item.inventoryItemId) continue;
         await updateInventoryItem(item.inventoryItemId, { status: "repair" });
       }
@@ -347,7 +352,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
     setMarking(true);
     setActionError(null);
     try {
-      for (const item of rental.items) {
+      for (const item of returnableItems) {
         if (!item.inventoryItemId) continue;
         await updateInventoryItem(item.inventoryItemId, { status: "stolen" });
       }
@@ -844,7 +849,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
             {/* Список товаров */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {rental.items.filter((i) => i.inventoryItemId).map((item) => {
+              {returnableItems.map((item) => {
                 const state = returnItems.get(item.inventoryItemId!);
                 if (!state) return null;
                 return (
@@ -893,13 +898,18 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             <div className="border-t border-[var(--color-border)] p-4 shrink-0">
               {(() => {
                 const selectedCount = Array.from(returnItems.values()).filter((s) => s.selected).length;
-                const totalCount = rental.items.filter((i) => i.inventoryItemId).length;
+                const totalCount = returnableItems.length;
                 const allSelected = selectedCount === totalCount;
                 return (
                   <>
                     {selectedCount > 0 && selectedCount < totalCount && (
                       <p className="mb-2 text-center text-[12px] text-[#B8620A]">
                         ⚠ Частичный возврат — аренда останется активной
+                      </p>
+                    )}
+                    {debt > 0 && allSelected && (
+                      <p className="mb-2 rounded-[8px] bg-[#FFF8EA] px-3 py-2 text-center text-[12px] font-medium text-[#B8620A]">
+                        Не оплачено {formatMoney(debt)}. Товар примем, аренда закроется, но клиент останется в «Должниках».
                       </p>
                     )}
                     <button

@@ -169,6 +169,21 @@ CREATE TABLE IF NOT EXISTS services (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS shop_products (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  sku TEXT,
+  serial_number TEXT,
+  category TEXT,
+  price REAL NOT NULL DEFAULT 0,
+  purchase_cost REAL,
+  qty REAL NOT NULL DEFAULT 0,
+  photo_url TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS inventory_checks (
   id TEXT PRIMARY KEY,
   inventory_item_id TEXT NOT NULL,
@@ -179,6 +194,7 @@ CREATE TABLE IF NOT EXISTS inventory_checks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_inventory_checks_item ON inventory_checks(inventory_item_id);
+CREATE INDEX IF NOT EXISTS idx_shop_products_name ON shop_products(name);
 
 CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
@@ -295,7 +311,14 @@ function ensureColumns(table: string, columns: Record<string, string>) {
   }
 }
 
-ensureColumns("rentals", { paused_at: "TEXT", paid_at: "TEXT" });
+ensureColumns("rentals", {
+  paused_at: "TEXT",
+  paid_at: "TEXT",
+  // Момент фактического возврата — по нему считается пунктуальность клиента
+  returned_at: "TEXT",
+  // Товары магазина списываются со склада ровно один раз, при выдаче
+  shop_written_off: "INTEGER NOT NULL DEFAULT 0",
+});
 
 ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0" });
 

@@ -56,3 +56,28 @@ export const paymentStyles: Record<PaymentStatus, { bg: string; text: string }> 
   overdue: { bg: "bg-[#FDECEC]", text: "text-[#C0272D]" },
   partial: { bg: "bg-[#EFF3FF]", text: "text-[#2E5FE0]" },
 };
+
+/**
+ * Позиции, которые не тарифицируются по времени: услуга — это разовая работа,
+ * товар магазина продаётся насовсем. Умножать их на срок аренды нельзя,
+ * иначе перчатки за неделю подорожают в семь раз.
+ */
+export function isOneTimeLine(line: { category?: string }) {
+  return line.category === "service" || line.category === "shop";
+}
+
+/** Сумма строки аренды с учётом того, тарифицируется она по дням или нет */
+export function lineTotal(line: { pricePerDay: number; qty: number; category?: string }, days: number) {
+  return line.pricePerDay * line.qty * (isOneTimeLine(line) ? 1 : Math.max(1, days));
+}
+
+/**
+ * Долг по аренде. Считаем только те, где инструмент уже уехал к клиенту:
+ * бронь без оплаты — это ещё не долг, а вот завершённая аренда с остатком —
+ * долг, и она обязана оставаться на вкладке «Должники». Раньше возврат товара
+ * прятал такую аренду из списка, и деньги терялись из виду.
+ */
+export function isDebtorRental(r: { status: string; total: number; paid: number }) {
+  const issued = r.status === "active" || r.status === "overdue" || r.status === "completed" || r.status === "stolen";
+  return issued && r.total - r.paid > 0;
+}

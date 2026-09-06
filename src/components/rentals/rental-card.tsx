@@ -1,7 +1,7 @@
 "use client";
 
 import { Rental } from "@/lib/types";
-import { cn, formatDateTimeDisplay, formatMoney, paymentLabels, paymentStyles, statusLabels, statusStyles } from "@/lib/utils";
+import { cn, formatDateTimeDisplay, formatMoney, paymentLabels, paymentStyles, statusLabels, statusStyles, isOneTimeLine } from "@/lib/utils";
 import { Phone, Truck, ChevronDown, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
@@ -75,7 +75,8 @@ export function RentalCard({ rental, draggable }: { rental: Rental; draggable?: 
 
       <div className="mt-3 rounded-[10px] border border-[var(--color-border)] px-2.5 py-2">
         <div className="mb-1 text-[10px] font-medium text-[var(--color-text-muted)]">
-          Инвентарь ({formatMoney(rental.items.reduce((s, i) => s + i.pricePerDay, 0))})
+          {/* Ставка за сутки: услуги и товары магазина сюда не входят, они разовые */}
+          Инвентарь ({formatMoney(rental.items.filter((i) => !isOneTimeLine(i)).reduce((s, i) => s + i.pricePerDay * i.qty, 0))} / сут)
         </div>
         {rental.items.slice(0, 2).map((item) => (
           <div key={item.id} className="flex items-center gap-1.5 py-0.5 text-[12px]">

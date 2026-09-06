@@ -7,11 +7,12 @@ import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
 import { branches, rentalPeriods, depositTypeLabels } from "@/lib/mock-data";
 import { Client, InventoryLine, LineCategory, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
-import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, durationDays } from "@/lib/utils";
+import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, durationDays, lineTotal, isOneTimeLine } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { QuickClientModal } from "@/components/clients/quick-client-modal";
 import { AddCatalogBundleModal } from "@/components/rentals/add-catalog-bundle-modal";
 import { AddCatalogItemModal } from "@/components/rentals/add-catalog-item-modal";
+import { AddShopItemModal } from "@/components/rentals/add-shop-item-modal";
 import {
   ArrowLeft,
   Search,
@@ -48,6 +49,7 @@ const tabDefs: { key: "all" | LineCategory; label: string }[] = [
   { key: "product", label: "Продукты" },
   { key: "kit", label: "Комплекты" },
   { key: "service", label: "Услуги" },
+  { key: "shop", label: "Магазин" },
 ];
 
 export default function NewRentalPage() {
@@ -151,7 +153,8 @@ export default function NewRentalPage() {
   const visibleItems = tab === "all" ? items : items.filter((i) => (i.category ?? "product") === tab);
   const countFor = (k: "all" | LineCategory) => (k === "all" ? items.length : items.filter((i) => (i.category ?? "product") === k).length);
 
-  const itemsTotal = items.reduce((s, i) => s + i.pricePerDay * i.qty, 0) * duration;
+  // Товары магазина и услуги в срок не упираются — считаем каждую строку по своим правилам
+  const itemsTotal = items.reduce((s, i) => s + lineTotal(i, duration), 0);
   const discountValue = Math.round(itemsTotal * (discountPct / 100));
   const penaltiesSum = penalties.reduce((s, p) => s + p.amount, 0);
   const total = Math.max(0, itemsTotal - discountValue + penaltiesSum);
@@ -250,13 +253,13 @@ export default function NewRentalPage() {
     router.push(`/rentals/${rentalId}`);
   }
 
-  function addItem(category: LineCategory, values: { name: string; pricePerDay: number; qty: number; inventoryItemId?: string }) {
+  function addItem(category: LineCategory, values: { name: string; pricePerDay: number; qty: number; inventoryItemId?: string; sku?: string }) {
     setItems((prev) => [
       ...prev,
       {
         id: `it_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         name: values.name,
-        sku: `NEW-${Math.floor(Math.random() * 900 + 100)}`,
+        sku: values.sku ?? `NEW-${Math.floor(Math.random() * 900 + 100)}`,
         qty: values.qty,
         pricePerDay: values.pricePerDay,
         category,
@@ -484,11 +487,11 @@ export default function NewRentalPage() {
               ))}
             </div>
 
-            {(["product", "kit", "service"] as LineCategory[])
+            {(["product", "kit", "service", "shop"] as LineCategory[])
               .filter((cat) => tab === "all" || tab === cat)
               .map((cat) => {
                 const catItems = items.filter((i) => (i.category ?? "product") === cat);
-                const catLabel = cat === "product" ? "Продукты" : cat === "kit" ? "Комплекты" : "Услуги";
+                const catLabel = cat === "product" ? "Продукты" : cat === "kit" ? "Комплекты" : cat === "service" ? "Услуги" : "Товары магазина";
                 return (
                   <div key={cat} className="mb-4 last:mb-0">
                     <div className="mb-2 flex items-center justify-between">
@@ -511,10 +514,10 @@ export default function NewRentalPage() {
                             {/* Название */}
                             <div className="min-w-0 flex-1">
                               <div className="truncate text-[12.5px] font-medium">{item.name}</div>
-                              <div className="text-[11px] text-[var(--color-text-muted)]">{formatMoney(item.pricePerDay)}/сут</div>
+                              <div className="text-[11px] text-[var(--color-text-muted)]">{formatMoney(item.pricePerDay)}{isOneTimeLine(item) ? " за шт." : "/сут"}</div>
                             </div>
                             {/* Сумма */}
-                            <span className="shrink-0 text-[12.5px] font-semibold">{formatMoney(item.pricePerDay * item.qty * duration)}</span>
+                            <span className="shrink-0 text-[12.5px] font-semibold">{formatMoney(lineTotal(item, duration))}</span>
                             {/* Удалить */}
                             <button onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))} className="shrink-0 text-[var(--color-text-muted)] hover:text-[#C0272D]">
                               <Trash2 className="h-3.5 w-3.5" />
@@ -842,6 +845,9 @@ export default function NewRentalPage() {
 
       {addModalCategory === "product" && (
         <AddCatalogItemModal onClose={() => setAddModalCategory(null)} onAdd={(values) => addItem("product", values)} />
+      )}
+      {addModalCategory === "shop" && (
+        <AddShopItemModal onClose={() => setAddModalCategory(null)} onAdd={(values) => addItem("shop", values)} />
       )}
       {(addModalCategory === "kit" || addModalCategory === "service") && (
         <AddCatalogBundleModal category={addModalCategory} onClose={() => setAddModalCategory(null)} onAdd={(values) => addItem(addModalCategory, values)} />

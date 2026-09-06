@@ -1,5 +1,6 @@
 import { db, logActivity } from "./db";
-import { Client, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { isOneTimeLine, lineTotal } from "./utils";
+import { Client, ClientRatingBreakdown, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -40,12 +41,88 @@ interface ClientRow {
   created_at: string;
 }
 
-function clientRowToDomain(row: ClientRow, rentalRows: { total: number; paid: number; status: string; start_at: string }[]): Client {
+/** Аренда глазами рейтинга: сколько должен, вернул ли вовремя */
+interface RentalForRating {
+  total: number;
+  paid: number;
+  status: string;
+  start_at: string;
+  end_at: string;
+  returned_at: string | null;
+}
+
+/**
+ * Рейтинг клиента 1–5 звёзд. Вручную его никто не ставит — он складывается
+ * из трёх вещей, которые важны прокату:
+ *   • как часто человек возвращается (30 %)
+ *   • платит ли полностью (35 %)
+ *   • возвращает ли инструмент в срок (35 %)
+ * Черновики и отменённые аренды в расчёт не идут: по ним судить не о чем.
+ */
+function computeClientRating(rows: RentalForRating[], blacklisted: boolean) {
+  const counted = rows.filter((r) => r.status !== "draft" && r.status !== "cancelled");
+  const debt = counted.reduce((sum, r) => sum + Math.max(0, r.total - r.paid), 0);
+  const lateReturns = counted.filter((r) => isLateReturn(r)).length;
+
+  const breakdown: ClientRatingBreakdown = {
+    loyalty: 0,
+    payment: 0,
+    punctuality: 0,
+    rentals: counted.length,
+    debt,
+    lateReturns,
+  };
+
+  // Ни одной аренды — рейтинга ещё нет, ставить «1 звезда» новичку нечестно
+  if (counted.length === 0) return { rating: undefined, breakdown };
+
+  // Кража или чёрный список перевешивают любую статистику
+  if (blacklisted || counted.some((r) => r.status === "stolen")) {
+    return { rating: 1, breakdown };
+  }
+
+  // Лояльность: первая аренда — 20 %, десятая и дальше — 100 %
+  const loyaltySteps = [1, 2, 3, 5, 10];
+  const loyalty = loyaltySteps.filter((n) => counted.length >= n).length / loyaltySteps.length;
+
+  // Оплата: доля аренд, закрытых полностью
+  const fullyPaid = counted.filter((r) => r.paid >= r.total).length;
+  const payment = fullyPaid / counted.length;
+
+  // Пунктуальность: доля возвратов не позже конца срока
+  const punctuality = (counted.length - lateReturns) / counted.length;
+
+  breakdown.loyalty = Math.round(loyalty * 100);
+  breakdown.payment = Math.round(payment * 100);
+  breakdown.punctuality = Math.round(punctuality * 100);
+
+  const score = 0.3 * loyalty + 0.35 * payment + 0.35 * punctuality;
+  const rating = Math.min(5, Math.max(1, Math.round(1 + 4 * score)));
+  return { rating, breakdown };
+}
+
+/**
+ * Опоздание с возвратом. Завершённую аренду сверяем с фактической датой
+ * возврата, а если её нет (аренда закрыта до появления поля) — считаем
+ * опозданием только явный статус «просрочена». Идущую аренду — по текущему
+ * времени: инструмент до сих пор у клиента, срок уже вышел.
+ */
+function isLateReturn(r: RentalForRating): boolean {
+  const deadline = new Date(r.end_at).getTime();
+  if (!Number.isFinite(deadline)) return false;
+  if (r.returned_at) return new Date(r.returned_at).getTime() > deadline;
+  if (r.status === "completed") return false;
+  if (r.status === "overdue") return true;
+  return r.status === "active" && Date.now() > deadline;
+}
+
+function clientRowToDomain(row: ClientRow, rentalRows: RentalForRating[]): Client {
   const totalRentals = rentalRows.length;
   const totalSpent = rentalRows.reduce((s, r) => s + r.paid, 0);
   const repeatRentals = Math.max(0, totalRentals - 1);
   const overdueCount = rentalRows.filter((r) => r.status === "overdue").length;
   const lastRentalDate = rentalRows.length ? rentalRows.map((r) => r.start_at).sort().slice(-1)[0]?.slice(0, 10) : undefined;
+  const { rating, breakdown } = computeClientRating(rentalRows, !!row.blacklisted);
 
   return {
     id: row.id,
@@ -68,7 +145,10 @@ function clientRowToDomain(row: ClientRow, rentalRows: { total: number; paid: nu
     bik: row.bik ?? undefined,
     acquisitionChannel: row.acquisition_channel ?? undefined,
     discount: row.discount ?? undefined,
-    rating: row.rating ?? undefined,
+    // Рейтинг считается, а не хранится: колонка rating осталась от ручного
+    // выставления и больше не используется
+    rating,
+    ratingBreakdown: breakdown,
     blacklisted: !!row.blacklisted,
     createdAt: row.created_at,
     totalRentals,
@@ -80,12 +160,9 @@ function clientRowToDomain(row: ClientRow, rentalRows: { total: number; paid: nu
 }
 
 function rentalSummariesForClient(clientId: string) {
-  return db.prepare(`SELECT total, paid, status, start_at FROM rentals WHERE client_id = ?`).all(clientId) as {
-    total: number;
-    paid: number;
-    status: string;
-    start_at: string;
-  }[];
+  return db
+    .prepare(`SELECT total, paid, status, start_at, end_at, returned_at FROM rentals WHERE client_id = ?`)
+    .all(clientId) as RentalForRating[];
 }
 
 export function listClients(): Client[] {
@@ -482,6 +559,169 @@ export function deleteService(id: string) {
   db.prepare(`DELETE FROM services WHERE id = ?`).run(id);
 }
 
+// ---------- Магазин: товары на продажу ----------
+
+interface ShopProductRow {
+  id: string;
+  name: string;
+  sku: string | null;
+  serial_number: string | null;
+  category: string | null;
+  price: number;
+  purchase_cost: number | null;
+  qty: number;
+  photo_url: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+function shopRowToDomain(row: ShopProductRow): ShopProduct {
+  return {
+    id: row.id,
+    name: row.name,
+    sku: row.sku ?? "",
+    serialNumber: row.serial_number ?? undefined,
+    category: row.category ?? undefined,
+    price: row.price,
+    purchaseCost: row.purchase_cost ?? undefined,
+    qty: row.qty,
+    photoUrl: row.photo_url ?? undefined,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at ?? undefined,
+  };
+}
+
+export function listShopProducts(search?: string): ShopProduct[] {
+  const rows = search?.trim()
+    ? (db
+        .prepare(
+          `SELECT * FROM shop_products
+           WHERE LOWER(name) LIKE @q OR LOWER(COALESCE(sku, '')) LIKE @q OR LOWER(COALESCE(serial_number, '')) LIKE @q
+           ORDER BY name`
+        )
+        .all({ q: `%${search.trim().toLowerCase()}%` }) as ShopProductRow[])
+    : (db.prepare(`SELECT * FROM shop_products ORDER BY name`).all() as ShopProductRow[]);
+  return rows.map(shopRowToDomain);
+}
+
+export function getShopProduct(id: string): ShopProduct | null {
+  const row = db.prepare(`SELECT * FROM shop_products WHERE id = ?`).get(id) as ShopProductRow | undefined;
+  return row ? shopRowToDomain(row) : null;
+}
+
+/**
+ * Инвентарный и серийный номера у товара магазина свои и не должны повторяться:
+ * по ним продавец находит позицию на полке и в накладной поставщика.
+ */
+function assertShopNumbersFree(sku: string, serial: string | undefined, exceptId?: string) {
+  if (sku) {
+    const clash = db
+      .prepare(`SELECT id FROM shop_products WHERE LOWER(sku) = LOWER(?) AND id != ?`)
+      .get(sku, exceptId ?? "") as { id: string } | undefined;
+    if (clash) throw httpError(409, `Инвентарный номер ${sku} уже занят другим товаром магазина`);
+  }
+  if (serial) {
+    const clash = db
+      .prepare(`SELECT id FROM shop_products WHERE LOWER(serial_number) = LOWER(?) AND id != ?`)
+      .get(serial, exceptId ?? "") as { id: string } | undefined;
+    if (clash) throw httpError(409, `Серийный номер ${serial} уже занят другим товаром магазина`);
+  }
+}
+
+/** Инвентарный номер по порядку: МГ-1, МГ-2 — если продавец не задал свой */
+const nextShopSku = db.transaction((): string => {
+  const row = db.prepare(`SELECT value FROM company_settings WHERE key = 'shop_counter'`).get() as
+    | { value: string }
+    | undefined;
+  const next = row
+    ? Number(row.value) + 1
+    : (db.prepare(`SELECT COUNT(*) AS c FROM shop_products`).get() as { c: number }).c + 1;
+  db.prepare(
+    `INSERT INTO company_settings (key, value) VALUES ('shop_counter', ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).run(String(next));
+  return `МГ-${next}`;
+});
+
+export function createShopProduct(input: Partial<ShopProduct>): ShopProduct {
+  const name = (input.name ?? "").trim();
+  if (!name) throw httpError(400, "Укажите название товара");
+
+  const sku = (input.sku ?? "").trim() || nextShopSku();
+  const serial = (input.serialNumber ?? "").trim() || undefined;
+  assertShopNumbersFree(sku, serial);
+
+  const id = newId("shop");
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO shop_products (id, name, sku, serial_number, category, price, purchase_cost, qty, photo_url, notes, created_at, updated_at)
+     VALUES (@id, @name, @sku, @serialNumber, @category, @price, @purchaseCost, @qty, @photoUrl, @notes, @createdAt, @updatedAt)`
+  ).run({
+    id,
+    name,
+    sku,
+    serialNumber: serial ?? null,
+    category: input.category?.trim() || null,
+    price: input.price ?? 0,
+    purchaseCost: input.purchaseCost ?? null,
+    qty: input.qty ?? 0,
+    photoUrl: input.photoUrl ?? null,
+    notes: input.notes?.trim() || null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  logActivity(`Магазин: добавлен товар «${name}»`);
+  return getShopProduct(id)!;
+}
+
+export function updateShopProduct(id: string, patch: Partial<ShopProduct>): ShopProduct | null {
+  const existing = getShopProduct(id);
+  if (!existing) return null;
+
+  const sku = patch.sku !== undefined ? patch.sku.trim() || existing.sku : existing.sku;
+  const serial = patch.serialNumber !== undefined ? patch.serialNumber.trim() || undefined : existing.serialNumber;
+  assertShopNumbersFree(sku, serial, id);
+
+  db.prepare(
+    `UPDATE shop_products SET name=@name, sku=@sku, serial_number=@serialNumber, category=@category,
+     price=@price, purchase_cost=@purchaseCost, qty=@qty, photo_url=@photoUrl, notes=@notes, updated_at=@updatedAt
+     WHERE id=@id`
+  ).run({
+    id,
+    name: (patch.name ?? existing.name).trim(),
+    sku,
+    serialNumber: serial ?? null,
+    category: patch.category !== undefined ? patch.category.trim() || null : existing.category ?? null,
+    price: patch.price ?? existing.price,
+    purchaseCost: patch.purchaseCost !== undefined ? patch.purchaseCost : existing.purchaseCost ?? null,
+    qty: patch.qty ?? existing.qty,
+    photoUrl: patch.photoUrl !== undefined ? patch.photoUrl || null : existing.photoUrl ?? null,
+    notes: patch.notes !== undefined ? patch.notes.trim() || null : existing.notes ?? null,
+    updatedAt: new Date().toISOString(),
+  });
+  return getShopProduct(id);
+}
+
+export function deleteShopProduct(id: string) {
+  db.prepare(`DELETE FROM shop_products WHERE id = ?`).run(id);
+}
+
+/** Сводка для шапки раздела: сколько позиций, штук и денег лежит на полке */
+export function shopSummary() {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS positions,
+              COALESCE(SUM(qty), 0) AS units,
+              COALESCE(SUM(qty * price), 0) AS value,
+              COALESCE(SUM(CASE WHEN qty <= 0 THEN 1 ELSE 0 END), 0) AS outOfStock
+       FROM shop_products`
+    )
+    .get() as { positions: number; units: number; value: number; outOfStock: number };
+  return row;
+}
+
 // ---------- Инвентаризация ----------
 
 interface InventoryCheckRow {
@@ -561,6 +801,8 @@ interface RentalRow {
   penalty_rate_per_hour: number | null;
   paused_at: string | null;
   paid_at: string | null;
+  returned_at: string | null;
+  shop_written_off: number;
   items_json: string;
   deposit_json: string | null;
   penalties_json: string;
@@ -602,6 +844,7 @@ function rentalRowToDomain(row: RentalRow): Rental | null {
     notes: JSON.parse(row.notes_json || "[]"),
     pausedAt: row.paused_at ?? undefined,
     paidAt: row.paid_at ?? undefined,
+    returnedAt: row.returned_at ?? undefined,
     autoPenaltyEnabled: !!row.auto_penalty_enabled,
     penaltyRatePerHour: row.penalty_rate_per_hour ?? undefined,
     createdAt: row.created_at,
@@ -651,7 +894,8 @@ function toRentalRow(r: Rental, createdAt: string, updatedAt: string) {
 
 function applyInventoryLock(items: InventoryLine[], status: "rented" | "available") {
   for (const item of items) {
-    if (item.inventoryItemId) {
+    // Товар магазина продан, а не выдан: в каталоге аренды его вообще нет
+    if (item.inventoryItemId && item.category !== "shop") {
       if (status === "available") {
         // Не затираем статус, если товар уже отмечен как требующий обслуживания/ремонта/списан
         // (это делается вручную при возврате товара, до вызова completed).
@@ -687,6 +931,38 @@ const nextRentalNumber = db.transaction((): string => {
   return String(next);
 });
 
+/**
+ * Товары магазина продаются безвозвратно, поэтому со склада они списываются
+ * ровно один раз — в момент выдачи. Флаг shop_written_off страхует от
+ * повторного списания, когда аренду правят или откатывают.
+ */
+function syncShopStock(rentalId: string, nextStatus: string, items: InventoryLine[]) {
+  const shopLines = items.filter((i) => i.category === "shop" && i.inventoryItemId);
+  if (shopLines.length === 0) return;
+
+  const row = db.prepare(`SELECT shop_written_off FROM rentals WHERE id = ?`).get(rentalId) as
+    | { shop_written_off: number }
+    | undefined;
+  const written = !!row?.shop_written_off;
+  const sold = nextStatus === "active" || nextStatus === "completed" || nextStatus === "overdue" || nextStatus === "stolen";
+
+  if (sold && !written) {
+    for (const line of shopLines) {
+      db.prepare(`UPDATE shop_products SET qty = MAX(0, qty - ?) WHERE id = ?`).run(line.qty, line.inventoryItemId);
+    }
+    db.prepare(`UPDATE rentals SET shop_written_off = 1 WHERE id = ?`).run(rentalId);
+    return;
+  }
+
+  // Аренду отменили или вернули в черновик — товар физически не ушёл, возвращаем
+  if (!sold && written) {
+    for (const line of shopLines) {
+      db.prepare(`UPDATE shop_products SET qty = qty + ? WHERE id = ?`).run(line.qty, line.inventoryItemId);
+    }
+    db.prepare(`UPDATE rentals SET shop_written_off = 0 WHERE id = ?`).run(rentalId);
+  }
+}
+
 export function createRental(input: Rental): Rental {
   const now = new Date().toISOString();
   // Номер присваивает сервер: на клиенте два менеджера могли бы получить одинаковый
@@ -701,6 +977,7 @@ export function createRental(input: Rental): Rental {
   ).run(toRentalRow(input, now, now));
 
   applyInventoryLock(input.items, "rented");
+  syncShopStock(input.id, input.status, input.items);
   logRentalEvent({
     rentalId: input.id,
     type: "created",
@@ -744,6 +1021,16 @@ export function updateRental(id: string, patch: Partial<Rental>, options: { sile
   if (merged.paid !== existing.paid) {
     db.prepare(`UPDATE rentals SET paid_at = ? WHERE id = ?`).run(merged.paid > 0 ? now : null, id);
   }
+
+  // Дата фактического возврата: по ней считается пунктуальность клиента.
+  // Откатили завершение — дату убираем, иначе рейтинг останется врать
+  if (merged.status === "completed" && existing.status !== "completed") {
+    db.prepare(`UPDATE rentals SET returned_at = COALESCE(returned_at, ?) WHERE id = ?`).run(now, id);
+  } else if (merged.status !== "completed" && existing.status === "completed") {
+    db.prepare(`UPDATE rentals SET returned_at = NULL WHERE id = ?`).run(id);
+  }
+
+  syncShopStock(id, merged.status, merged.items);
 
   if (merged.status === "completed" || merged.status === "cancelled") {
     applyInventoryLock(merged.items, "available");
@@ -1049,7 +1336,7 @@ export function applyOverdueAndPenalties(): { markedOverdue: number; penaltiesAd
     if (!row.auto_penalty_enabled || !row.penalty_rate_per_hour) {
       try {
         const items = JSON.parse(row.items_json || "[]") as { pricePerDay: number; qty: number; category?: string }[];
-        const products = items.filter((i) => i.category !== "service");
+        const products = items.filter((i) => !isOneTimeLine(i));
         if (products.length > 0) {
           // Фактические дни = от начала аренды до сейчас (минимум 1)
           const actualDays = Math.max(1, Math.ceil((now - start) / 86400000));
@@ -1058,7 +1345,7 @@ export function applyOverdueAndPenalties(): { markedOverdue: number; penaltiesAd
 
           if (actualDays > bookedDays) {
             // Считаем новый total: товары × фактические дни + услуги (фикс)
-            const services = items.filter((i) => i.category === "service");
+            const services = items.filter((i) => isOneTimeLine(i));
             const productTotal = products.reduce((s, i) => s + i.pricePerDay * i.qty * actualDays, 0);
             const serviceTotal = services.reduce((s, i) => s + i.pricePerDay * i.qty, 0);
             const newTotal = productTotal + serviceTotal;
@@ -1396,8 +1683,8 @@ export function renderTemplate(template: string, rental: Rental): string {
     : 0;
 
   // Суммы
-  const inventoryTotal = rental.items.filter((i) => i.category !== "service").reduce((s, i) => s + i.pricePerDay * i.qty * durationDays, 0);
-  const servicesTotal = rental.items.filter((i) => i.category === "service").reduce((s, i) => s + i.pricePerDay * i.qty, 0);
+  const inventoryTotal = rental.items.filter((i) => !isOneTimeLine(i)).reduce((s, i) => s + lineTotal(i, durationDays), 0);
+  const servicesTotal = rental.items.filter((i) => isOneTimeLine(i)).reduce((s, i) => s + i.pricePerDay * i.qty, 0);
   const penaltyTotal = (rental.penalties ?? []).reduce((s: number, p: { amount: number }) => s + p.amount, 0);
   const unpaid = Math.max(0, rental.total - rental.paid);
   const deposit = (rental.deposit as { amount?: number } | undefined)?.amount ?? 0;
@@ -1412,7 +1699,7 @@ export function renderTemplate(template: string, rental: Rental): string {
     <td style="border:1px solid #ccc;padding:4px 8px">${i.name}</td>
     <td style="border:1px solid #ccc;padding:4px 8px;text-align:center">${i.qty}</td>
     <td style="border:1px solid #ccc;padding:4px 8px;text-align:right">${fmt(i.pricePerDay)}/сут</td>
-    <td style="border:1px solid #ccc;padding:4px 8px;text-align:right">${fmt(i.pricePerDay * i.qty * (i.category !== "service" ? durationDays : 1))}</td>
+    <td style="border:1px solid #ccc;padding:4px 8px;text-align:right">${fmt(lineTotal(i, durationDays))}</td>
   </tr>`).join("");
 
   const itemsTable = `<table style="border-collapse:collapse;width:100%;font-size:12px">
@@ -1496,7 +1783,7 @@ export function renderTemplate(template: string, rental: Rental): string {
     "{{created_by}}": rental.bookedBy?.name ?? "",
     "{{created_at}}": rental.createdAt ? new Date(rental.createdAt).toLocaleString("ru-RU") : "",
     "{{booked_at}}": rental.createdAt ? new Date(rental.createdAt).toLocaleDateString("ru-RU") : "",
-    "{{products_count}}": String(rental.items.filter((i) => i.category !== "service").length),
+    "{{products_count}}": String(rental.items.filter((i) => !isOneTimeLine(i)).length),
     "{{services_count}}": String(rental.items.filter((i) => i.category === "service").length),
     "{{all_inventory_total}}": fmt(inventoryTotal),
     "{{all_inventory_total_text}}": fmtT(inventoryTotal),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRental, updateRental, deleteRental } from "@/lib/repo";
 import { db } from "@/lib/db";
+import { isOneTimeLine } from "@/lib/utils";
 import { requireAuth, apiError, assertNonNegativeFields } from "@/lib/auth";
 
 // При открытии карточки просроченной аренды — пересчитываем total по фактическим дням
@@ -23,14 +24,14 @@ function recalcIfOverdue(id: string) {
 
   try {
     const items = JSON.parse(row.items_json || "[]") as { pricePerDay: number; qty: number; category?: string }[];
-    const products = items.filter((i) => i.category !== "service");
+    const products = items.filter((i) => !isOneTimeLine(i));
     if (products.length === 0) return;
 
     const actualDays = Math.max(1, Math.ceil((now - start) / 86400000));
     const bookedDays = Math.max(1, Math.ceil((end - start) / 86400000));
     if (actualDays <= bookedDays) return;
 
-    const services = items.filter((i) => i.category === "service");
+    const services = items.filter((i) => isOneTimeLine(i));
     const productTotal = products.reduce((s, i) => s + i.pricePerDay * i.qty * actualDays, 0);
     const serviceTotal = services.reduce((s, i) => s + i.pricePerDay * i.qty, 0);
     const newTotal = productTotal + serviceTotal;
