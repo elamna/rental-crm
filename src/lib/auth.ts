@@ -73,7 +73,18 @@ export function apiError(e: unknown) {
   const err = e as { status?: number; message?: string };
   const status = err?.status ?? 500;
   if (status === 500) console.error("API error:", e);
-  return Response.json({ error: err?.message ?? "Внутренняя ошибка сервера" }, { status });
+
+  // «FOREIGN KEY constraint failed» ничего не говорит менеджеру: переводим
+  // на человеческий и отдаём 409 — это не поломка сервера, а связанные данные
+  const raw = err?.message ?? "";
+  if (/FOREIGN KEY constraint failed/i.test(raw)) {
+    return Response.json(
+      { error: "Запись связана с другими данными и не может быть удалена. Сообщите администратору, если это повторится." },
+      { status: 409 }
+    );
+  }
+
+  return Response.json({ error: raw || "Внутренняя ошибка сервера" }, { status });
 }
 
 /** Обязательное текстовое поле */

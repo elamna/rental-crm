@@ -1345,6 +1345,14 @@ export function deleteRental(id: string) {
   db.prepare(`DELETE FROM rental_events WHERE rental_id = ?`).run(id);
   db.prepare(`DELETE FROM rental_pauses WHERE rental_id = ?`).run(id);
   db.prepare(`DELETE FROM rental_documents WHERE rental_id = ?`).run(id);
+
+  // Заявка мастерской и доставка живут своей жизнью: ремонт инструмента и
+  // поездку курьера нельзя стирать вместе с арендой. Но ссылку на неё снимаем —
+  // из-за внешнего ключа workshop_tickets.source_rental_id удаление падало
+  // с «FOREIGN KEY constraint failed», причём откатывалась вся пачка сразу.
+  db.prepare(`UPDATE workshop_tickets SET source_rental_id = NULL WHERE source_rental_id = ?`).run(id);
+  db.prepare(`UPDATE deliveries SET rental_id = NULL WHERE rental_id = ?`).run(id);
+
   db.prepare(`DELETE FROM rentals WHERE id = ?`).run(id);
   logActivity(`Удалена аренда №${rental.number}`);
 }
