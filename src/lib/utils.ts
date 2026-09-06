@@ -50,6 +50,24 @@ export const statusStyles: Record<RentalStatus, { bg: string; text: string; bord
   cancelled: { bg: "bg-[#F1F2F6]", text: "text-[#8A8F9C]", border: "border-[#E3E5EC]", dot: "bg-[#B4B8C4]" },
 };
 
+/**
+ * Цвет шапки карточки аренды. Статус должен читаться с двух метров, не
+ * вчитываясь в подпись: жёлтая — в работе, зелёная — закрыта, фиолетовая —
+ * просрочена. Заливка плотная, текст поверх неё белый.
+ */
+export const statusHeaderStyles: Record<RentalStatus, { header: string; tile: string; chip: string }> = {
+  request: { header: "bg-[#64748B]", tile: "bg-white/15", chip: "text-[#475569]" },
+  booked: { header: "bg-[#2B5FD9]", tile: "bg-white/15", chip: "text-[#2B5FD9]" },
+  active: { header: "bg-[#F5A623]", tile: "bg-white/25", chip: "text-[#A2620A]" },
+  completed: { header: "bg-[#2E9E5B]", tile: "bg-white/18", chip: "text-[#1C8A46]" },
+  overdue: { header: "bg-[#C13DD6]", tile: "bg-white/18", chip: "text-[#9A28AC]" },
+  stolen: { header: "bg-[#8B1A1A]", tile: "bg-white/15", chip: "text-[#8B1A1A]" },
+  cancelled: { header: "bg-[#9AA0B4]", tile: "bg-white/20", chip: "text-[#5E6478]" },
+};
+
+/** Долг — отдельная метка поверх статуса: он важнее оттенка стадии */
+export const DEBTOR_HEADER = "bg-[#F0522B]";
+
 export const paymentStyles: Record<PaymentStatus, { bg: string; text: string }> = {
   paid: { bg: "bg-[#EAF7EE]", text: "text-[#1C8A46]" },
   pending: { bg: "bg-[#FEF6E3]", text: "text-[#B8860B]" },

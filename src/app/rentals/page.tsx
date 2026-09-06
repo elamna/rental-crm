@@ -19,8 +19,9 @@ export default function RentalsPage() {
   const [view, setView] = useState<"grid" | "list">("grid");
 
   // Режим выбора: включается кнопкой, чтобы обычный клик по карточке по-прежнему открывал аренду
-  const { can } = useAuth();
-  const canEdit = can("rentals.edit");
+  // Массовое удаление — только администратору
+  const { user: me } = useAuth();
+  const canEdit = !!me?.isAdmin;
   const deleteRentals = useAppStore((s) => s.deleteRentals);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());

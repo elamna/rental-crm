@@ -31,8 +31,9 @@ export default function ClientsPage() {
   const deleteClient = useAppStore((s) => s.deleteClient);
   const deleteClients = useAppStore((s) => s.deleteClients);
   const importClients = useAppStore((s) => s.importClients);
-  const { can } = useAuth();
-  const canEdit = can("clients.edit");
+  // Чекбоксы массового выбора показываем только администратору
+  const { user: me } = useAuth();
+  const canEdit = !!me?.isAdmin;
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
