@@ -1256,6 +1256,7 @@ export interface RentalImportInput {
 export function importRentals(rows: RentalImportInput[]): ImportReport & {
   clientsCreated: number;
   itemsLinked: number;
+  itemsCreated: number;
   itemsUnmatched: number;
 } {
   const reasons: Record<string, number> = {};
@@ -1263,6 +1264,7 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
   let skipped = 0;
   let clientsCreated = 0;
   let itemsLinked = 0;
+  let itemsCreated = 0;
   let itemsUnmatched = 0;
 
   const existingNumbers = new Set(
@@ -1284,12 +1286,48 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
   }
 
   const itemBySku = new Map<string, { id: string; price: number }>();
-  for (const i of db.prepare(`SELECT id, sku, rental_price FROM inventory_items WHERE sku IS NOT NULL`).all() as {
+  // Образец по названию: у новой единицы должны быть цена и категория такие же,
+  // как у её собратьев в каталоге, иначе она заведётся пустой карточкой
+  const templateByName = new Map<string, { category: string | null; price: number }>();
+  for (const i of db.prepare(`SELECT id, name, sku, category, rental_price FROM inventory_items`).all() as {
     id: string;
-    sku: string;
+    name: string;
+    sku: string | null;
+    category: string | null;
     rental_price: number;
   }[]) {
-    itemBySku.set(i.sku.trim().toLowerCase(), { id: i.id, price: i.rental_price });
+    if (i.sku) itemBySku.set(i.sku.trim().toLowerCase(), { id: i.id, price: i.rental_price });
+    const nameKey = i.name.trim().toLowerCase();
+    if (!templateByName.has(nameKey)) templateByName.set(nameKey, { category: i.category, price: i.rental_price });
+  }
+
+  const insertItem = db.prepare(
+    `INSERT INTO inventory_items (id, name, sku, category, rental_price, status, branch, created_at)
+     VALUES (@id, @name, @sku, @category, @price, 'available', @branch, @createdAt)`
+  );
+
+  /**
+   * Единица каталога, которой не оказалось под своим артикулом. В выгрузке каталога
+   * прошлой системы позиции сгруппированы по продуктам, поэтому артикулы конкретных
+   * единиц (QS.0404 и такие же) там просто отсутствуют — а в арендах они есть.
+   * Заводим карточку по данным из аренды, цену и категорию берём у одноимённых.
+   */
+  function ensureInventoryItem(name: string, sku: string, createdAt: string) {
+    const template = templateByName.get(name.trim().toLowerCase());
+    const id = newId("inv");
+    insertItem.run({
+      id,
+      name,
+      sku,
+      category: template?.category ?? null,
+      price: template?.price ?? 0,
+      branch: branches[0] ?? null,
+      createdAt,
+    });
+    const created = { id, price: template?.price ?? 0 };
+    itemBySku.set(sku.trim().toLowerCase(), created);
+    itemsCreated++;
+    return created;
   }
 
   const insert = db.prepare(
@@ -1335,10 +1373,13 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
         clientsCreated++;
       }
 
-      // Позиции: привязываем по артикулу, ненайденные оставляем текстом
+      // Позиции привязываем по артикулу. Артикула нет в каталоге — заводим единицу:
+      // она реально существовала, раз её выдавали в аренду
       const lines: InventoryLine[] = row.items.map((item, index) => {
-        const match = item.sku ? itemBySku.get(item.sku.trim().toLowerCase()) : undefined;
+        const sku = item.sku.trim();
+        let match = sku ? itemBySku.get(sku.toLowerCase()) : undefined;
         if (match) itemsLinked++;
+        else if (sku) match = ensureInventoryItem(item.name, sku, row.createdAt ?? row.startAt ?? new Date().toISOString());
         else itemsUnmatched++;
         return {
           id: `imp_${number}_${index}`,
@@ -1400,7 +1441,9 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
 
   if (added) logActivity(`Импортировано аренд: ${added}`);
   if (clientsCreated) reasons["заведено новых клиентов"] = clientsCreated;
-  return { added, skipped, reasons, clientsCreated, itemsLinked, itemsUnmatched };
+  if (itemsCreated) reasons["заведено единиц каталога"] = itemsCreated;
+  if (itemsCreated) logActivity(`Импорт аренд: заведено единиц каталога — ${itemsCreated}`);
+  return { added, skipped, reasons, clientsCreated, itemsLinked, itemsCreated, itemsUnmatched };
 }
 
 // ---------- История аренды и паузы ----------

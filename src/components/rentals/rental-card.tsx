@@ -34,8 +34,10 @@ export function RentalCard({
   const st = statusHeaderStyles[rental.status];
   const pay = paymentStyles[rental.paymentStatus];
 
-  // Долг перекрашивает шапку: невыплаченные деньги важнее стадии аренды
-  const debtor = isDebtorRental(rental);
+  // «Должник» — это закрытая аренда с долгом: инструмент вернули, деньги нет.
+  // Пока аренда идёт, долга ещё нет — есть неоплаченный остаток, и он виден
+  // отдельной строкой. Иначе каждая свежая невыплаченная аренда краснела бы.
+  const debtor = isDebtorRental(rental) && (rental.status === "completed" || rental.status === "stolen");
   const headerBg = debtor ? DEBTOR_HEADER : st.header;
   const label = debtor ? "Должник" : statusLabels[rental.status];
   const chipText = debtor ? "text-[#C23A16]" : st.chip;

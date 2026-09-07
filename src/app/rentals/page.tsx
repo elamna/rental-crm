@@ -45,12 +45,12 @@ export default function RentalsPage() {
       const rows = await parseRentalsFile(file);
       setImportMsg(`Загружаем ${rows.length} аренд…`);
       const report = await importRentals(rows);
-      // Позиции ищутся в каталоге по артикулу. Если каталог ещё не загружен или
-      // выгружен группами (без артикулов единиц) — состав аренды сохранится текстом
-      const tail =
-        report.itemsUnmatched > 0
-          ? ` · позиций без привязки к каталогу: ${report.itemsUnmatched} (сохранены текстом — загрузите каталог по единицам, чтобы они связались)`
-          : "";
+      // Артикулов, которых не было в каталоге, импорт заводит сам — об этом стоит сказать:
+      // каталог после загрузки аренд станет больше, и это ожидаемо
+      const parts = [];
+      if (report.itemsCreated > 0) parts.push(`заведено единиц каталога: ${report.itemsCreated}`);
+      if (report.itemsUnmatched > 0) parts.push(`позиций без артикула: ${report.itemsUnmatched}`);
+      const tail = parts.length ? ` · ${parts.join(", ")}` : "";
       setImportMsg(formatImportReport("Аренды", report) + tail);
       setTimeout(() => setImportMsg(null), 15000);
     } catch (err) {
