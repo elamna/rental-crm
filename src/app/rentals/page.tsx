@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { RentalCard } from "@/components/rentals/rental-card";
 import { StatusTabs, TabKey } from "@/components/rentals/status-tabs";
@@ -18,6 +18,10 @@ export default function RentalsPage() {
   const hydrated = useAppStore((s) => s.hydrated);
   const [tab, setTab] = useState<TabKey>("all");
   const [search, setSearch] = useState("");
+  // Три тысячи карточек разом браузер рисует секундами и потом тормозит
+  // на каждом клике. Показываем порциями, фильтры при этом ищут по всему списку
+  const PAGE_SIZE = 60;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [view, setView] = useState<"grid" | "list">("grid");
 
   // Режим выбора: включается кнопкой, чтобы обычный клик по карточке по-прежнему открывал аренду
@@ -87,6 +91,11 @@ export default function RentalsPage() {
       setDeleting(false);
     }
   }
+
+  // Смена вкладки или поиска начинает показ заново
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [tab, search]);
 
   const filtered = useMemo(() => {
     let list = allRentals;
@@ -186,7 +195,7 @@ export default function RentalsPage() {
                 : "flex flex-col gap-3"
             }
           >
-            {filtered.map((r, i) => (
+            {filtered.slice(0, visibleCount).map((r, i) => (
               <div key={r.id} className="animate-fade-in-up" style={{ animationDelay: `${Math.min(i * 25, 300)}ms` }}>
                 <RentalCard
                   rental={r}
@@ -197,6 +206,20 @@ export default function RentalsPage() {
                 />
               </div>
             ))}
+          </div>
+        )}
+
+        {filtered.length > visibleCount && (
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <span className="text-[13px] text-[var(--color-text-muted)]">
+              Показано {visibleCount} из {filtered.length}
+            </span>
+            <button
+              onClick={() => setVisibleCount((n) => n + PAGE_SIZE * 2)}
+              className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            >
+              Показать ещё
+            </button>
           </div>
         )}
       </div>

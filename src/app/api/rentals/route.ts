@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError, ApiError, assertNonNegativeFields } from "@/lib/auth";
 import { listRentals, createRental } from "@/lib/repo";
 import { Rental } from "@/lib/types";
+import { jsonCompressed } from "@/lib/api-response";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await requireAuth("rentals.view");
-    return NextResponse.json(listRentals());
+    // Список большой — отдаём сжатым, иначе на телефоне он едет мегабайтами
+    return jsonCompressed(req, listRentals());
   } catch (e) {
     return apiError(e);
   }

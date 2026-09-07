@@ -173,9 +173,29 @@ function rentalSummariesForClient(clientId: string) {
     .all(clientId) as RentalForRating[];
 }
 
+/**
+ * Все аренды, сгруппированные по клиенту. Раньше список клиентов делал по
+ * отдельному SELECT на каждого: на шести тысячах карточек это шесть тысяч
+ * запросов и полторы секунды только на выборку. Теперь один проход по таблице.
+ */
+function rentalSummariesByClient(): Map<string, RentalForRating[]> {
+  const rows = db
+    .prepare(`SELECT client_id, total, paid, status, start_at, end_at, returned_at FROM rentals`)
+    .all() as (RentalForRating & { client_id: string })[];
+
+  const map = new Map<string, RentalForRating[]>();
+  for (const row of rows) {
+    const list = map.get(row.client_id);
+    if (list) list.push(row);
+    else map.set(row.client_id, [row]);
+  }
+  return map;
+}
+
 export function listClients(): Client[] {
   const rows = db.prepare(`SELECT * FROM clients ORDER BY created_at DESC`).all() as ClientRow[];
-  return rows.map((row) => clientRowToDomain(row, rentalSummariesForClient(row.id)));
+  const byClient = rentalSummariesByClient();
+  return rows.map((row) => clientRowToDomain(row, byClient.get(row.id) ?? []));
 }
 
 export function getClient(id: string): Client | null {
@@ -997,9 +1017,10 @@ interface RentalRow {
   updated_at: string;
 }
 
-function rentalRowToDomain(row: RentalRow): Rental | null {
-  const client = getClient(row.client_id);
-  if (!client) return null;
+/** `client` передают, когда клиенты уже подняты пачкой — чтобы не ходить за каждым */
+function rentalRowToDomain(row: RentalRow, client?: Client): Rental | null {
+  const resolved = client ?? getClient(row.client_id);
+  if (!resolved) return null;
   return {
     id: row.id,
     status: row.status as RentalStatus,
@@ -1013,7 +1034,7 @@ function rentalRowToDomain(row: RentalRow): Rental | null {
     startAt: row.start_at,
     endAt: row.end_at,
     rentalPeriod: (row.rental_period ?? undefined) as Rental["rentalPeriod"],
-    client,
+    client: resolved,
     total: row.total,
     paid: row.paid,
     items: JSON.parse(row.items_json || "[]") as InventoryLine[],
@@ -1036,9 +1057,20 @@ function rentalRowToDomain(row: RentalRow): Rental | null {
   };
 }
 
+/**
+ * Список аренд. Клиентов собираем разом и раздаём по ссылке: `rentalRowToDomain`
+ * зовёт `getClient()`, а тот пересчитывает статистику и рейтинг — на трёх тысячах
+ * аренд это тысячи лишних запросов и секунда ожидания на каждой странице.
+ */
 export function listRentals(): Rental[] {
   const rows = db.prepare(`SELECT * FROM rentals ORDER BY created_at DESC`).all() as RentalRow[];
-  return rows.map(rentalRowToDomain).filter((r): r is Rental => r !== null);
+  const clients = new Map(listClients().map((c) => [c.id, c]));
+  return rows
+    .map((row) => {
+      const client = clients.get(row.client_id);
+      return client ? rentalRowToDomain(row, client) : null;
+    })
+    .filter((r): r is Rental => r !== null);
 }
 
 export function getRental(id: string): Rental | null {

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError, required, assertNonNegativeFields } from "@/lib/auth";
 import { listInventory, createInventoryItem, createInventoryItems } from "@/lib/repo";
+import { jsonCompressed } from "@/lib/api-response";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await requireAuth("catalog.view");
-    return NextResponse.json(listInventory());
+    return jsonCompressed(req, listInventory());
   } catch (e) {
     return apiError(e);
   }

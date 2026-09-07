@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { acquisitionChannels, clientTypeLabels } from "@/lib/mock-data";
@@ -39,6 +39,9 @@ export default function ClientsPage() {
   const canImport = !!me?.isOwner;
 
   const [search, setSearch] = useState("");
+  // База на несколько тысяч строк: рисуем частями, поиск идёт по всей базе
+  const PAGE_SIZE = 100;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [channelFilter, setChannelFilter] = useState<string>("");
   const [ratingFilter, setRatingFilter] = useState<string>("");
@@ -81,6 +84,10 @@ export default function ClientsPage() {
       setDeleting(false);
     }
   }
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [search, typeFilter, channelFilter, ratingFilter]);
 
   const stats = useMemo(() => {
     const count = clients.length;
@@ -320,7 +327,7 @@ export default function ClientsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
+                {filtered.slice(0, visibleCount).map((c) => (
                   <tr
                     key={c.id}
                     className={cn(
@@ -370,6 +377,20 @@ export default function ClientsPage() {
                 ))}
               </tbody>
             </table>
+
+            {filtered.length > visibleCount && (
+              <div className="flex flex-col items-center gap-2 border-t border-[var(--color-border)] py-4">
+                <span className="text-[13px] text-[var(--color-text-muted)]">
+                  Показано {visibleCount} из {filtered.length}
+                </span>
+                <button
+                  onClick={() => setVisibleCount((n) => n + PAGE_SIZE * 2)}
+                  className="rounded-[10px] border border-[var(--color-border)] px-5 py-2 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                >
+                  Показать ещё
+                </button>
+              </div>
+            )}
 
             {filtered.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-16 text-center">
