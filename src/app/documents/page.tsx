@@ -7,7 +7,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
-import { TextStyle } from "@tiptap/extension-text-style";
+import { TextStyle, FontFamily, FontSize, Color } from "@tiptap/extension-text-style";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -73,6 +73,25 @@ const BLUEPRINTS: { name: string; hint: string; body: string }[] = [
       '<p>Остаток к оплате: {{unpaid}}.</p>' +
       '<p><br></p><p>Принял: _______________ / {{manager_name}}</p>',
   },
+];
+
+/** Шрифты, которые есть на рабочих машинах и одинаково печатаются */
+const FONTS = [
+  { label: "Arial", value: "Arial, sans-serif" },
+  { label: "Times New Roman", value: "'Times New Roman', serif" },
+  { label: "Calibri", value: "Calibri, sans-serif" },
+  { label: "Georgia", value: "Georgia, serif" },
+  { label: "Courier New", value: "'Courier New', monospace" },
+];
+
+/** Размеры в пунктах: в документах привычнее «12 пт», а не «16 px» */
+const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24];
+
+const TEXT_COLORS = [
+  { label: "Чёрный", value: "#000000" },
+  { label: "Серый", value: "#555555" },
+  { label: "Красный", value: "#C0272D" },
+  { label: "Синий", value: "#2B5FD9" },
 ];
 
 const VARIABLES = [
@@ -376,6 +395,12 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
   // Сколько листов займёт шаблон на печати. Без этого «одна страница» в редакторе
   // ничего не значила: лист тянулся вниз, а на бумаге подписи уезжали на второй
   const [pages, setPages] = useState(1);
+  // Что выбрано в селектах. isActive() отвечает только про позицию курсора, а после
+  // применения ко всему документу курсор может стоять там, где стиля нет — и селект
+  // сбрасывался на «Шрифт», хотя шрифт только что задали
+  const [font, setFont] = useState("");
+  const [fontSize, setFontSize] = useState("");
+  const [textColor, setTextColor] = useState("");
   const sheetRef = useRef<HTMLDivElement>(null);
   const [editorReady, setEditorReady] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -386,6 +411,9 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
       StarterKit,
       Underline,
       TextStyle,
+      FontFamily,
+      FontSize,
+      Color,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Table.configure({ resizable: true }),
       TableRow,
@@ -411,6 +439,19 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
     editor.on("update", update);
     return () => { editor.off("update", update); };
   }, [editor]);
+
+  /**
+   * Шрифт, размер и цвет применяются к выделению, а если ничего не выделено —
+   * ко всему документу: чаще всего нужно именно «сделать во всём шаблоне 12 пт».
+   */
+  function applyToSelection(apply: (chain: ReturnType<NonNullable<typeof editor>["chain"]>) => unknown) {
+    if (!editor) return;
+    const chain = editor.chain().focus();
+    if (editor.state.selection.empty) chain.selectAll();
+    apply(chain);
+    chain.run();
+    bodyRef.current = editor.getHTML();
+  }
 
   function insertVariable(key: string) {
     editor?.chain().focus().insertContent(key).run();
@@ -527,6 +568,58 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
           <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Нумерованный список"><ListOrdered className="h-3.5 w-3.5" /></ToolBtn>
           <div className="mx-1.5 h-5 w-px bg-[var(--color-border)]" />
           <ToolBtn onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 4, withHeaderRow: true }).run()} title="Вставить таблицу"><TableIcon className="h-3.5 w-3.5" /></ToolBtn>
+          <div className="mx-1.5 h-5 w-px bg-[var(--color-border)]" />
+          <select
+            className="rounded-[6px] border border-[var(--color-border)] px-2 py-1 text-[13px]"
+            title="Шрифт: к выделению или ко всему документу"
+            value={FONTS.find((f) => editor.isActive("textStyle", { fontFamily: f.value }))?.value ?? font}
+            onChange={(e) => {
+              const v = e.target.value;
+              setFont(v);
+              applyToSelection((c) => (v ? c.setFontFamily(v) : c.unsetFontFamily()));
+            }}
+          >
+            <option value="">Шрифт</option>
+            {FONTS.map((f) => (
+              <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+          <select
+            className="rounded-[6px] border border-[var(--color-border)] px-2 py-1 text-[13px]"
+            title="Размер: к выделению или ко всему документу"
+            value={FONT_SIZES.find((n) => editor.isActive("textStyle", { fontSize: `${n}pt` })) ?? fontSize}
+            onChange={(e) => {
+              const v = e.target.value;
+              setFontSize(v);
+              applyToSelection((c) => (v ? c.setFontSize(`${v}pt`) : c.unsetFontSize()));
+            }}
+          >
+            <option value="">Размер</option>
+            {FONT_SIZES.map((n) => (
+              <option key={n} value={n}>
+                {n} пт
+              </option>
+            ))}
+          </select>
+          <select
+            className="rounded-[6px] border border-[var(--color-border)] px-2 py-1 text-[13px]"
+            title="Цвет текста"
+            value={TEXT_COLORS.find((c) => editor.isActive("textStyle", { color: c.value }))?.value ?? textColor}
+            onChange={(e) => {
+              const v = e.target.value;
+              setTextColor(v);
+              applyToSelection((c) => (v ? c.setColor(v) : c.unsetColor()));
+            }}
+          >
+            <option value="">Цвет</option>
+            {TEXT_COLORS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
           <div className="mx-1.5 h-5 w-px bg-[var(--color-border)]" />
           <select className="rounded-[6px] border border-[var(--color-border)] px-2 py-1 text-[13px]" onChange={(e) => {
             const v = e.target.value;
