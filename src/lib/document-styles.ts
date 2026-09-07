@@ -47,7 +47,7 @@ export const DOCUMENT_CSS = `
 
 /** Дополнительные правила, нужные только окну печати */
 export const DOCUMENT_PRINT_CSS = `
-@page { size: A4; margin: 14mm 12mm; }
+@page { size: A4; margin: 12mm; }
 html, body { margin: 0; padding: 0; background: #fff; }
 
 /* Без этого браузер выбрасывает заливку ячеек и цветной текст при печати */

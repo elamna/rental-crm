@@ -15,7 +15,7 @@ const columns: { key: WorkshopStatus; label: string; dot: string; icon: React.El
 ];
 
 const reasonLabels: Record<WorkshopReason, string> = {
-  maintenance: "Профилактика",
+  maintenance: "Диагностика",
   repair: "Ремонт",
 };
 
@@ -28,6 +28,7 @@ export default function WorkshopPage() {
   const [showNew, setShowNew] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const selected = tickets.find((ticket) => ticket.id === selectedId) ?? tickets[0];
   const activeTickets = tickets.filter((ticket) => ticket.status !== "archived");
@@ -52,6 +53,29 @@ export default function WorkshopPage() {
   async function moveTicket(ticket: WorkshopTicket, status: WorkshopStatus) {
     if (ticket.status === status) return;
     await updateWorkshopTicket(ticket.id, { status });
+  }
+
+  /**
+   * Итог диагностики. Исправен — заявка закрывается, инструмент возвращается в
+   * каталог свободным. Нужен ремонт — та же заявка меняет причину и уходит в
+   * работу: заводить вторую по тому же инструменту незачем, история должна быть
+   * одной ниткой.
+   */
+  async function finishDiagnostics(ticket: WorkshopTicket, needsRepair: boolean) {
+    setBusy(true);
+    try {
+      if (needsRepair) {
+        await updateWorkshopTicket(ticket.id, {
+          reason: "repair",
+          status: "in_progress",
+          title: ticket.title.replace(/^Диагностика/, "Ремонт"),
+        });
+      } else {
+        await updateWorkshopTicket(ticket.id, { status: "done" });
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function addLine(ticket: WorkshopTicket) {
@@ -91,7 +115,7 @@ export default function WorkshopPage() {
           <Metric label="Активных заявок" value={String(totals.active)} />
           <Metric label="Затраты на ремонт" value={formatMoney(totals.cost)} />
           <Metric label="Ремонтов" value={String(totals.repair)} />
-          <Metric label="Профилактика" value={String(totals.maintenance)} />
+          <Metric label="Диагностика" value={String(totals.maintenance)} />
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -204,6 +228,30 @@ export default function WorkshopPage() {
                 </div>
 
                 {selected.description && <p className="mb-4 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">{selected.description}</p>}
+
+                {/* Итог диагностики: либо инструмент годен, либо нужен ремонт.
+                    Раньше приёмщик перекладывал статусы вручную и путался */}
+                {selected.reason === "maintenance" && selected.status !== "archived" && (
+                  <div className="mb-4 rounded-[12px] border border-[var(--color-border)] p-3">
+                    <p className="mb-2 text-[13px] font-semibold text-[var(--color-text-muted)]">Что показала диагностика</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => finishDiagnostics(selected, false)}
+                        disabled={busy}
+                        className="rounded-[10px] border border-[#1C8A46] bg-[#EAF7EE] py-2 text-[13.5px] font-semibold text-[#1C8A46] transition hover:bg-[#DCF0E3] disabled:opacity-50"
+                      >
+                        Исправен, в строй
+                      </button>
+                      <button
+                        onClick={() => finishDiagnostics(selected, true)}
+                        disabled={busy}
+                        className="rounded-[10px] border border-[#C0272D] bg-[#FDECEC] py-2 text-[13.5px] font-semibold text-[#C0272D] transition hover:bg-[#FADFDF] disabled:opacity-50"
+                      >
+                        Нужен ремонт
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-[14.5px] font-semibold">Запчасти и услуги</h3>
@@ -344,7 +392,7 @@ function NewTicketModal({
             <button
               onClick={() => {
                 setReason("maintenance");
-                setTitle("Профилактика оборудования");
+                setTitle("Диагностика после возврата");
               }}
               className={cn("rounded-[10px] border py-2 text-[14px] font-semibold", reason === "maintenance" ? "border-[#FFDCA8] bg-[#FFF8EA] text-[#B8620A]" : "border-[var(--color-border)]")}
             >

@@ -2,7 +2,8 @@
 
 import { Rental, DocumentTemplate, RentalDocument, Delivery, DELIVERY_KIND_LABELS, DELIVERY_STATUS_LABELS } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
-import { DOCUMENT_CSS, buildPrintDocument } from "@/lib/document-styles";
+import { DOCUMENT_CSS } from "@/lib/document-styles";
+import { printDocument } from "@/lib/print-document";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -255,6 +256,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   const addWorkshopTicket = useAppStore((s) => s.addWorkshopTicket);
 
   // Состояние для каждого товара: выбран ли + его состояние
+  // Профилактику делают всем и всегда — отдельной галочкой она только мешала.
+  // Приёмщик решает одно: инструмент сразу в строй или на стол мастеру
   type ItemCondition = "ok" | "maintenance" | "repair";
   // Проданные товары магазина в возврат не попадают: они ушли насовсем
   const returnableItems = rental.items.filter((i) => i.inventoryItemId && i.category !== "shop");
@@ -297,7 +300,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           await addWorkshopTicket({
             inventoryItemId: item.inventoryItemId,
             reason: condition,
-            title: condition === "maintenance" ? "Профилактика после возврата" : "Ремонт после возврата",
+            title: condition === "maintenance" ? "Диагностика после возврата" : "Ремонт после возврата",
             description: `Заявка создана автоматически из аренды №${rental.number}`,
             sourceRentalId: rental.id,
             lines: [],
@@ -871,12 +874,12 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                     {/* Состояние — только если выбран */}
                     {state.selected && (
                       <div className="border-t border-[var(--color-primary)]/20 px-3 pb-3 pt-2">
-                        <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Состояние</p>
+                        <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Куда после приёмки</p>
                         <div className="flex gap-1.5">
                           {([
-                            { value: "ok", label: "Исправен", color: "text-[#1C8A46]", activeBg: "bg-[#EAF7EE] border-[#1C8A46]" },
-                            { value: "maintenance", label: "Профилактика", color: "text-[#B8860B]", activeBg: "bg-[#FFF8EA] border-[#B8860B]" },
-                            { value: "repair", label: "Ремонт", color: "text-[#C0272D]", activeBg: "bg-[#FDECEC] border-[#C0272D]" },
+                            { value: "ok", label: "В строй", color: "text-[#1C8A46]", activeBg: "bg-[#EAF7EE] border-[#1C8A46]" },
+                            { value: "maintenance", label: "На диагностику", color: "text-[#B8860B]", activeBg: "bg-[#FFF8EA] border-[#B8860B]" },
+                            { value: "repair", label: "Сразу в ремонт", color: "text-[#C0272D]", activeBg: "bg-[#FDECEC] border-[#C0272D]" },
                           ] as const).map((opt) => (
                             <button
                               key={opt.value}
@@ -1007,15 +1010,7 @@ function DocumentsSection({ rental }: { rental: Rental }) {
     setDocs((prev) => prev.filter((d) => d.id !== id));
   }
 
-  function printDoc(body: string, name = "Документ") {
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(buildPrintDocument(name, body));
-    w.document.close();
-    w.focus();
-    // Печать сразу после write иногда уходит до применения стилей — даём кадр на отрисовку
-    setTimeout(() => w.print(), 250);
-  }
+  const printDoc = printDocument;
 
   return (
     <>
