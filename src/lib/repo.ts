@@ -2082,7 +2082,10 @@ export function updateWorkshopTicket(id: string, patch: Partial<WorkshopTicket>)
   if (merged.status === "done") {
     db.prepare(`UPDATE inventory_items SET status = 'available' WHERE id = ?`).run(merged.inventoryItemId);
   } else if (merged.status !== "archived") {
-    db.prepare(`UPDATE inventory_items SET status = ? WHERE id = ?`).run(merged.reason, merged.inventoryItemId);
+    // В каталоге состояний всего два: «в ремонте» и «в мастерской». Обслуживание и
+    // диагностика для склада одинаковы — инструмент временно не выдаётся
+    const inventoryStatus = merged.reason === "repair" ? "repair" : "maintenance";
+    db.prepare(`UPDATE inventory_items SET status = ? WHERE id = ?`).run(inventoryStatus, merged.inventoryItemId);
   }
 
   return getWorkshopTicket(id);

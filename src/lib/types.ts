@@ -175,7 +175,8 @@ export interface Rental {
   updatedAt?: string;
 }
 
-export type WorkshopStatus = "new" | "in_progress" | "done" | "archived";
+/** servicing и in_progress — параллельные ветки: обслуживание и ремонт идут по-разному */
+export type WorkshopStatus = "new" | "servicing" | "in_progress" | "done" | "archived";
 /** service — плановое ТО, maintenance — диагностика после возврата, repair — ремонт */
 export type WorkshopReason = "service" | "maintenance" | "repair";
 

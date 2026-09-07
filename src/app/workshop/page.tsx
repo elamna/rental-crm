@@ -9,6 +9,7 @@ import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Settings2, 
 
 const columns: { key: WorkshopStatus; label: string; dot: string; icon: React.ElementType }[] = [
   { key: "new", label: "Новая", dot: "bg-[#8B8F98]", icon: Circle },
+  { key: "servicing", label: "На обслуживании", dot: "bg-[#2B5FD9]", icon: Settings2 },
   { key: "in_progress", label: "В ремонте", dot: "bg-[#F59E0B]", icon: Clock3 },
   { key: "done", label: "Готово", dot: "bg-[#34C987]", icon: CheckCircle2 },
   { key: "archived", label: "Архив", dot: "bg-[#8B8F98]", icon: Archive },
@@ -113,7 +114,7 @@ export default function WorkshopPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
           <Metric label="Активных заявок" value={String(totals.active)} />
           <Metric label="Затраты на ремонт" value={formatMoney(totals.cost)} />
           <Metric label="Ремонтов" value={String(totals.repair)} />
@@ -133,7 +134,7 @@ export default function WorkshopPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {columns.map((column) => {
                 const columnTickets = tickets.filter((ticket) => ticket.status === column.key);
                 return (
@@ -213,7 +214,7 @@ export default function WorkshopPage() {
                   </button>
                 </div>
 
-                <div className="mb-4 grid grid-cols-2 gap-2">
+                <div className="mb-4 grid grid-cols-3 gap-2">
                   {columns.map((column) => (
                     <button
                       key={column.key}
