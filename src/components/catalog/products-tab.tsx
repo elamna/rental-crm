@@ -9,6 +9,9 @@ import { cn, formatMoney } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, Tag } from "lucide-react";
 import { Checkbox, EmptyRow, ExportButton, FilterSelect, Pagination, Pill, SearchInput, StatBar, TableCard, Th, paginate } from "./shared";
+import { SelectionBar, SelectBox, ConfirmDeleteModal } from "@/components/common/selection-bar";
+import { useAuth } from "@/components/auth/auth-provider";
+import { useAppStore as useStore } from "@/lib/store";
 
 type SortKey = "name" | "category" | "sku" | "free";
 
@@ -27,6 +30,23 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  // Массовая чистка каталога — как в арендах и клиентах, только администратору.
+  // Отмечаем продукт целиком: за строкой стоят все его единицы
+  const { user: me } = useAuth();
+  const canDelete = !!me?.isAdmin;
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  function toggleSelect(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   // Активные единицы — то, что реально сдаётся. Украденные и списанные показываются отдельной кнопкой.
   const scope = useMemo(
@@ -67,6 +87,40 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
   }, [groups, search, branch, category, status, onlyFree, sort, dir]);
 
   const pageItems = paginate(filtered, page, perPage);
+
+  const chosenGroups = filtered.filter((g) => selected.has(g.key));
+  const chosenUnits = chosenGroups.flatMap((g) => g.units.map((u) => u.id));
+
+  async function removeSelected() {
+    if (chosenUnits.length === 0) return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/inventory/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: chosenUnits }),
+      });
+      const report = await res.json();
+      if (!res.ok) throw new Error(report?.error ?? "Не удалось удалить позиции");
+
+      setSelected(new Set());
+      setConfirming(false);
+      // Каталог живёт в общем сторе — перечитываем его после чистки
+      useStore.setState({ hydrated: false, hydrating: false });
+      await useStore.getState().hydrate();
+
+      const skipped = Object.entries(report.reasons ?? {})
+        .map(([reason, count]) => `${reason} — ${count}`)
+        .join(", ");
+      if (report.skipped > 0) {
+        alert(`Удалено единиц: ${report.added}. Пропущено ${report.skipped} (${skipped}).`);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Не удалось удалить позиции");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const totals = useMemo(() => {
     const t = { units: 0, free: 0, booked: 0, rented: 0, broken: 0, repair: 0, inactive: 0 };
@@ -155,6 +209,21 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
         <table className="w-full border-collapse">
           <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
             <tr>
+              {canDelete && (
+                <Th className="w-10">
+                  <button
+                    onClick={() =>
+                      setSelected((prev) =>
+                        prev.size >= filtered.length ? new Set() : new Set(filtered.map((g) => g.key))
+                      )
+                    }
+                    title={selected.size >= filtered.length ? "Снять выделение" : "Выбрать все"}
+                    className="grid place-items-center"
+                  >
+                    <SelectBox checked={filtered.length > 0 && selected.size >= filtered.length} />
+                  </button>
+                </Th>
+              )}
               <Th className="w-10" />
               <Th sortable active={sort === "name"} dir={dir} onSort={() => toggleSort("name")}>
                 Название
@@ -175,12 +244,20 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
           <tbody>
             {pageItems.length === 0 ? (
               <EmptyRow
-                colSpan={7}
+                colSpan={canDelete ? 8 : 7}
                 text={!hydrated ? "Загрузка…" : showInactive ? "Нет списанных и украденных единиц" : "Ничего не найдено"}
               />
             ) : (
               pageItems.map((g) => (
-                <ProductRow key={g.key} group={g} expanded={expanded.has(g.key)} onToggle={() => toggleExpand(g.key)} />
+                <ProductRow
+                  key={g.key}
+                  group={g}
+                  expanded={expanded.has(g.key)}
+                  onToggle={() => toggleExpand(g.key)}
+                  selectable={canDelete}
+                  selected={selected.has(g.key)}
+                  onToggleSelect={() => toggleSelect(g.key)}
+                />
               ))
             )}
           </tbody>
@@ -188,11 +265,50 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
       </TableCard>
 
       <Pagination total={filtered.length} page={page} perPage={perPage} onPage={setPage} onPerPage={setPerPage} />
+
+      <SelectionBar
+        count={selected.size}
+        total={filtered.length}
+        busy={deleting}
+        noun={["позиция", "позиции", "позиций"]}
+        onSelectAll={() => setSelected(new Set(filtered.map((g) => g.key)))}
+        onClear={() => setSelected(new Set())}
+        onDelete={() => setConfirming(true)}
+      />
+
+      {confirming && (
+        <ConfirmDeleteModal
+          title={`Удалить ${selected.size} ${selected.size === 1 ? "позицию" : "позиций"} каталога?`}
+          lines={[
+            `Всего единиц под удаление: ${chosenUnits.length}`,
+            "Инструмент в идущей аренде и с заявкой в мастерской будет пропущен",
+            "История инвентаризаций по этим единицам тоже удалится",
+          ]}
+          busy={deleting}
+          confirmLabel="Удалить"
+          onCancel={() => setConfirming(false)}
+          onConfirm={removeSelected}
+        />
+      )}
     </div>
   );
 }
 
-function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expanded: boolean; onToggle: () => void }) {
+function ProductRow({
+  group,
+  expanded,
+  onToggle,
+  selectable,
+  selected,
+  onToggleSelect,
+}: {
+  group: ProductGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const router = useRouter();
   const single = group.units.length === 1;
   const brokenTotal = group.broken + group.repair;
@@ -213,8 +329,25 @@ function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expand
     <>
       <tr
         onClick={openRow}
-        className="cursor-pointer border-b border-[var(--color-border)] transition last:border-0 hover:bg-[var(--color-bg)]"
+        className={cn(
+          "cursor-pointer border-b border-[var(--color-border)] transition last:border-0 hover:bg-[var(--color-bg)]",
+          selected && "bg-[var(--color-primary-soft)]"
+        )}
       >
+        {selectable && (
+          <td className="px-4 py-3">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect?.();
+              }}
+              className="grid place-items-center"
+              title="Выбрать"
+            >
+              <SelectBox checked={!!selected} />
+            </button>
+          </td>
+        )}
         <td className="px-4 py-3">
           {single ? (
             <span className="block h-4 w-4" />
@@ -279,6 +412,8 @@ function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expand
             }}
             className="cursor-pointer border-b border-[var(--color-border)] bg-[var(--color-bg)]/60 transition last:border-0 hover:bg-[var(--color-bg)]"
           >
+            {/* Отдельные единицы не отмечаются: выбор идёт по продукту целиком */}
+            {selectable && <td />}
             <td />
             <td className="px-4 py-2 pl-16">
               <Link href={`/catalog/${u.id}`} className="text-[13.5px] font-medium transition hover:text-[var(--color-primary)]">

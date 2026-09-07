@@ -594,6 +594,56 @@ export function deleteInventoryItem(id: string) {
   db.prepare(`DELETE FROM inventory_items WHERE id = ?`).run(id);
 }
 
+/**
+ * Массовое удаление единиц каталога. Пропускаем то, что нельзя стирать молча:
+ * инструмент в идущей аренде и инструмент с заявкой мастерской. По каждому
+ * пропуску возвращаем причину, иначе пользователь не поймёт, почему из выбранных
+ * двадцати удалилось семнадцать.
+ */
+export function deleteInventoryItems(ids: string[]): ImportReport {
+  const reasons: Record<string, number> = {};
+  let deleted = 0;
+  let skipped = 0;
+
+  // Что сейчас на руках у клиентов — одним проходом по идущим арендам
+  const busy = new Set<string>();
+  for (const row of db
+    .prepare(`SELECT items_json FROM rentals WHERE status IN ('active','overdue','booked')`)
+    .all() as { items_json: string }[]) {
+    try {
+      for (const line of JSON.parse(row.items_json || "[]") as InventoryLine[]) {
+        if (line.inventoryItemId) busy.add(line.inventoryItemId);
+      }
+    } catch {
+      // Битый состав аренды не должен мешать чистке каталога
+    }
+  }
+
+  const ticketCount = db.prepare(`SELECT COUNT(*) AS c FROM workshop_tickets WHERE inventory_item_id = ?`);
+
+  const run = db.transaction(() => {
+    for (const id of ids) {
+      if (busy.has(id)) {
+        skipped++;
+        countReason(reasons, "занят в аренде");
+        continue;
+      }
+      if ((ticketCount.get(id) as { c: number }).c > 0) {
+        skipped++;
+        countReason(reasons, "есть заявка в мастерской");
+        continue;
+      }
+      db.prepare(`DELETE FROM inventory_checks WHERE inventory_item_id = ?`).run(id);
+      db.prepare(`DELETE FROM inventory_items WHERE id = ?`).run(id);
+      deleted++;
+    }
+  });
+  run();
+
+  if (deleted) logActivity(`Удалено позиций каталога: ${deleted}`);
+  return { added: deleted, skipped, reasons };
+}
+
 /** Следующий свободный артикул вида QS.0123 (нумерация продолжает уже существующие). */
 export function nextSku(prefix = "QS"): string {
   const rows = db.prepare(`SELECT sku FROM inventory_items WHERE sku LIKE ?`).all(`${prefix}.%`) as { sku: string | null }[];
