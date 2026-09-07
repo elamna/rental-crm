@@ -109,9 +109,9 @@ export function fitScaleForOnePage(blocks: number[], contentWidth: number) {
   const widthScale = contentWidth > PRINTABLE_WIDTH_PX + 1 ? PRINTABLE_WIDTH_PX / contentWidth : 1;
   if (countPages(blocks, widthScale) <= 1) return widthScale;
 
-  // Подбираем с запасом в пару процентов: подгонка «впритык» рассыпается от
-  // любой мелочи — другого шрифта на машине, округления в драйвере принтера
-  const safeHeight = PRINTABLE_HEIGHT_PX * 0.97;
+  // Запас нужен под то, что мы не контролируем: включённые колонтитулы браузера
+  // съедают около сантиметра сверху и снизу, плюс округления в драйвере принтера
+  const safeHeight = PRINTABLE_HEIGHT_PX * 0.93;
   for (let scale = widthScale; scale >= MIN_SCALE; scale -= 0.02) {
     if (countPages(blocks, scale, safeHeight) <= 1) return scale;
   }
@@ -143,9 +143,24 @@ export function fitToPage(doc: Document) {
   const scale = fitScaleForOnePage(blocks, contentWidth);
   if (scale >= 0.999) return;
 
-  root.style.transform = `scale(${scale})`;
-  root.style.transformOrigin = "top left";
-  root.style.width = `${100 / scale}%`;
+  // Именно zoom, а не transform: transform только рисует уменьшенную картинку,
+  // а страницы браузер режет по исходной вёрстке — документ оставался на двух
+  // листах, просто мелким шрифтом. zoom меняет сам layout, вместе с разбивкой
+  if (supportsZoom(doc)) {
+    root.style.zoom = String(scale);
+    return;
+  }
+
+  // Там, где zoom не поддерживается, уменьшаем базовый шрифт: это тоже реальный
+  // layout, хотя рамки и отступы таблиц сжимаются не так пропорционально
+  const base = parseFloat(doc.defaultView?.getComputedStyle(root).fontSize ?? "13") || 13;
+  root.style.fontSize = `${base * scale}px`;
+}
+
+function supportsZoom(doc: Document) {
+  const view = doc.defaultView;
+  if (!view?.CSS?.supports) return false;
+  return view.CSS.supports("zoom: 0.9");
 }
 
 /**
