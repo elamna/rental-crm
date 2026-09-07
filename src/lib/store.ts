@@ -36,6 +36,8 @@ interface AppState {
     withRentals?: boolean
   ) => Promise<{ deleted: number; deletedRentals: number; skipped: { id: string; name: string; rentals: number }[] }>;
   importClients: (rows: Partial<Client>[]) => Promise<ImportReport>;
+  /** Импорт истории аренд: клиенты и позиции подтягиваются по телефону и артикулу */
+  importRentals: (rows: unknown[]) => Promise<ImportReport & { clientsCreated: number; itemsLinked: number; itemsUnmatched: number }>;
   /** Импорт каталога из выгрузки: строка файла разворачивается в несколько единиц */
   importInventoryItems: (rows: (Partial<InventoryItem> & { quantity?: number })[]) => Promise<ImportReport & { units: number }>;
 
@@ -158,6 +160,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     const clients = await api<Client[]>("/api/clients");
     set({ clients });
+    get().refreshActivity();
+    return result;
+  },
+
+  importRentals: async (rows) => {
+    const result = await api<ImportReport & { clientsCreated: number; itemsLinked: number; itemsUnmatched: number }>(
+      "/api/rentals/import",
+      { method: "POST", body: JSON.stringify(rows) }
+    );
+    // Импорт трогает аренды, клиентов и занятость инвентаря — перечитываем всё три
+    const [rentals, clients, inventory] = await Promise.all([
+      api<Rental[]>("/api/rentals"),
+      api<Client[]>("/api/clients"),
+      api<InventoryItem[]>("/api/inventory"),
+    ]);
+    set({ rentals, clients, inventory });
     get().refreshActivity();
     return result;
   },

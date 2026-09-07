@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { RentalCard } from "@/components/rentals/rental-card";
 import { StatusTabs, TabKey } from "@/components/rentals/status-tabs";
 import { FilterBar } from "@/components/rentals/filter-bar";
 import { cn, isDebtorRental } from "@/lib/utils";
-import { CheckSquare, Download, Video, X } from "lucide-react";
+import { CheckSquare, Download, Upload, Video, X } from "lucide-react";
 import Link from "next/link";
 import { SelectionBar, ConfirmDeleteModal } from "@/components/common/selection-bar";
+import { parseRentalsFile } from "@/lib/rental-io";
+import { formatImportReport } from "@/lib/import-utils";
 import { useAuth } from "@/components/auth/auth-provider";
 
 export default function RentalsPage() {
@@ -27,6 +29,35 @@ export default function RentalsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+
+  // Импорт истории аренд — разовая необратимая операция, только для владельца
+  const canImport = !!me?.isOwner;
+  const importRentals = useAppStore((s) => s.importRentals);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      setImportMsg("Читаем файл…");
+      const rows = await parseRentalsFile(file);
+      setImportMsg(`Загружаем ${rows.length} аренд…`);
+      const report = await importRentals(rows);
+      // Позиции ищутся в каталоге по артикулу. Если каталог ещё не загружен или
+      // выгружен группами (без артикулов единиц) — состав аренды сохранится текстом
+      const tail =
+        report.itemsUnmatched > 0
+          ? ` · позиций без привязки к каталогу: ${report.itemsUnmatched} (сохранены текстом — загрузите каталог по единицам, чтобы они связались)`
+          : "";
+      setImportMsg(formatImportReport("Аренды", report) + tail);
+      setTimeout(() => setImportMsg(null), 15000);
+    } catch (err) {
+      setImportMsg(err instanceof Error ? err.message : "Не удалось прочитать файл. Поддерживаются .xlsx, .xls, .csv");
+      setTimeout(() => setImportMsg(null), 8000);
+    }
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -88,6 +119,14 @@ export default function RentalsPage() {
           <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             <Download className="h-3.5 w-3.5" /> Экспорт
           </button>
+          {canImport && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            >
+              <Upload className="h-3.5 w-3.5" /> Импорт
+            </button>
+          )}
           {canEdit && (
             <button
               onClick={() => (selecting ? exitSelection() : setSelecting(true))}
@@ -109,7 +148,14 @@ export default function RentalsPage() {
             + Новая аренда
           </Link>
         </div>
+        <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImportFile} />
       </header>
+
+      {importMsg && (
+        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[13px] font-medium text-[var(--color-primary)]">
+          {importMsg}
+        </div>
+      )}
 
       <div className="space-y-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3">
         <StatusTabs rentals={allRentals} active={tab} onChange={setTab} />

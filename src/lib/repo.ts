@@ -1,5 +1,6 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
+import { branches } from "./mock-data";
 import { Client, ClientRatingBreakdown, ImportReport, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
@@ -1223,6 +1224,183 @@ export function updateRental(id: string, patch: Partial<Rental>, options: { sile
   // silent — при откате: там своё событие, иначе история зациклится
   if (updated && !options.silent) diffRentalToEvents(existing, updated, options.actorName);
   return updated;
+}
+
+/** Строка аренды из выгрузки — то, что отдаёт парсер `rental-io.ts` */
+export interface RentalImportInput {
+  number: string;
+  clientName: string;
+  clientPhone: string;
+  status: RentalStatus;
+  paymentStatus: Rental["paymentStatus"];
+  startAt?: string;
+  endAt?: string;
+  returnedAt?: string;
+  total: number;
+  paid: number;
+  discount: number;
+  createdAt?: string;
+  items: { name: string; sku: string }[];
+}
+
+/**
+ * Импорт истории аренд. Строки пишем напрямую, минуя createRental: он вешает
+ * инструмент в «в аренде» и заводит событие «Создал» — для трёх тысяч закрытых
+ * аренд это и неверно, и лишний мусор в истории.
+ *
+ * Клиента ищем по телефону, затем по имени, и заводим только если не нашли:
+ * аренда без клиента в базе не живёт (внешний ключ), а плодить двойников нельзя.
+ * Позиции привязываем к каталогу по артикулу; чего нет — остаётся текстом,
+ * чтобы состав аренды не потерялся.
+ */
+export function importRentals(rows: RentalImportInput[]): ImportReport & {
+  clientsCreated: number;
+  itemsLinked: number;
+  itemsUnmatched: number;
+} {
+  const reasons: Record<string, number> = {};
+  let added = 0;
+  let skipped = 0;
+  let clientsCreated = 0;
+  let itemsLinked = 0;
+  let itemsUnmatched = 0;
+
+  const existingNumbers = new Set(
+    (db.prepare(`SELECT number FROM rentals`).all() as { number: string }[]).map((r) => r.number.trim())
+  );
+
+  // Клиентов и каталог поднимаем в память: три тысячи аренд по отдельному SELECT
+  // превратились бы в десятки тысяч запросов
+  const clientByKey = new Map<string, string>();
+  for (const c of db.prepare(`SELECT id, name, phone FROM clients`).all() as {
+    id: string;
+    name: string;
+    phone: string;
+  }[]) {
+    const digits = onlyDigits(c.phone);
+    if (digits && !clientByKey.has(digits)) clientByKey.set(digits, c.id);
+    const nameKey = `name:${c.name.trim().toLowerCase()}`;
+    if (!clientByKey.has(nameKey)) clientByKey.set(nameKey, c.id);
+  }
+
+  const itemBySku = new Map<string, { id: string; price: number }>();
+  for (const i of db.prepare(`SELECT id, sku, rental_price FROM inventory_items WHERE sku IS NOT NULL`).all() as {
+    id: string;
+    sku: string;
+    rental_price: number;
+  }[]) {
+    itemBySku.set(i.sku.trim().toLowerCase(), { id: i.id, price: i.rental_price });
+  }
+
+  const insert = db.prepare(
+    `INSERT INTO rentals (id, number, status, payment_status, branch, start_at, end_at, rental_period, client_id,
+      total, paid, booked_by_name, comment, delivery, auto_penalty_enabled, penalty_rate_per_hour,
+      items_json, penalties_json, expenses_json, documents_json, notes_json, returned_at, paid_at, created_at, updated_at)
+     VALUES (@id, @number, @status, @paymentStatus, @branch, @startAt, @endAt, 'daily', @clientId,
+      @total, @paid, @bookedBy, @comment, 0, 0, 0,
+      @itemsJson, '[]', '[]', '[]', '[]', @returnedAt, @paidAt, @createdAt, @createdAt)`
+  );
+
+  const markRented = db.prepare(`UPDATE inventory_items SET status = 'rented' WHERE id = ? AND status = 'available'`);
+
+  const run = db.transaction(() => {
+    for (const row of rows) {
+      const number = (row.number ?? "").trim();
+      const clientName = (row.clientName ?? "").trim();
+
+      if (!number) {
+        skipped++;
+        countReason(reasons, "без номера аренды");
+        continue;
+      }
+      if (existingNumbers.has(number)) {
+        skipped++;
+        countReason(reasons, "аренда с таким номером уже есть");
+        continue;
+      }
+      if (!clientName) {
+        skipped++;
+        countReason(reasons, "без клиента");
+        continue;
+      }
+
+      // Клиент: сначала по телефону, потом по имени, иначе заводим нового
+      const digits = onlyDigits(row.clientPhone ?? "");
+      const nameKey = `name:${clientName.toLowerCase()}`;
+      let clientId = (digits ? clientByKey.get(digits) : undefined) ?? clientByKey.get(nameKey);
+      if (!clientId) {
+        clientId = createClient({ name: clientName, phone: row.clientPhone ?? "", createdAt: row.createdAt }).id;
+        if (digits) clientByKey.set(digits, clientId);
+        clientByKey.set(nameKey, clientId);
+        clientsCreated++;
+      }
+
+      // Позиции: привязываем по артикулу, ненайденные оставляем текстом
+      const lines: InventoryLine[] = row.items.map((item, index) => {
+        const match = item.sku ? itemBySku.get(item.sku.trim().toLowerCase()) : undefined;
+        if (match) itemsLinked++;
+        else itemsUnmatched++;
+        return {
+          id: `imp_${number}_${index}`,
+          name: item.name,
+          sku: item.sku,
+          qty: 1,
+          pricePerDay: match?.price ?? 0,
+          category: "product" as const,
+          inventoryItemId: match?.id,
+        };
+      });
+
+      const createdAt = row.createdAt ?? row.startAt ?? new Date().toISOString();
+      insert.run({
+        id: newId("r"),
+        number,
+        status: row.status,
+        paymentStatus: row.paymentStatus,
+        branch: branches[0] ?? null,
+        startAt: row.startAt ?? createdAt,
+        endAt: row.endAt ?? row.startAt ?? createdAt,
+        clientId,
+        total: row.total,
+        paid: row.paid,
+        bookedBy: "Импорт",
+        comment: row.discount > 0 ? `Скидка при импорте: ${Math.round(row.discount)} ₸` : null,
+        itemsJson: JSON.stringify(lines),
+        returnedAt: row.returnedAt ?? null,
+        paidAt: row.paid > 0 ? row.returnedAt ?? createdAt : null,
+        createdAt,
+      });
+      existingNumbers.add(number);
+      added++;
+
+      // Инструмент занят только у тех аренд, которые идут прямо сейчас
+      if (row.status === "active" || row.status === "overdue") {
+        for (const line of lines) {
+          if (line.inventoryItemId) markRented.run(line.inventoryItemId);
+        }
+      }
+    }
+
+    // Счётчик номеров сдвигаем за импортированные: иначе новая аренда получит занятый номер
+    const numeric = [...existingNumbers].map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0);
+    const maxNumber = numeric.length > 0 ? Math.max(...numeric) : 0;
+    if (maxNumber > 0) {
+      const current = db.prepare(`SELECT value FROM company_settings WHERE key = 'rental_counter'`).get() as
+        | { value: string }
+        | undefined;
+      if (!current || Number(current.value) < maxNumber) {
+        db.prepare(
+          `INSERT INTO company_settings (key, value) VALUES ('rental_counter', ?)
+           ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+        ).run(String(maxNumber));
+      }
+    }
+  });
+  run();
+
+  if (added) logActivity(`Импортировано аренд: ${added}`);
+  if (clientsCreated) reasons["заведено новых клиентов"] = clientsCreated;
+  return { added, skipped, reasons, clientsCreated, itemsLinked, itemsUnmatched };
 }
 
 // ---------- История аренды и паузы ----------
