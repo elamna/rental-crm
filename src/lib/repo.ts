@@ -2444,6 +2444,15 @@ export function renderTemplate(template: string, rental: Rental): string {
     : 0;
 
   // Суммы
+  // Первый товар и первая услуга: одиночные переменные шаблона ссылаются на них
+  const firstProduct = rental.items.find((i) => (i.category ?? "product") === "product") ?? rental.items[0];
+  const firstService = rental.items.find((i) => i.category === "service");
+  const productCategory = firstProduct?.inventoryItemId
+    ? (db.prepare(`SELECT category FROM inventory_items WHERE id = ?`).get(firstProduct.inventoryItemId) as
+        | { category: string | null }
+        | undefined)?.category ?? ""
+    : "";
+
   const inventoryTotal = rental.items.filter((i) => !isOneTimeLine(i)).reduce((s, i) => s + lineTotal(i, durationDays), 0);
   const servicesTotal = rental.items.filter((i) => isOneTimeLine(i)).reduce((s, i) => s + i.pricePerDay * i.qty, 0);
   const penaltyTotal = (rental.penalties ?? []).reduce((s: number, p: { amount: number }) => s + p.amount, 0);
@@ -2576,10 +2585,17 @@ export function renderTemplate(template: string, rental: Rental): string {
 
     // Продукты (первый товар для одиночных переменных)
     "{{product_index}}": rental.items[0] ? "1" : "",
-    "{{product_uid}}": rental.items[0]?.inventoryItemId ?? "",
-    "{{product_name}}": rental.items[0]?.name ?? "",
-    "{{product_sku}}": "",
-    "{{product_category}}": rental.items[0]?.category ?? "",
+    "{{product_uid}}": firstProduct?.inventoryItemId ?? "",
+    "{{product_name}}": firstProduct?.name ?? "",
+    // Артикул раньше всегда подставлялся пустым, хотя он есть в самой позиции
+    "{{product_sku}}": firstProduct?.sku ?? "",
+    // Категория берётся из каталога: в позиции лежит служебный вид строки
+    // («product», «shop»), а в акте нужна человеческая категория инструмента
+    "{{product_category}}": productCategory,
+    // Первая услуга — по аналогии с первым товаром
+    "{{service_name}}": firstService?.name ?? "",
+    "{{service_total}}": firstService ? fmt(firstService.pricePerDay * firstService.qty) : "",
+    "{{service_total_text}}": firstService ? fmtT(firstService.pricePerDay * firstService.qty) : "",
     "{{product_qty}}": rental.items[0] ? String(rental.items[0].qty) : "",
     "{{product_total}}": rental.items[0] ? fmt(rental.items[0].pricePerDay * rental.items[0].qty * durationDays) : "",
     "{{product_total_text}}": rental.items[0] ? fmtT(rental.items[0].pricePerDay * rental.items[0].qty * durationDays) : "",
