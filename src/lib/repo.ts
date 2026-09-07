@@ -1,7 +1,7 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
-import { Client, ClientRatingBreakdown, ImportReport, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, ImportReport, PaymentMethod, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -1476,6 +1476,122 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
   if (itemsCreated) reasons["заведено единиц каталога"] = itemsCreated;
   if (itemsCreated) logActivity(`Импорт аренд: заведено единиц каталога — ${itemsCreated}`);
   return { added, skipped, reasons, clientsCreated, itemsLinked, itemsCreated, itemsUnmatched };
+}
+
+// ---------- Платежи по арендам ----------
+
+/**
+ * Приём оплаты. Пишем не только новую сумму в аренде, но и отдельную строку
+ * платежа: без неё способ оплаты пропадал — в модалке его выбирали, а в базе
+ * не оставалось следа, и в аналитике нечего было разложить по Kaspi и наличным.
+ */
+export function addRentalPayment(rentalId: string, amount: number, method: PaymentMethod) {
+  const rental = getRental(rentalId);
+  if (!rental) throw httpError(404, "Аренда не найдена");
+  if (!(amount > 0)) throw httpError(400, "Сумма оплаты должна быть больше нуля");
+
+  const now = new Date().toISOString();
+  const paid = Math.min(rental.total, rental.paid + amount);
+
+  db.transaction(() => {
+    db.prepare(
+      `INSERT INTO rental_payments (id, rental_id, amount, method, created_at) VALUES (?, ?, ?, ?, ?)`
+    ).run(newId("pay"), rentalId, amount, method, now);
+    db.prepare(`UPDATE rentals SET paid = ?, payment_status = ?, paid_at = ?, updated_at = ? WHERE id = ?`).run(
+      paid,
+      paid >= rental.total ? "paid" : "partial",
+      now,
+      now,
+      rentalId
+    );
+  })();
+
+  logRentalEvent({
+    rentalId,
+    type: "payment",
+    title: "Принял оплату",
+    details: `${Math.round(amount)} ₸ · ${method === "cash" ? "наличные" : method === "kaspi" ? "Kaspi" : "от компании"}`,
+  });
+
+  return getRental(rentalId);
+}
+
+export function listRentalPayments(rentalId: string) {
+  return db
+    .prepare(`SELECT id, rental_id, amount, method, created_at FROM rental_payments WHERE rental_id = ? ORDER BY created_at`)
+    .all(rentalId) as { id: string; rental_id: string; amount: number; method: string; created_at: string }[];
+}
+
+/**
+ * Поступления за период: чем платили и за что.
+ *
+ * «Чем» берём из строк платежей. «За что» — из состава аренд и доставок:
+ * товары магазина продаются внутри аренды, а доставка стоит отдельной строкой.
+ * Это разные разрезы одних и тех же денег, поэтому суммы по ним не складываются.
+ */
+export function incomeBreakdown(fromIso: string | null, toIso: string | null) {
+  const range = { from: fromIso, to: toIso };
+  const inRange = (column: string) =>
+    `(@from IS NULL OR ${column} >= @from) AND (@to IS NULL OR ${column} <= @to)`;
+
+  const byMethod = db
+    .prepare(
+      `SELECT method, COALESCE(SUM(amount), 0) AS total FROM rental_payments
+       WHERE ${inRange("created_at")} GROUP BY method`
+    )
+    .all(range) as { method: string; total: number }[];
+
+  const methods: Record<PaymentMethod, number> = { cash: 0, kaspi: 0, company: 0 };
+  for (const row of byMethod) {
+    if (row.method in methods) methods[row.method as PaymentMethod] = row.total;
+  }
+
+  // Оплаты, принятые до появления истории платежей, в разрезе способов не видны —
+  // показываем их отдельной строкой, чтобы итог сходился
+  const paidTotal = (
+    db
+      .prepare(`SELECT COALESCE(SUM(paid), 0) AS total FROM rentals WHERE paid > 0 AND ${inRange("COALESCE(paid_at, created_at)")}`)
+      .get(range) as { total: number }
+  ).total;
+  const trackedTotal = methods.cash + methods.kaspi + methods.company;
+  const untracked = Math.max(0, Math.round(paidTotal - trackedTotal));
+
+  // За что: аренда инструмента и проданные товары магазина внутри тех же аренд
+  const rentalRows = db
+    .prepare(`SELECT items_json, total, paid FROM rentals WHERE paid > 0 AND ${inRange("COALESCE(paid_at, created_at)")}`)
+    .all(range) as { items_json: string; total: number; paid: number }[];
+
+  let shop = 0;
+  for (const row of rentalRows) {
+    try {
+      for (const line of JSON.parse(row.items_json || "[]") as InventoryLine[]) {
+        if (line.category === "shop") shop += line.pricePerDay * line.qty;
+      }
+    } catch {
+      // Битый состав не должен ронять отчёт
+    }
+  }
+
+  const delivery = (
+    db
+      .prepare(
+        `SELECT COALESCE(SUM(price), 0) AS total FROM deliveries
+         WHERE status = 'done' AND ${inRange("COALESCE(completed_at, created_at)")}`
+      )
+      .get(range) as { total: number }
+  ).total;
+
+  return {
+    methods,
+    untracked,
+    sources: {
+      rent: Math.max(0, Math.round(paidTotal - shop)),
+      shop: Math.round(shop),
+      delivery: Math.round(delivery),
+    },
+    total: Math.round(paidTotal + delivery),
+    paidTotal: Math.round(paidTotal),
+  };
 }
 
 // ---------- История аренды и паузы ----------

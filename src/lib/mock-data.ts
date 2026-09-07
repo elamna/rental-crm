@@ -46,7 +46,7 @@ export const inventoryCategories = [
 export const inventoryStatusLabels = {
   available: "Свободен",
   rented: "В аренде",
-  maintenance: "На диагностике",
+  maintenance: "В мастерской",
   repair: "Требует ремонта",
   stolen: "Украден",
   written_off: "Списан",

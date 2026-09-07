@@ -9,12 +9,13 @@ import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Settings2, 
 
 const columns: { key: WorkshopStatus; label: string; dot: string; icon: React.ElementType }[] = [
   { key: "new", label: "Новая", dot: "bg-[#8B8F98]", icon: Circle },
-  { key: "in_progress", label: "В работе", dot: "bg-[#F59E0B]", icon: Clock3 },
+  { key: "in_progress", label: "В ремонте", dot: "bg-[#F59E0B]", icon: Clock3 },
   { key: "done", label: "Готово", dot: "bg-[#34C987]", icon: CheckCircle2 },
   { key: "archived", label: "Архив", dot: "bg-[#8B8F98]", icon: Archive },
 ];
 
 const reasonLabels: Record<WorkshopReason, string> = {
+  service: "Обслуживание",
   maintenance: "Диагностика",
   repair: "Ремонт",
 };
@@ -48,6 +49,7 @@ export default function WorkshopPage() {
     cost: tickets.reduce((sum, ticket) => sum + ticket.total, 0),
     repair: tickets.filter((ticket) => ticket.reason === "repair").length,
     maintenance: tickets.filter((ticket) => ticket.reason === "maintenance").length,
+    service: tickets.filter((ticket) => ticket.reason === "service").length,
   };
 
   async function moveTicket(ticket: WorkshopTicket, status: WorkshopStatus) {
@@ -100,7 +102,7 @@ export default function WorkshopPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div>
           <h1 className="font-display text-[19px] font-bold">Мастерская</h1>
-          <p className="text-[13.5px] text-[var(--color-text-muted)]">Ремонт, профилактика и история обслуживания оборудования</p>
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">Ремонт, обслуживание и диагностика оборудования</p>
         </div>
         <button
           onClick={() => setShowNew(true)}
@@ -116,6 +118,7 @@ export default function WorkshopPage() {
           <Metric label="Затраты на ремонт" value={formatMoney(totals.cost)} />
           <Metric label="Ремонтов" value={String(totals.repair)} />
           <Metric label="Диагностика" value={String(totals.maintenance)} />
+          <Metric label="Обслуживание" value={String(totals.service)} />
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -168,7 +171,7 @@ export default function WorkshopPage() {
                               <div className="truncate text-[14px] font-semibold">{ticket.inventoryItem?.name ?? ticket.title}</div>
                               <div className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">{ticket.title}</div>
                             </div>
-                            {ticket.reason === "repair" ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[#C0272D]" /> : <Settings2 className="h-3.5 w-3.5 shrink-0 text-[#B8860B]" />}
+                            {ticket.reason === "repair" ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[#C0272D]" /> : <Settings2 className={cn("h-3.5 w-3.5 shrink-0", ticket.reason === "service" ? "text-[#2B5FD9]" : "text-[#B8860B]")} />}
                           </div>
                           <div className="mt-2 flex items-center justify-between text-[12.5px]">
                             <span className="text-[var(--color-text-muted)]">{ticket.number}</span>
@@ -231,9 +234,11 @@ export default function WorkshopPage() {
 
                 {/* Итог диагностики: либо инструмент годен, либо нужен ремонт.
                     Раньше приёмщик перекладывал статусы вручную и путался */}
-                {selected.reason === "maintenance" && selected.status !== "archived" && (
+                {(selected.reason === "maintenance" || selected.reason === "service") && selected.status !== "archived" && (
                   <div className="mb-4 rounded-[12px] border border-[var(--color-border)] p-3">
-                    <p className="mb-2 text-[13px] font-semibold text-[var(--color-text-muted)]">Что показала диагностика</p>
+                    <p className="mb-2 text-[13px] font-semibold text-[var(--color-text-muted)]">
+                      {selected.reason === "service" ? "Итог обслуживания" : "Что показала диагностика"}
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => finishDiagnostics(selected, false)}
@@ -379,25 +384,25 @@ function NewTicketModal({
               ))}
             </select>
           </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => {
-                setReason("repair");
-                setTitle("Ремонт оборудования");
-              }}
-              className={cn("rounded-[10px] border py-2 text-[14px] font-semibold", reason === "repair" ? "border-[#F3B7B7] bg-[#FDECEC] text-[#C0272D]" : "border-[var(--color-border)]")}
-            >
-              Требует ремонта
-            </button>
-            <button
-              onClick={() => {
-                setReason("maintenance");
-                setTitle("Диагностика после возврата");
-              }}
-              className={cn("rounded-[10px] border py-2 text-[14px] font-semibold", reason === "maintenance" ? "border-[#FFDCA8] bg-[#FFF8EA] text-[#B8620A]" : "border-[var(--color-border)]")}
-            >
-              Требует профилактики
-            </button>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { value: "repair", label: "Ремонт", title: "Ремонт оборудования", cls: "border-[#F3B7B7] bg-[#FDECEC] text-[#C0272D]" },
+                { value: "service", label: "Обслуживание", title: "Плановое обслуживание", cls: "border-[#BFD8FB] bg-[#EDF4FE] text-[#2B5FD9]" },
+                { value: "maintenance", label: "Диагностика", title: "Диагностика после возврата", cls: "border-[#FFDCA8] bg-[#FFF8EA] text-[#B8620A]" },
+              ] as { value: WorkshopReason; label: string; title: string; cls: string }[]
+            ).map((o) => (
+              <button
+                key={o.value}
+                onClick={() => {
+                  setReason(o.value);
+                  setTitle(o.title);
+                }}
+                className={cn("rounded-[10px] border py-2 text-[13.5px] font-semibold", reason === o.value ? o.cls : "border-[var(--color-border)]")}
+              >
+                {o.label}
+              </button>
+            ))}
           </div>
           <input value={title} onChange={(event) => setTitle(event.target.value)} className="crm-input" placeholder="Название заявки" />
           <textarea value={description} onChange={(event) => setDescription(event.target.value)} className="crm-input min-h-24 resize-none" placeholder="Описание поломки или работы" />

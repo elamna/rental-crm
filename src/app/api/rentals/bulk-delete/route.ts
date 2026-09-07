@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
     if (!me.isAdmin) throw new ApiError(403, "Массовое удаление доступно только администратору");
     const { ids } = await req.json();
     if (!Array.isArray(ids) || ids.length === 0) throw new ApiError(400, "Не выбрано ни одной аренды");
-    if (ids.length > 500) throw new ApiError(400, "За раз можно удалить не больше 500 аренд");
     return NextResponse.json(deleteRentals(ids));
   } catch (e) {
     return apiError(e);

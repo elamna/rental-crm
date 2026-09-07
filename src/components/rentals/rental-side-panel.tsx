@@ -10,16 +10,12 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { DeliveryModal } from "@/components/delivery/delivery-modal";
 import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check, Truck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { PaymentMethod, PAYMENT_METHOD_LABELS } from "@/lib/types";
 
-type PaymentMethod = "cash" | "kaspi_qr" | "company";
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  cash: "Наличные",
-  kaspi_qr: "Kaspi QR",
-  company: "Оплата компаний",
-};
+// Ключи те же, что в аналитике: по ним считается касса за период
 const PAYMENT_METHOD_ICONS: Record<PaymentMethod, React.ElementType> = {
   cash: Banknote,
-  kaspi_qr: QrCode,
+  kaspi: QrCode,
   company: Building2,
 };
 
@@ -210,10 +206,17 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
     setPaying(true);
     setActionError(null);
     try {
-      await updateRental(rental.id, {
-        paid,
-        paymentStatus: paid >= rental.total ? "paid" : "partial",
+      // Способ оплаты раньше терялся: модалка его спрашивала, а сохранялась
+      // только сумма. Теперь платёж пишется отдельной строкой и идёт в аналитику
+      const res = await fetch(`/api/rentals/${rental.id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, method }),
       });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Не удалось принять оплату");
+      // Платёж прошёл мимо store — перечитываем аренды, чтобы суммы обновились
+      useAppStore.setState({ hydrated: false, hydrating: false });
+      await useAppStore.getState().hydrate();
       setShowPaymentModal(false);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Не удалось принять оплату");
@@ -258,7 +261,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   // Состояние для каждого товара: выбран ли + его состояние
   // Профилактику делают всем и всегда — отдельной галочкой она только мешала.
   // Приёмщик решает одно: инструмент сразу в строй или на стол мастеру
-  type ItemCondition = "ok" | "maintenance" | "repair";
+  type ItemCondition = "ok" | "maintenance" | "service" | "repair";
   // Проданные товары магазина в возврат не попадают: они ушли насовсем
   const returnableItems = rental.items.filter((i) => i.inventoryItemId && i.category !== "shop");
   const [returnItems, setReturnItems] = useState<Map<string, { selected: boolean; condition: ItemCondition }>>(
@@ -294,13 +297,20 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         if (!item.inventoryItemId) continue;
         const { condition } = returnItems.get(item.inventoryItemId)!;
         await updateInventoryItem(item.inventoryItemId, {
-          status: condition === "ok" ? "available" : condition,
+          // Обслуживание и диагностика для каталога — одно и то же: инструмент
+          // временно не выдаётся. Разница видна в заявке мастерской
+          status: condition === "ok" ? "available" : condition === "repair" ? "repair" : "maintenance",
         });
         if (condition !== "ok") {
           await addWorkshopTicket({
             inventoryItemId: item.inventoryItemId,
             reason: condition,
-            title: condition === "maintenance" ? "Диагностика после возврата" : "Ремонт после возврата",
+            title:
+              condition === "maintenance"
+                ? "Диагностика после возврата"
+                : condition === "service"
+                  ? "Обслуживание после возврата"
+                  : "Ремонт после возврата",
             description: `Заявка создана автоматически из аренды №${rental.number}`,
             sourceRentalId: rental.id,
             lines: [],
@@ -878,8 +888,9 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                         <div className="flex gap-1.5">
                           {([
                             { value: "ok", label: "В строй", color: "text-[#1C8A46]", activeBg: "bg-[#EAF7EE] border-[#1C8A46]" },
-                            { value: "maintenance", label: "На диагностику", color: "text-[#B8860B]", activeBg: "bg-[#FFF8EA] border-[#B8860B]" },
-                            { value: "repair", label: "Сразу в ремонт", color: "text-[#C0272D]", activeBg: "bg-[#FDECEC] border-[#C0272D]" },
+                            { value: "service", label: "Обслуживание", color: "text-[#2B5FD9]", activeBg: "bg-[#EDF4FE] border-[#2B5FD9]" },
+                            { value: "maintenance", label: "Диагностика", color: "text-[#B8860B]", activeBg: "bg-[#FFF8EA] border-[#B8860B]" },
+                            { value: "repair", label: "В ремонт", color: "text-[#C0272D]", activeBg: "bg-[#FDECEC] border-[#C0272D]" },
                           ] as const).map((opt) => (
                             <button
                               key={opt.value}
@@ -1121,7 +1132,7 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
               Тип оплаты <span className="text-[#C0272D]">*</span>
             </p>
             <div className="flex flex-wrap gap-2">
-              {(["company", "cash", "kaspi_qr"] as PaymentMethod[]).map((m) => {
+              {(["company", "cash", "kaspi"] as PaymentMethod[]).map((m) => {
                 const Icon = PAYMENT_METHOD_ICONS[m];
                 return (
                   <button

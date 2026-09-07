@@ -23,6 +23,16 @@ interface AnalyticsData {
   byStatus: { status: string; count: number }[];
 }
 
+/** Поступления за период в двух разрезах: чем платили и за что */
+interface IncomeData {
+  methods: { cash: number; kaspi: number; company: number };
+  /** Оплаты, принятые до того, как начали записывать способ */
+  untracked: number;
+  sources: { rent: number; shop: number; delivery: number };
+  total: number;
+  paidTotal: number;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   request: "Запрос", booked: "Забронировано", active: "В аренде",
   completed: "Завершено", overdue: "Просрочено", stolen: "Украдено", cancelled: "Отменено",
@@ -36,12 +46,19 @@ export default function AnalyticsPage() {
   const [period, setPeriod] = useState<PeriodValue>({ key: "month" });
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [income, setIncome] = useState<IncomeData | null>(null);
+  const [incomeView, setIncomeView] = useState<"all" | "methods" | "sources">("all");
 
   useEffect(() => {
     setLoading(true);
     fetch(`/api/analytics?${periodQuery(period)}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); });
+
+    fetch(`/api/analytics/income?${periodQuery(period)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setIncome)
+      .catch(() => setIncome(null));
   }, [period]);
 
   // Шаг графика задаёт сервер: сутки — по часам, длинный период — по месяцам
@@ -70,6 +87,68 @@ export default function AnalyticsPage() {
           </div>
         ) : !data ? null : (
           <>
+            {income && (
+              <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-display text-[17px] font-bold">Поступления за период</h2>
+                    <p className="text-[13.5px] text-[var(--color-text-muted)]">
+                      Всего {formatMoney(income.total)} · аренды {formatMoney(income.paidTotal)}, доставка {formatMoney(income.sources.delivery)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-[10px] bg-[var(--color-bg)] p-1">
+                    {(
+                      [
+                        { key: "all", label: "Все" },
+                        { key: "methods", label: "Чем платили" },
+                        { key: "sources", label: "За что" },
+                      ] as { key: "all" | "methods" | "sources"; label: string }[]
+                    ).map((o) => (
+                      <button
+                        key={o.key}
+                        onClick={() => setIncomeView(o.key)}
+                        className={`rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition ${
+                          incomeView === o.key
+                            ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm"
+                            : "text-[var(--color-text-muted)]"
+                        }`}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                  {incomeView !== "sources" && (
+                    <>
+                      <IncomeTile label="Kaspi" value={income.methods.kaspi} total={income.total} tone="#37A0E4" />
+                      <IncomeTile label="Наличные" value={income.methods.cash} total={income.total} tone="#1C8A46" />
+                      <IncomeTile label="От компаний" value={income.methods.company} total={income.total} tone="#2B5FD9" />
+                    </>
+                  )}
+                  {incomeView !== "methods" && (
+                    <>
+                      <IncomeTile label="Аренда инструмента" value={income.sources.rent} total={income.total} tone="#0E7C66" />
+                      <IncomeTile label="Магазин" value={income.sources.shop} total={income.total} tone="#B8620A" />
+                      <IncomeTile label="Доставка" value={income.sources.delivery} total={income.total} tone="#7C3AED" />
+                    </>
+                  )}
+                </div>
+
+                {incomeView !== "sources" && income.untracked > 0 && (
+                  <p className="mt-3 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13px] text-[var(--color-text-muted)]">
+                    Ещё {formatMoney(income.untracked)} приняты до того, как начали записывать способ оплаты — они есть в общей
+                    сумме, но не разложены по Kaspi и наличным.
+                  </p>
+                )}
+
+                <p className="mt-3 text-[13px] text-[var(--color-text-muted)]">
+                  «Чем платили» и «за что» — два разреза одних и тех же денег, складывать их между собой не нужно.
+                </p>
+              </section>
+            )}
+
             {/* KPI карточки */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               <KpiCard icon={TrendingUp} label="Выручка" value={formatMoney(data.summary.totalRevenue)} color="primary" sub={`${data.summary.totalRentals} аренд за период`} />
@@ -205,6 +284,24 @@ export default function AnalyticsPage() {
 }
 
 // ─── Вспомогательные компоненты ──────────────────────────────────────────────
+
+/** Сумма с долей в общем потоке: доля показывает вес источника, а не просто цифру */
+function IncomeTile({ label, value, total, tone }: { label: string; value: number; total: number; tone: string }) {
+  const share = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="rounded-[12px] border border-[var(--color-border)] px-4 py-3">
+      <div className="flex items-center gap-2">
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: tone }} />
+        <span className="text-[13.5px] text-[var(--color-text-muted)]">{label}</span>
+      </div>
+      <div className="mt-1 font-display text-[20px] font-bold">{formatMoney(value)}</div>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--color-bg)]">
+        <div className="h-full rounded-full" style={{ width: `${Math.max(2, share)}%`, background: tone }} />
+      </div>
+      <div className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">{share}% от поступлений</div>
+    </div>
+  );
+}
 
 function KpiCard({ icon: Icon, label, value, color, sub }: {
   icon: React.ElementType; label: string; value: string; color: string; sub: string;

@@ -169,6 +169,14 @@ CREATE TABLE IF NOT EXISTS services (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS rental_payments (
+  id TEXT PRIMARY KEY,
+  rental_id TEXT NOT NULL,
+  amount REAL NOT NULL,
+  method TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS shop_products (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -195,6 +203,8 @@ CREATE TABLE IF NOT EXISTS inventory_checks (
 
 CREATE INDEX IF NOT EXISTS idx_inventory_checks_item ON inventory_checks(inventory_item_id);
 CREATE INDEX IF NOT EXISTS idx_shop_products_name ON shop_products(name);
+CREATE INDEX IF NOT EXISTS idx_rental_payments_rental ON rental_payments(rental_id);
+CREATE INDEX IF NOT EXISTS idx_rental_payments_created ON rental_payments(created_at);
 
 CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,

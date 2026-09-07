@@ -115,6 +115,23 @@ export interface ImportReport {
   reasons: Record<string, number>;
 }
 
+/** Чем платят: наличные, Kaspi (QR или перевод) и безнал от компаний */
+export type PaymentMethod = "cash" | "kaspi" | "company";
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: "Наличные",
+  kaspi: "Kaspi",
+  company: "От компаний",
+};
+
+export interface RentalPayment {
+  id: string;
+  rentalId: string;
+  amount: number;
+  method: PaymentMethod;
+  createdAt: string;
+}
+
 export type RentalPeriod = "hourly" | "daily" | "weekly" | "monthly";
 
 export interface Rental {
@@ -159,7 +176,8 @@ export interface Rental {
 }
 
 export type WorkshopStatus = "new" | "in_progress" | "done" | "archived";
-export type WorkshopReason = "maintenance" | "repair";
+/** service — плановое ТО, maintenance — диагностика после возврата, repair — ремонт */
+export type WorkshopReason = "service" | "maintenance" | "repair";
 
 export interface WorkshopLine {
   id: string;
