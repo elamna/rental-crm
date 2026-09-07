@@ -2,13 +2,18 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
+import type { Rental } from "@/lib/types";
 import { notFound, useRouter } from "next/navigation";
 import { RentalSidePanel } from "@/components/rentals/rental-side-panel";
-import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, isOneTimeLine } from "@/lib/utils";
+import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, isOneTimeLine, lineTotal, durationDays } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { ArrowLeft, Search, Star, Phone, Mail, Plus, AlertTriangle, Pencil, MoreHorizontal, Pause, Play, History, Ban, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RentalHistoryModal, RentalPausesModal } from "@/components/rentals/rental-history";
+import { AddCatalogItemModal } from "@/components/rentals/add-catalog-item-modal";
+import { AddCatalogBundleModal } from "@/components/rentals/add-catalog-bundle-modal";
+import { AddShopItemModal } from "@/components/rentals/add-shop-item-modal";
+import type { InventoryLine, LineCategory } from "@/lib/types";
 import Link from "next/link";
 
 const itemTabs = [
@@ -85,14 +90,25 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
     router.push("/rentals");
   }
 
-  // Редактирование дат
-  const [editingDates, setEditingDates] = useState(false);
+  // Даты и комментарий правятся прямо в полях: отдельная кнопка «Изменить»
+  // заставляла делать лишний клик перед каждой правкой
   const [startDraft, setStartDraft] = useState("");
   const [endDraft, setEndDraft] = useState("");
-  const [savingDates, setSavingDates] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
-  const [editingComment, setEditingComment] = useState(false);
-  const [savingComment, setSavingComment] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Клиент часто возвращается за вторым инструментом через пару часов — позиции
+  // должны добавляться в уже открытую аренду, а не заводиться новой
+  const [addCategory, setAddCategory] = useState<LineCategory | null>(null);
+  const [addingItem, setAddingItem] = useState(false);
+
+  // Хук обязан стоять до раннего return: иначе при первой отрисовке (аренда ещё
+  // не подгрузилась) порядок хуков разъезжается и React ругается
+  useEffect(() => {
+    setStartDraft(toInputValue(rental?.startAt ?? ""));
+    setEndDraft(toInputValue(rental?.endAt ?? ""));
+    setCommentDraft(rental?.comment ?? "");
+  }, [rental?.id, rental?.startAt, rental?.endAt, rental?.comment]);
 
   if (!rental) {
     if (!hydrated) {
@@ -101,6 +117,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
     return notFound();
   }
   const st = statusStyles[rental.status];
+
 
   // Вкладки над списком позиций теперь действительно фильтруют
   const activeCategory = itemTabs.find((t) => t.label === activeTab)?.category ?? null;
@@ -118,48 +135,92 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  function startEditDates() {
+  /**
+   * Добавляет позицию в открытую аренду и сразу поднимает счёт: повременная
+   * считается за оставшийся срок, услуга и товар магазина — разово.
+   */
+  async function addLine(category: LineCategory, values: { name: string; pricePerDay: number; qty: number; inventoryItemId?: string; sku?: string }) {
     if (!rental) return;
-    setStartDraft(toInputValue(rental.startAt ?? ""));
-    setEndDraft(toInputValue(rental.endAt ?? ""));
-    setEditingDates(true);
+    setAddCategory(null);
+    setAddingItem(true);
+    try {
+      const line: InventoryLine = {
+        id: `it_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: values.name,
+        sku: values.sku ?? "",
+        qty: values.qty,
+        pricePerDay: values.pricePerDay,
+        category,
+        inventoryItemId: values.inventoryItemId,
+      };
+      await updateRental(rental.id, {
+        items: [...rental.items, line],
+        total: rental.total + lineTotal(line, durationDaysCount),
+      });
+    } finally {
+      setAddingItem(false);
+    }
   }
 
-  async function saveDates() {
-    if (!rental || !startDraft || !endDraft) return;
+  /** Убирает позицию и настолько же уменьшает счёт */
+  async function removeLine(line: InventoryLine) {
+    if (!rental) return;
+    if (!confirm(`Убрать «${line.name}» из аренды?`)) return;
+    setAddingItem(true);
+    try {
+      await updateRental(rental.id, {
+        items: rental.items.filter((i) => i.id !== line.id),
+        total: Math.max(0, rental.total - lineTotal(line, durationDaysCount)),
+      });
+    } finally {
+      setAddingItem(false);
+    }
+  }
+
+  async function saveChanges() {
+    if (!rental || !hasChanges) return;
     const start = new Date(startDraft);
     const end = new Date(endDraft);
-    if (end <= start) {
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
       alert("Дата конца должна быть позже даты начала");
       return;
     }
-    setSavingDates(true);
+
+    setSaving(true);
     try {
-      await updateRental(rental.id, {
-        startAt: start.toISOString(),
-        endAt: end.toISOString(),
-      });
-      setEditingDates(false);
+      const patch: Partial<Rental> = { comment: commentDraft };
+      if (datesChanged) {
+        patch.startAt = start.toISOString();
+        patch.endAt = end.toISOString();
+        // Продлили срок — значит клиент должен доплатить за лишние сутки.
+        // Считаем именно дельту, а не сумму заново: иначе затрём ручные скидки и штрафы
+        if (priceDelta !== 0) patch.total = Math.max(0, rental.total + priceDelta);
+      }
+      await updateRental(rental.id, patch);
     } finally {
-      setSavingDates(false);
+      setSaving(false);
     }
   }
 
-  async function saveComment() {
-    if (!rental) return;
-    setSavingComment(true);
-    try {
-      await updateRental(rental.id, { comment: commentDraft });
-      setEditingComment(false);
-    } finally {
-      setSavingComment(false);
-    }
-  }
+  // Расчёт длительности — общей функцией, она отбрасывает секунды
+  const durationDaysCount = rental.startAt && rental.endAt ? durationDays(rental.startAt, rental.endAt) : 1;
 
-  // Расчёт длительности
-  const durationDaysCount = rental.startAt && rental.endAt
-    ? Math.max(1, Math.ceil((new Date(rental.endAt).getTime() - new Date(rental.startAt).getTime()) / 86400000))
-    : 1;
+  // Срок по черновику — он и показывается, пока правки не сохранены
+  const draftDays =
+    startDraft && endDraft && new Date(endDraft) > new Date(startDraft)
+      ? durationDays(new Date(startDraft).toISOString(), new Date(endDraft).toISOString())
+      : durationDaysCount;
+
+  const datesChanged =
+    startDraft !== toInputValue(rental.startAt ?? "") || endDraft !== toInputValue(rental.endAt ?? "");
+  const commentChanged = commentDraft !== (rental.comment ?? "");
+  const hasChanges = datesChanged || commentChanged;
+
+  // Сколько добавится к счёту за изменение срока: только повременные позиции
+  const extraDays = draftDays - durationDaysCount;
+  const priceDelta = perDayTotal * extraDays;
+  const nextTotal = Math.max(0, rental.total + priceDelta);
+  const nextDue = Math.max(0, nextTotal - rental.paid);
 
   return (
     <div className="flex h-full flex-col">
@@ -186,6 +247,15 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div className="flex items-center gap-2">
+          {canEdit && hasChanges && (
+            <button
+              onClick={saveChanges}
+              disabled={saving}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            >
+              {saving ? "Сохраняем…" : "Сохранить изменения"}
+            </button>
+          )}
           <div ref={menuRef} className="relative">
             <button
               onClick={() => setMenuOpen((v) => !v)}
@@ -229,6 +299,20 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
         <RentalHistoryModal rentalId={id} canEdit={canEdit} onClose={() => setShowHistory(false)} onReverted={reloadRentals} />
       )}
       {showPauses && <RentalPausesModal rentalId={id} onClose={() => setShowPauses(false)} />}
+
+      {addCategory === "product" && (
+        <AddCatalogItemModal onClose={() => setAddCategory(null)} onAdd={(v) => addLine("product", v)} />
+      )}
+      {(addCategory === "kit" || addCategory === "service") && (
+        <AddCatalogBundleModal
+          category={addCategory}
+          onClose={() => setAddCategory(null)}
+          onAdd={(v) => addLine(addCategory, v)}
+        />
+      )}
+      {addCategory === "shop" && (
+        <AddShopItemModal onClose={() => setAddCategory(null)} onAdd={(v) => addLine("shop", v)} />
+      )}
 
       <div className={cn("flex flex-1 gap-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5", isMobile && "flex-col")}>
         {/* LEFT: main form */}
@@ -280,36 +364,14 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
           {/* Rental fields */}
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[15px] font-semibold">Аренда</h2>
-              {!editingDates ? (
-                <button
-                  onClick={startEditDates}
-                  className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Изменить даты
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setEditingDates(false)}
-                    disabled={savingDates}
-                    className="rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
-                  >
-                    Отмена
-                  </button>
-                  <button
-                    onClick={saveDates}
-                    disabled={savingDates}
-                    className="rounded-[8px] bg-[var(--color-primary)] px-3 py-1.5 text-[13px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
-                  >
-                    {savingDates ? "Сохранение…" : "Сохранить"}
-                  </button>
-                </div>
+              <h2 className="text-[16px] font-semibold">Аренда</h2>
+              {datesChanged && (
+                <span className="text-[13px] font-medium text-[var(--color-primary)]">Срок изменён — не забудьте сохранить</span>
               )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {editingDates ? (
+              {canEdit ? (
                 <>
                   <label className="block">
                     <span className="mb-1 block text-[13px] text-[var(--color-text-muted)]">Дата начала</span>
@@ -317,7 +379,10 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                       type="datetime-local"
                       value={startDraft}
                       onChange={(e) => setStartDraft(e.target.value)}
-                      className="w-full rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[14px] outline-none"
+                      className={cn(
+                        "w-full rounded-[10px] border px-3 py-2 text-[15px] outline-none transition focus:border-[var(--color-primary)]",
+                        datesChanged ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-transparent bg-[var(--color-bg)]"
+                      )}
                     />
                   </label>
                   <label className="block">
@@ -326,16 +391,15 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                       type="datetime-local"
                       value={endDraft}
                       onChange={(e) => setEndDraft(e.target.value)}
-                      className="w-full rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[14px] outline-none"
+                      className={cn(
+                        "w-full rounded-[10px] border px-3 py-2 text-[15px] outline-none transition focus:border-[var(--color-primary)]",
+                        datesChanged ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-transparent bg-[var(--color-bg)]"
+                      )}
                     />
                   </label>
                   <div>
                     <span className="mb-1 block text-[13px] text-[var(--color-text-muted)]">Продолжительность</span>
-                    <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[14px]">
-                      {startDraft && endDraft
-                        ? `${Math.max(1, Math.ceil((new Date(endDraft).getTime() - new Date(startDraft).getTime()) / 86400000))} сут.`
-                        : "—"}
-                    </div>
+                    <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[15px]">{draftDays} сут.</div>
                   </div>
                 </>
               ) : (
@@ -350,38 +414,41 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
               <Field label="Менеджер" value={rental.bookedBy.name} />
             </div>
 
-            <div className="mt-4">
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-[13px] text-[var(--color-text-muted)]">Комментарий</span>
-                {!editingComment ? (
-                  <button
-                    onClick={() => { setCommentDraft(rental.comment ?? ""); setEditingComment(true); }}
-                    className="text-[12.5px] font-medium text-[var(--color-primary)] hover:underline"
-                  >
-                    Изменить
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button onClick={() => setEditingComment(false)} className="text-[12.5px] text-[var(--color-text-muted)] hover:underline">Отмена</button>
-                    <button onClick={saveComment} disabled={savingComment} className="text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-50">
-                      {savingComment ? "Сохранение…" : "Сохранить"}
-                    </button>
+            {/* Продление срока — это деньги: показываем доплату сразу, до сохранения */}
+            {datesChanged && extraDays !== 0 && (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[12px] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-3.5 py-3">
+                <div>
+                  <div className="text-[14px] font-semibold text-[var(--color-primary)]">
+                    {extraDays > 0
+                      ? `Продление на ${extraDays} сут. — доплата ${formatMoney(priceDelta)}`
+                      : `Срок сокращён на ${-extraDays} сут. — сумма уменьшится на ${formatMoney(-priceDelta)}`}
                   </div>
-                )}
+                  <div className="text-[13px] text-[var(--color-text-muted)]">
+                    Ставка {formatMoney(perDayTotal)} / сут · сумма аренды станет {formatMoney(nextTotal)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[13px] text-[var(--color-text-muted)]">К оплате после изменения</div>
+                  <div className="text-[17px] font-bold">{formatMoney(nextDue)}</div>
+                </div>
               </div>
-              {editingComment ? (
+            )}
+
+            <div className="mt-4">
+              <span className="mb-1 block text-[13px] text-[var(--color-text-muted)]">Комментарий</span>
+              {canEdit ? (
                 <textarea
-                  autoFocus
                   value={commentDraft}
                   onChange={(e) => setCommentDraft(e.target.value)}
-                  rows={3}
-                  className="w-full resize-none rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[14px] outline-none"
+                  rows={2}
+                  className={cn(
+                    "w-full resize-none rounded-[10px] border px-3 py-2 text-[14px] outline-none transition focus:border-[var(--color-primary)]",
+                    commentChanged ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-transparent bg-[var(--color-bg)]"
+                  )}
                   placeholder="Комментарий к аренде…"
                 />
               ) : (
-                <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[14px]">
-                  {rental.comment || "Без комментария"}
-                </div>
+                <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[14px]">{rental.comment || "Без комментария"}</div>
               )}
             </div>
           </section>
@@ -425,22 +492,47 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                       <div className="text-[12.5px] text-[var(--color-text-muted)]">{item.sku} · {item.qty} шт</div>
                     </div>
                   </div>
-                  <div className="shrink-0 text-[14px] font-semibold">{formatMoney(item.pricePerDay)}{isOneTimeLine(item) ? " за шт." : " / сутки"}</div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-[14px] font-semibold">
+                      {formatMoney(item.pricePerDay)}
+                      {isOneTimeLine(item) ? " за шт." : " / сутки"}
+                    </span>
+                    {canEdit && rental.status !== "cancelled" && (
+                      <button
+                        onClick={() => removeLine(item)}
+                        disabled={addingItem}
+                        className="grid h-6 w-6 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[#FDECEC] hover:text-[#C0272D] disabled:opacity-40"
+                        title="Убрать из аренды"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
-                <Plus className="h-3.5 w-3.5" /> Добавить товар
-              </button>
-              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
-                <Plus className="h-3.5 w-3.5" /> Добавить комплект
-              </button>
-              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
-                <Plus className="h-3.5 w-3.5" /> Добавить услугу
-              </button>
-            </div>
+            {canEdit && rental.status !== "cancelled" && (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(
+                  [
+                    { key: "product", label: "Товар" },
+                    { key: "kit", label: "Комплект" },
+                    { key: "service", label: "Услугу" },
+                    { key: "shop", label: "Из магазина" },
+                  ] as { key: LineCategory; label: string }[]
+                ).map((o) => (
+                  <button
+                    key={o.key}
+                    onClick={() => setAddCategory(o.key)}
+                    disabled={addingItem}
+                    className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-3">
               <div className="flex items-center justify-between">

@@ -15,9 +15,15 @@ export function formatDateTimeDisplay(iso: string) {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(d);
 }
 
+/**
+ * Срок аренды в сутках. Секунды и миллисекунды отбрасываем: без этого аренда
+ * «с 12:15 до 12:15 следующего дня» превращалась в двое суток из-за одной
+ * лишней миллисекунды в дате, и клиенту насчитывался лишний день.
+ */
 export function durationDays(startIso: string, endIso: string) {
-  const start = new Date(startIso).getTime();
-  const end = new Date(endIso).getTime();
+  const toMinutes = (iso: string) => Math.floor(new Date(iso).getTime() / 60000) * 60000;
+  const start = toMinutes(startIso);
+  const end = toMinutes(endIso);
   if (isNaN(start) || isNaN(end) || end <= start) return 1;
   return Math.max(1, Math.ceil((end - start) / 86400000));
 }
