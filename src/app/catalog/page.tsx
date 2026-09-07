@@ -71,7 +71,7 @@ export default function CatalogPage() {
                   if (t.key !== "products") setShowInactive(false);
                 }}
                 className={cn(
-                  "relative shrink-0 whitespace-nowrap px-3.5 pb-3 pt-1.5 text-[13.5px] font-semibold transition",
+                  "relative shrink-0 whitespace-nowrap px-3.5 pb-3 pt-1.5 text-[14.5px] font-semibold transition",
                   tab === t.key ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 )}
               >
@@ -88,7 +88,7 @@ export default function CatalogPage() {
               <button
                 onClick={() => setShowInactive((v) => !v)}
                 className={cn(
-                  "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3.5 py-2 text-[13px] font-semibold transition",
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3.5 py-2 text-[14px] font-semibold transition",
                   showInactive
                     ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                     : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
@@ -102,7 +102,7 @@ export default function CatalogPage() {
             {canImport && tab === "products" && (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
               >
                 <Upload className="h-3.5 w-3.5" /> Импорт
               </button>
@@ -110,7 +110,7 @@ export default function CatalogPage() {
             {canEdit && tab === "products" && (
               <Link
                 href="/catalog/new"
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
               >
                 <Plus className="h-3.5 w-3.5" /> Добавить
               </Link>
@@ -118,7 +118,7 @@ export default function CatalogPage() {
             {canEdit && tab === "kits" && (
               <button
                 onClick={() => setAddKit(true)}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
               >
                 <Plus className="h-3.5 w-3.5" /> Добавить комплект
               </button>
@@ -126,7 +126,7 @@ export default function CatalogPage() {
             {canEdit && tab === "services" && (
               <button
                 onClick={() => setAddService(true)}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
               >
                 <Plus className="h-3.5 w-3.5" /> Создать услугу
               </button>
@@ -137,7 +137,7 @@ export default function CatalogPage() {
       </div>
 
       {importMsg && (
-        <div className="mx-4 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[13px] font-medium text-[var(--color-primary)] sm:mx-6">
+        <div className="mx-4 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[14px] font-medium text-[var(--color-primary)] sm:mx-6">
           {importMsg}
         </div>
       )}

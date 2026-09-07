@@ -49,7 +49,7 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 className="font-display text-[18px] font-bold">{service ? "Услуга" : "Новая услуга"}</h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Расходники и работы, которые добавляются в аренду отдельной строкой</p>
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">Расходники и работы, которые добавляются в аренду отдельной строкой</p>
           </div>
           <button onClick={onClose} className="text-[var(--color-text-muted)] transition hover:text-[#C0272D]">
             <X className="h-5 w-5" />
@@ -57,14 +57,14 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
         </div>
 
         <label className="block">
-          <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">
+          <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
             Название <span className="text-[var(--color-primary)]">*</span>
           </span>
           <input value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Сверло 18 (Магнитный дрел)" />
         </label>
 
         <div className="mt-5">
-          <span className="mb-2 block text-[12.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Тарифы</span>
+          <span className="mb-2 block text-[13.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Тарифы</span>
           <div className="space-y-2">
             {TARIFF_TYPES.map((type) => {
               const active = tariffs.find((t) => t.type === type);
@@ -73,14 +73,14 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
                   <button
                     onClick={() => toggleTariff(type)}
                     className={cn(
-                      "flex w-[150px] items-center gap-2 rounded-[10px] border px-3 py-2 text-[13px] font-medium transition",
+                      "flex w-[150px] items-center gap-2 rounded-[10px] border px-3 py-2 text-[14px] font-medium transition",
                       active
                         ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                         : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]"
                     )}
                   >
                     <span className={cn("grid h-4 w-4 place-items-center rounded-[4px] border", active ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "border-[var(--color-border)]")}>
-                      {active && <span className="text-[10px] leading-none">✓</span>}
+                      {active && <span className="text-[11px] leading-none">✓</span>}
                     </span>
                     {serviceTariffLabels[type]}
                   </button>
@@ -93,7 +93,7 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
                     placeholder="0"
                     className="crm-input flex-1 disabled:opacity-40"
                   />
-                  <span className="text-[13px] text-[var(--color-text-muted)]">₸</span>
+                  <span className="text-[14px] text-[var(--color-text-muted)]">₸</span>
                 </div>
               );
             })}
@@ -101,20 +101,20 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
         </div>
 
         <label className="mt-4 block">
-          <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Заметки</span>
+          <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Заметки</span>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="crm-input" />
         </label>
 
-        {error && <p className="mt-3 text-[13px] text-[#C0272D]">{error}</p>}
+        {error && <p className="mt-3 text-[14px] text-[#C0272D]">{error}</p>}
 
         <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[13.5px] font-semibold text-[var(--color-text-muted)]">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[14.5px] font-semibold text-[var(--color-text-muted)]">
             Отмена
           </button>
           <button
             disabled={!canSave}
             onClick={save}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[14.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving ? "Сохранение…" : "Сохранить"}
           </button>

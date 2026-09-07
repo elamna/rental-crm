@@ -109,7 +109,7 @@ export function ScheduleTab() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
         <SearchInput value={search} onChange={setSearch} className="col-span-2 sm:flex-1" />
-        <div className="col-span-2 flex items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] sm:col-span-1">
+        <div className="col-span-2 flex items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] sm:col-span-1">
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-transparent outline-none" />
           <span className="text-[var(--color-text-muted)]">→</span>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="bg-transparent outline-none" />
@@ -122,12 +122,12 @@ export function ScheduleTab() {
       </div>
 
       <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
-        <span className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-[12.5px] font-medium">
+        <span className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-[13.5px] font-medium">
           <span className="h-2 w-2 rounded-full bg-[var(--color-primary)]" /> Исправен
         </span>
-        <span className="flex items-center gap-1.5 rounded-[10px] border border-[#F8C4C4] bg-[var(--color-surface)] px-3 py-1.5 text-[12.5px] font-medium">
+        <span className="flex items-center gap-1.5 rounded-[10px] border border-[#F8C4C4] bg-[var(--color-surface)] px-3 py-1.5 text-[13.5px] font-medium">
           <span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Сломан
-          <span className="rounded-[6px] bg-[#FDECEC] px-1.5 py-[1px] text-[11px] text-[#C0272D]">Не сдаётся в аренду</span>
+          <span className="rounded-[6px] bg-[#FDECEC] px-1.5 py-[1px] text-[12px] text-[#C0272D]">Не сдаётся в аренду</span>
         </span>
       </div>
 
@@ -136,7 +136,7 @@ export function ScheduleTab() {
           <table className="border-collapse" style={{ minWidth: 260 + days.length * CELL }}>
             <thead className="sticky top-0 z-20">
               <tr>
-                <th className="sticky left-0 z-30 w-[260px] min-w-[260px] border-b border-r border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-left text-[11.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                <th className="sticky left-0 z-30 w-[260px] min-w-[260px] border-b border-r border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-left text-[12.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
                   Инвентари
                 </th>
                 {days.map((d) => {
@@ -151,10 +151,10 @@ export function ScheduleTab() {
                         weekend && "bg-[var(--color-bg)]"
                       )}
                     >
-                      <div className="text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">{weekdays[d.getDay()]}</div>
+                      <div className="text-[11px] font-semibold uppercase text-[var(--color-text-muted)]">{weekdays[d.getDay()]}</div>
                       <div
                         className={cn(
-                          "mx-auto mt-0.5 grid h-5 w-5 place-items-center rounded-full text-[11.5px] font-semibold",
+                          "mx-auto mt-0.5 grid h-5 w-5 place-items-center rounded-full text-[12.5px] font-semibold",
                           isToday ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[var(--color-text)]"
                         )}
                       >
@@ -169,13 +169,13 @@ export function ScheduleTab() {
             <tbody>
               {days.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="px-4 py-10 text-center text-[13px] text-[var(--color-text-muted)]">
+                  <td colSpan={2} className="px-4 py-10 text-center text-[14px] text-[var(--color-text-muted)]">
                     Укажите корректный период
                   </td>
                 </tr>
               ) : pageUnits.length === 0 ? (
                 <tr>
-                  <td colSpan={days.length + 1} className="px-4 py-10 text-center text-[13px] text-[var(--color-text-muted)]">
+                  <td colSpan={days.length + 1} className="px-4 py-10 text-center text-[14px] text-[var(--color-text-muted)]">
                     {hydrated ? "Ничего не найдено" : "Загрузка…"}
                   </td>
                 </tr>
@@ -189,10 +189,10 @@ export function ScheduleTab() {
                         <div className="flex items-center gap-2">
                           <span className={cn("h-2 w-2 shrink-0 rounded-full", broken ? "bg-[#EF4444]" : "bg-[var(--color-primary)]")} />
                           <div className="min-w-0">
-                            <Link href={`/catalog/${u.id}`} className="block truncate text-[12.5px] font-medium transition hover:text-[var(--color-primary)]">
+                            <Link href={`/catalog/${u.id}`} className="block truncate text-[13.5px] font-medium transition hover:text-[var(--color-primary)]">
                               {u.name}
                             </Link>
-                            <div className="text-[11px] text-[var(--color-text-muted)]">{u.sku || "без артикула"}</div>
+                            <div className="text-[12px] text-[var(--color-text-muted)]">{u.sku || "без артикула"}</div>
                           </div>
                         </div>
                       </td>
@@ -222,7 +222,7 @@ export function ScheduleTab() {
                                 title={`${b.client} · ${statusLabels[b.status as keyof typeof statusLabels] ?? b.status}`}
                                 style={{ left: b.from * CELL + 3, width: b.span * CELL - 6 }}
                                 className={cn(
-                                  "absolute top-[7px] flex h-[32px] items-center overflow-hidden rounded-[6px] border px-2 text-[11.5px] font-medium",
+                                  "absolute top-[7px] flex h-[32px] items-center overflow-hidden rounded-[6px] border px-2 text-[12.5px] font-medium",
                                   st.bg,
                                   st.text,
                                   st.border

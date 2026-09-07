@@ -96,6 +96,8 @@ export function lineTotal(line: { pricePerDay: number; qty: number; category?: s
  * прятал такую аренду из списка, и деньги терялись из виду.
  */
 export function isDebtorRental(r: { status: string; total: number; paid: number }) {
-  const issued = r.status === "active" || r.status === "overdue" || r.status === "completed" || r.status === "stolen";
-  return issued && r.total - r.paid > 0;
+  // Пока инструмент у клиента, он не должник: аренда идёт, оплата ещё впереди.
+  // Долг появляется, когда вещь вернули (или не вернут уже никогда), а деньги нет
+  const closed = r.status === "completed" || r.status === "stolen";
+  return closed && r.total - r.paid > 0;
 }

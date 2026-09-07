@@ -42,14 +42,14 @@ export function SelectionBar({
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-5 safe-bottom">
       <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 shadow-lg">
-        <span className="px-1 text-[13px] font-semibold">
+        <span className="px-1 text-[14px] font-semibold">
           Выбрано {count} {plural(count, noun[0], noun[1], noun[2])}
         </span>
 
         {!allSelected && (
           <button
             onClick={onSelectAll}
-            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
           >
             <CheckSquare className="h-3.5 w-3.5" /> Выбрать все ({total})
           </button>
@@ -57,7 +57,7 @@ export function SelectionBar({
 
         <button
           onClick={onClear}
-          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
         >
           <X className="h-3.5 w-3.5" /> Снять выделение
         </button>
@@ -65,7 +65,7 @@ export function SelectionBar({
         <button
           onClick={onDelete}
           disabled={busy}
-          className="flex items-center gap-1.5 rounded-[10px] bg-[#C0272D] px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-[#A31F24] disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-[10px] bg-[#C0272D] px-3.5 py-1.5 text-[13.5px] font-semibold text-white transition hover:bg-[#A31F24] disabled:opacity-60"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
           {busy ? "Удаляем…" : "Удалить"}
@@ -128,12 +128,12 @@ export function ConfirmDeleteModal({
             <Trash2 className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <h3 className="text-[15px] font-semibold">{title}</h3>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Восстановить данные будет нельзя</p>
+            <h3 className="text-[16px] font-semibold">{title}</h3>
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">Восстановить данные будет нельзя</p>
           </div>
         </div>
 
-        <ul className="mt-4 space-y-1.5 rounded-[10px] bg-[var(--color-bg)] px-3.5 py-3 text-[12.5px]">
+        <ul className="mt-4 space-y-1.5 rounded-[10px] bg-[var(--color-bg)] px-3.5 py-3 text-[13.5px]">
           {lines.map((l) => (
             <li key={l} className="text-[var(--color-text-muted)]">
               {l}
@@ -147,14 +147,14 @@ export function ConfirmDeleteModal({
           <button
             onClick={onCancel}
             disabled={busy}
-            className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+            className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
           >
             Отмена
           </button>
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-[10px] bg-[#C0272D] px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#A31F24] disabled:opacity-60"
+            className="flex items-center gap-1.5 rounded-[10px] bg-[#C0272D] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#A31F24] disabled:opacity-60"
           >
             {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {busy ? "Удаляем…" : confirmLabel}

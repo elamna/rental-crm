@@ -68,7 +68,7 @@ export default function TasksPage() {
 
   if (!can("tasks.view")) {
     return (
-      <div className="grid h-full place-items-center p-6 text-center text-[13.5px] text-[var(--color-text-muted)]">
+      <div className="grid h-full place-items-center p-6 text-center text-[14.5px] text-[var(--color-text-muted)]">
         Нет доступа к разделу «Темп»
       </div>
     );
@@ -79,14 +79,14 @@ export default function TasksPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div className="min-w-0">
           <h1 className="font-display text-[20px] font-bold">Темп</h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">
+          <p className="text-[14px] text-[var(--color-text-muted)]">
             {canManageAll ? "Задачи сотрудников и KPI по выполнению" : "Ваши задачи и личный KPI"}
           </p>
         </div>
         {canManageAll && (
           <button
             onClick={() => setCreating(true)}
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
           >
             <Plus className="h-3.5 w-3.5" /> Новая задача
           </button>
@@ -106,7 +106,7 @@ export default function TasksPage() {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "rounded-[8px] px-3.5 py-1.5 text-[12.5px] font-semibold transition",
+                  "rounded-[8px] px-3.5 py-1.5 text-[13.5px] font-semibold transition",
                   tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
                 )}
               >
@@ -116,7 +116,7 @@ export default function TasksPage() {
           </div>
 
           {tab === "board" && canManageAll && (
-            <label className="flex cursor-pointer select-none items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[12.5px] font-medium text-[var(--color-text-muted)]">
+            <label className="flex cursor-pointer select-none items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13.5px] font-medium text-[var(--color-text-muted)]">
               <input
                 type="checkbox"
                 checked={onlyMine}
@@ -130,10 +130,10 @@ export default function TasksPage() {
 
         {tab === "board" ? (
           loading ? (
-            <p className="py-10 text-center text-[13px] text-[var(--color-text-muted)]">Загрузка…</p>
+            <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
           ) : tasks.length === 0 ? (
             <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center card-shadow">
-              <p className="text-[13.5px] text-[var(--color-text-muted)]">
+              <p className="text-[14.5px] text-[var(--color-text-muted)]">
                 {canManageAll ? "Задач пока нет — поставьте первую" : "Вам пока не поставили задач"}
               </p>
             </div>

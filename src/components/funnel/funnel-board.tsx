@@ -50,10 +50,10 @@ export function FunnelBoard({
                 className={cn("rounded-[12px] border-l-[3px] px-3.5 py-2.5", col.bg)}
                 style={{ borderLeftColor: col.accent }}
               >
-                <div className="text-[13px] font-semibold" style={{ color: col.accent }}>
+                <div className="text-[14px] font-semibold" style={{ color: col.accent }}>
                   {col.label}
                 </div>
-                <div className="text-[11.5px] text-[var(--color-text-muted)]">
+                <div className="text-[12.5px] text-[var(--color-text-muted)]">
                   {items.length} сделки: {formatMoney(sum)}
                 </div>
               </div>
@@ -74,7 +74,7 @@ export function FunnelBoard({
                   />
                 ))}
                 {items.length === 0 && (
-                  <p className="rounded-[10px] border border-dashed border-[var(--color-border)] py-5 text-center text-[12px] text-[var(--color-text-muted)]">
+                  <p className="rounded-[10px] border border-dashed border-[var(--color-border)] py-5 text-center text-[13px] text-[var(--color-text-muted)]">
                     Пусто
                   </p>
                 )}
@@ -108,7 +108,7 @@ export function FunnelBoard({
                   setDropZone(null);
                 }}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 py-5 text-[14px] font-semibold transition",
+                  "flex flex-1 items-center justify-center gap-2 py-5 text-[15px] font-semibold transition",
                   z.cls,
                   dropZone === z.key && "brightness-95 ring-2 ring-inset ring-[var(--color-primary)]"
                 )}
@@ -158,11 +158,11 @@ function LeadCard({
     >
       <button onClick={onOpen} className="block w-full text-left">
         <div className="flex items-start justify-between gap-2">
-          <span className="text-[13px] font-semibold uppercase leading-tight text-[var(--color-primary)]">{lead.title}</span>
-          <span className="shrink-0 text-[11.5px] text-[var(--color-text-muted)]">№{lead.number}</span>
+          <span className="text-[14px] font-semibold uppercase leading-tight text-[var(--color-primary)]">{lead.title}</span>
+          <span className="shrink-0 text-[12.5px] text-[var(--color-text-muted)]">№{lead.number}</span>
         </div>
 
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-[12px]">
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[13px]">
           <span className="flex min-w-0 items-center gap-1 text-[var(--color-text-muted)]">
             <Phone className="h-3 w-3 shrink-0" />
             <span className="truncate">{lead.phone ?? "—"}</span>
@@ -176,15 +176,15 @@ function LeadCard({
         <div className="mt-2 flex flex-wrap items-center justify-between gap-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
             {lead.source && (
-              <span className="rounded-[6px] bg-[var(--color-bg)] px-1.5 py-0.5 text-[10.5px] text-[var(--color-text-muted)]">{lead.source}</span>
+              <span className="rounded-[6px] bg-[var(--color-bg)] px-1.5 py-0.5 text-[11.5px] text-[var(--color-text-muted)]">{lead.source}</span>
             )}
             {lead.amount > 0 && (
-              <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[10.5px] font-semibold text-[var(--color-primary)]">
+              <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--color-primary)]">
                 {formatMoney(lead.amount)}
               </span>
             )}
           </div>
-          <span className={cn("text-[11.5px] text-[var(--color-text-muted)]", overdue && "font-semibold text-[#C0272D]")}>
+          <span className={cn("text-[12.5px] text-[var(--color-text-muted)]", overdue && "font-semibold text-[#C0272D]")}>
             {lead.neededAt ? formatShortDate(lead.neededAt) : "без даты"}
           </span>
         </div>
@@ -195,7 +195,7 @@ function LeadCard({
         <select
           value={currentBucket}
           onChange={(e) => onMoveBucket(e.target.value as FunnelBucket)}
-          className="mt-2 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]"
+          className="mt-2 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-[13px]"
         >
           {FUNNEL_COLUMNS.map((c) => (
             <option key={c.key} value={c.key}>

@@ -95,7 +95,7 @@ export default function FunnelPage() {
 
   if (!can("leads.view")) {
     return (
-      <div className="grid h-full place-items-center p-6 text-center text-[13.5px] text-[var(--color-text-muted)]">
+      <div className="grid h-full place-items-center p-6 text-center text-[14.5px] text-[var(--color-text-muted)]">
         Нет доступа к разделу «Воронка»
       </div>
     );
@@ -106,14 +106,14 @@ export default function FunnelPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div className="min-w-0">
           <h1 className="font-display text-[20px] font-bold">Воронка</h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">
+          <p className="text-[14px] text-[var(--color-text-muted)]">
             {totals.count} сделки — {formatMoney(totals.amount)}
           </p>
         </div>
         {canEdit && (
           <button
             onClick={() => setCreating(true)}
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
           >
             <Plus className="h-3.5 w-3.5" /> Новая заявка
           </button>
@@ -131,7 +131,7 @@ export default function FunnelPage() {
                   setLoading(true);
                 }}
                 className={cn(
-                  "flex-1 whitespace-nowrap rounded-[8px] px-3 py-1.5 text-[12.5px] font-semibold transition sm:flex-none",
+                  "flex-1 whitespace-nowrap rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition sm:flex-none",
                   view === v.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
                 )}
               >
@@ -146,14 +146,14 @@ export default function FunnelPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по инструменту, клиенту, телефону, номеру"
-              className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)]"
+              className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[14.5px] outline-none transition focus:border-[var(--color-primary)]"
             />
           </div>
 
           <select
             value={manager}
             onChange={(e) => setManager(e.target.value)}
-            className="w-full min-w-0 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none sm:w-auto"
+            className="w-full min-w-0 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[14px] font-medium text-[var(--color-text-muted)] outline-none sm:w-auto"
           >
             <option value="">Все менеджеры</option>
             {staff.map((u) => (
@@ -166,7 +166,7 @@ export default function FunnelPage() {
           <select
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            className="w-full min-w-0 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none sm:w-auto"
+            className="w-full min-w-0 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[14px] font-medium text-[var(--color-text-muted)] outline-none sm:w-auto"
           >
             <option value="">Канал привлечения</option>
             {acquisitionChannels.map((c) => (
@@ -178,12 +178,12 @@ export default function FunnelPage() {
         </div>
 
         {loading ? (
-          <p className="py-10 text-center text-[13px] text-[var(--color-text-muted)]">Загрузка…</p>
+          <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : view !== "open" ? (
           <ClosedList leads={leads} onOpen={setEditing} canEdit={canEdit} />
         ) : leads.length === 0 ? (
           <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center card-shadow">
-            <p className="text-[13.5px] text-[var(--color-text-muted)]">
+            <p className="text-[14.5px] text-[var(--color-text-muted)]">
               {canEdit ? "Заявок пока нет — создайте первую" : "Заявок пока нет"}
             </p>
           </div>
@@ -209,7 +209,7 @@ function ClosedList({ leads, onOpen, canEdit }: { leads: Lead[]; onOpen: (l: Lea
   if (leads.length === 0) {
     return (
       <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center card-shadow">
-        <p className="text-[13.5px] text-[var(--color-text-muted)]">Пока пусто</p>
+        <p className="text-[14.5px] text-[var(--color-text-muted)]">Пока пусто</p>
       </div>
     );
   }
@@ -222,13 +222,13 @@ function ClosedList({ leads, onOpen, canEdit }: { leads: Lead[]; onOpen: (l: Lea
           className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-left card-shadow transition hover:border-[var(--color-primary)]"
         >
           <div className="flex items-start justify-between gap-2">
-            <span className="text-[13px] font-semibold uppercase text-[var(--color-primary)]">{l.title}</span>
-            <span className="shrink-0 text-[11.5px] text-[var(--color-text-muted)]">№{l.number}</span>
+            <span className="text-[14px] font-semibold uppercase text-[var(--color-primary)]">{l.title}</span>
+            <span className="shrink-0 text-[12.5px] text-[var(--color-text-muted)]">№{l.number}</span>
           </div>
-          <div className="mt-1 text-[12px] text-[var(--color-text-muted)]">
+          <div className="mt-1 text-[13px] text-[var(--color-text-muted)]">
             {l.clientName ?? "—"} · {l.phone ?? "—"}
           </div>
-          <div className="mt-1.5 text-[12.5px] font-semibold">{formatMoney(l.amount)}</div>
+          <div className="mt-1.5 text-[13.5px] font-semibold">{formatMoney(l.amount)}</div>
         </button>
       ))}
     </div>

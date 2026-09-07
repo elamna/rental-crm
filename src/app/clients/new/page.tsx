@@ -46,8 +46,8 @@ export default function NewClientPage() {
   return (
     <div>
       <ClientForm title="Новый клиент" onSubmit={handleSubmit} />
-      {error && <p className="mx-auto -mt-4 max-w-3xl px-6 text-[13px] text-[#C0272D]">{error}</p>}
-      {saving && <p className="mx-auto -mt-4 max-w-3xl px-6 text-[13px] text-[var(--color-text-muted)]">Сохранение…</p>}
+      {error && <p className="mx-auto -mt-4 max-w-3xl px-6 text-[14px] text-[#C0272D]">{error}</p>}
+      {saving && <p className="mx-auto -mt-4 max-w-3xl px-6 text-[14px] text-[var(--color-text-muted)]">Сохранение…</p>}
     </div>
   );
 }

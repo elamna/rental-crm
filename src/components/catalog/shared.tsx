@@ -19,12 +19,12 @@ export function StatBar({ items }: { items: StatItem[] }) {
           <div className="flex items-baseline gap-1.5">
             <span className={cn("font-display text-[18px] font-bold", it.muted && "text-[var(--color-text-muted)]")}>{it.value}</span>
             {it.pct && (
-              <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-[1px] text-[10.5px] font-semibold text-[var(--color-primary)]">
+              <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-[1px] text-[11.5px] font-semibold text-[var(--color-primary)]">
                 {it.pct}
               </span>
             )}
           </div>
-          <div className="text-[11.5px] text-[var(--color-text-muted)]">{it.label}</div>
+          <div className="text-[12.5px] text-[var(--color-text-muted)]">{it.label}</div>
         </div>
       ))}
     </div>
@@ -49,7 +49,7 @@ export function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
+        className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[14.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
       />
     </div>
   );
@@ -70,7 +70,7 @@ export function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full min-w-0 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none transition focus:border-[var(--color-primary)] sm:w-auto"
+      className="w-full min-w-0 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[14px] font-medium text-[var(--color-text-muted)] outline-none transition focus:border-[var(--color-primary)] sm:w-auto"
     >
       <option value="">{placeholder}</option>
       {options.map((o) => (
@@ -84,7 +84,7 @@ export function FilterSelect({
 
 export function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
-    <label className="flex w-full min-w-0 cursor-pointer select-none items-center gap-2 truncate rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] sm:w-auto">
+    <label className="flex w-full min-w-0 cursor-pointer select-none items-center gap-2 truncate rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[14px] font-medium text-[var(--color-text-muted)] sm:w-auto">
       <input
         type="checkbox"
         checked={checked}
@@ -100,7 +100,7 @@ export function ExportButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:w-auto"
+      className="flex w-full items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:w-auto"
     >
       <Download className="h-3.5 w-3.5" /> Экспорт
     </button>
@@ -131,7 +131,7 @@ export function Th({
   className?: string;
 }) {
   return (
-    <th className={cn("whitespace-nowrap px-4 py-3 text-left text-[12.5px] font-semibold text-[var(--color-text-muted)]", className)}>
+    <th className={cn("whitespace-nowrap px-4 py-3 text-left text-[13.5px] font-semibold text-[var(--color-text-muted)]", className)}>
       {sortable ? (
         <button onClick={onSort} className={cn("flex items-center gap-1 transition hover:text-[var(--color-primary)]", active && "text-[var(--color-primary)]")}>
           {children}
@@ -152,13 +152,13 @@ export function Pill({ tone, children }: { tone: "green" | "red" | "amber" | "vi
     violet: "bg-[#E9F0FE] text-[#2B5FD9]",
     grey: "bg-[#F1F2F6] text-[#8A8F9C]",
   } as const;
-  return <span className={cn("inline-block rounded-[8px] px-3 py-1 text-center text-[12px] font-semibold", tones[tone])}>{children}</span>;
+  return <span className={cn("inline-block rounded-[8px] px-3 py-1 text-center text-[13px] font-semibold", tones[tone])}>{children}</span>;
 }
 
 export function EmptyRow({ colSpan, text }: { colSpan: number; text: string }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-14 text-center text-[13.5px] text-[var(--color-text-muted)]">
+      <td colSpan={colSpan} className="px-4 py-14 text-center text-[14.5px] text-[var(--color-text-muted)]">
         {text}
       </td>
     </tr>
@@ -190,7 +190,7 @@ export function Pagination({
           onPerPage(Number(e.target.value));
           onPage(1);
         }}
-        className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--color-primary)]"
+        className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[13.5px] outline-none focus:border-[var(--color-primary)]"
       >
         {[10, 25, 50, 100].map((n) => (
           <option key={n} value={n}>
@@ -198,7 +198,7 @@ export function Pagination({
           </option>
         ))}
       </select>
-      <span className="text-[12.5px] text-[var(--color-text-muted)]">Всего: {total}</span>
+      <span className="text-[13.5px] text-[var(--color-text-muted)]">Всего: {total}</span>
 
       {pages > 1 && (
         <div className="ml-auto flex items-center gap-1">
@@ -207,7 +207,7 @@ export function Pagination({
           </PageBtn>
           {list.map((p, i) => (
             <span key={p} className="flex items-center gap-1">
-              {i > 0 && p - list[i - 1] > 1 && <span className="px-1 text-[12px] text-[var(--color-text-muted)]">…</span>}
+              {i > 0 && p - list[i - 1] > 1 && <span className="px-1 text-[13px] text-[var(--color-text-muted)]">…</span>}
               <PageBtn active={p === page} onClick={() => onPage(p)}>
                 {p}
               </PageBtn>
@@ -238,7 +238,7 @@ function PageBtn({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "grid h-7 min-w-7 place-items-center rounded-[8px] border px-2 text-[12.5px] font-medium transition",
+        "grid h-7 min-w-7 place-items-center rounded-[8px] border px-2 text-[13.5px] font-medium transition",
         active
           ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
           : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",

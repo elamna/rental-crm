@@ -48,13 +48,13 @@ function ThemePicker() {
               >
                 <Icon className="h-4 w-4" />
               </span>
-              <span className="text-[13.5px] font-semibold">{o.label}</span>
-              <span className="text-[11.5px] leading-tight text-[var(--color-text-muted)]">{o.hint}</span>
+              <span className="text-[14.5px] font-semibold">{o.label}</span>
+              <span className="text-[12.5px] leading-tight text-[var(--color-text-muted)]">{o.hint}</span>
             </button>
           );
         })}
       </div>
-      <p className="mt-3 text-[12px] text-[var(--color-text-muted)]">
+      <p className="mt-3 text-[13px] text-[var(--color-text-muted)]">
         Тема сохраняется в этом браузере и не влияет на других пользователей.
         {theme === "system" && ` Сейчас применена ${resolved === "dark" ? "тёмная" : "светлая"}.`}
       </p>
@@ -109,10 +109,10 @@ export default function SettingsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="font-display text-[20px] font-bold">Настройки</h1>
-            <p className="text-[13px] text-[var(--color-text-muted)]">Данные компании, реквизиты и параметры системы</p>
+            <p className="text-[14px] text-[var(--color-text-muted)]">Данные компании, реквизиты и параметры системы</p>
           </div>
           {isAdmin && (
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-60">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-60">
               <Save className="h-4 w-4" />
               {saving ? "Сохранение…" : saved ? "Сохранено ✓" : "Сохранить"}
             </button>
@@ -139,12 +139,12 @@ export default function SettingsPage() {
               </div>
               {isAdmin && (
                 <div>
-                  <label className="flex cursor-pointer items-center gap-2 rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[13px] font-medium hover:bg-[var(--color-bg)]">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[14px] font-medium hover:bg-[var(--color-bg)]">
                     <Upload className="h-4 w-4" />
                     {uploading ? "Загрузка…" : "Загрузить логотип"}
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])} />
                   </label>
-                  <p className="mt-1.5 text-[12px] text-[var(--color-text-muted)]">PNG, JPG до 8 МБ. Отображается в документах.</p>
+                  <p className="mt-1.5 text-[13px] text-[var(--color-text-muted)]">PNG, JPG до 8 МБ. Отображается в документах.</p>
                 </div>
               )}
             </div>
@@ -218,7 +218,7 @@ export default function SettingsPage() {
 
           {/* Переменные для шаблонов — подсказка */}
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-            <p className="text-[12.5px] font-semibold text-[var(--color-text-muted)] mb-2">Переменные для шаблонов документов</p>
+            <p className="text-[13.5px] font-semibold text-[var(--color-text-muted)] mb-2">Переменные для шаблонов документов</p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
               {[
                 ["{{company_name}}", "Название компании"],
@@ -233,15 +233,15 @@ export default function SettingsPage() {
                 ["{{city}}", "Город"],
               ].map(([key, label]) => (
                 <div key={key} className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-[10.5px] text-[var(--color-primary)]">{key}</span>
-                  <span className="text-[11px] text-[var(--color-text-muted)]">— {label}</span>
+                  <span className="font-mono text-[11.5px] text-[var(--color-primary)]">{key}</span>
+                  <span className="text-[12px] text-[var(--color-text-muted)]">— {label}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {!isAdmin && (
-            <p className="text-center text-[12.5px] text-[var(--color-text-muted)]">
+            <p className="text-center text-[13.5px] text-[var(--color-text-muted)]">
               Только главный администратор может изменять настройки
             </p>
           )}
@@ -258,7 +258,7 @@ function Section({ icon: Icon, title, children }: { icon: React.ElementType; tit
         <div className="grid h-8 w-8 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
           <Icon className="h-4 w-4" />
         </div>
-        <h2 className="text-[14px] font-semibold">{title}</h2>
+        <h2 className="text-[15px] font-semibold">{title}</h2>
       </div>
       {children}
     </div>

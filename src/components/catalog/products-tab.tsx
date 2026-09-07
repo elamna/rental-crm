@@ -241,7 +241,7 @@ function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expand
               )}
             </div>
             {single ? (
-              <Link href={`/catalog/${group.units[0].id}`} className="text-[13.5px] font-semibold transition hover:text-[var(--color-primary)]">
+              <Link href={`/catalog/${group.units[0].id}`} className="text-[14.5px] font-semibold transition hover:text-[var(--color-primary)]">
                 {group.name}
               </Link>
             ) : (
@@ -250,23 +250,23 @@ function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expand
                   e.stopPropagation();
                   onToggle();
                 }}
-                className="text-left text-[13.5px] font-semibold transition hover:text-[var(--color-primary)]"
+                className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary)]"
               >
                 {group.name}
-                <span className="ml-2 text-[11.5px] font-medium text-[var(--color-text-muted)]">{group.total} ед.</span>
+                <span className="ml-2 text-[12.5px] font-medium text-[var(--color-text-muted)]">{group.total} ед.</span>
               </button>
             )}
           </div>
         </td>
-        <td className="px-4 py-3 text-[13px] text-[var(--color-text-muted)]">{group.category || "—"}</td>
-        <td className="px-4 py-3 text-[13px] text-[var(--color-text-muted)]">{group.sku || "—"}</td>
+        <td className="px-4 py-3 text-[14px] text-[var(--color-text-muted)]">{group.category || "—"}</td>
+        <td className="px-4 py-3 text-[14px] text-[var(--color-text-muted)]">{group.sku || "—"}</td>
         <td className="px-4 py-3">
           <Pill tone={group.free > 0 ? "green" : "red"}>
             {group.free}/{group.total} Свободно
           </Pill>
         </td>
-        <td className="px-4 py-3 text-[13px]">{brokenTotal > 0 ? <Pill tone="amber">{brokenTotal}</Pill> : <span className="text-[var(--color-text-muted)]">—</span>}</td>
-        <td className="px-4 py-3 text-right text-[13.5px] font-semibold">{formatMoney(group.price)}</td>
+        <td className="px-4 py-3 text-[14px]">{brokenTotal > 0 ? <Pill tone="amber">{brokenTotal}</Pill> : <span className="text-[var(--color-text-muted)]">—</span>}</td>
+        <td className="px-4 py-3 text-right text-[14.5px] font-semibold">{formatMoney(group.price)}</td>
       </tr>
 
       {expanded &&
@@ -281,16 +281,16 @@ function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expand
           >
             <td />
             <td className="px-4 py-2 pl-16">
-              <Link href={`/catalog/${u.id}`} className="text-[12.5px] font-medium transition hover:text-[var(--color-primary)]">
+              <Link href={`/catalog/${u.id}`} className="text-[13.5px] font-medium transition hover:text-[var(--color-primary)]">
                 {u.serialNumber ? `S/N ${u.serialNumber}` : u.name}
               </Link>
             </td>
-            <td className="px-4 py-2 text-[12px] text-[var(--color-text-muted)]">{u.branch || "—"}</td>
-            <td className="px-4 py-2 text-[12px] text-[var(--color-text-muted)]">{u.sku || "—"}</td>
+            <td className="px-4 py-2 text-[13px] text-[var(--color-text-muted)]">{u.branch || "—"}</td>
+            <td className="px-4 py-2 text-[13px] text-[var(--color-text-muted)]">{u.sku || "—"}</td>
             <td className="px-4 py-2">
               <span
                 className={cn(
-                  "text-[12px] font-medium",
+                  "text-[13px] font-medium",
                   u.status === "available" ? "text-[#1C8A46]" : u.status === "rented" ? "text-[#B8620A]" : "text-[var(--color-text-muted)]"
                 )}
               >
@@ -298,7 +298,7 @@ function ProductRow({ group, expanded, onToggle }: { group: ProductGroup; expand
               </span>
             </td>
             <td />
-            <td className="px-4 py-2 text-right text-[12.5px]">{formatMoney(u.rentalPricePerDay)}</td>
+            <td className="px-4 py-2 text-right text-[13.5px]">{formatMoney(u.rentalPricePerDay)}</td>
           </tr>
         ))}
     </>

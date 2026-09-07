@@ -112,7 +112,7 @@ export function DeliveryModal({
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 className="font-display text-[18px] font-bold">{delivery ? `Доставка №${delivery.number}` : "Доставка"}</h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">
               {delivery?.rentalNumber ? `По аренде №${delivery.rentalNumber}` : "Появится в разделе «Доставка» как новый запрос"}
             </p>
           </div>
@@ -150,8 +150,8 @@ export function DeliveryModal({
                 </span>
                 <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]")} />
                 <span>
-                  <span className="block text-[13.5px] font-semibold">{o.label}</span>
-                  <span className="block text-[11.5px] text-[var(--color-text-muted)]">{o.hint}</span>
+                  <span className="block text-[14.5px] font-semibold">{o.label}</span>
+                  <span className="block text-[12.5px] text-[var(--color-text-muted)]">{o.hint}</span>
                 </span>
               </button>
             );
@@ -205,25 +205,25 @@ export function DeliveryModal({
           <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} className="crm-input" placeholder="Этаж, домофон, во сколько удобно" />
         </Field>
 
-        {error && <p className="mt-3 text-[13px] text-[#C0272D]">{error}</p>}
+        {error && <p className="mt-3 text-[14px] text-[#C0272D]">{error}</p>}
 
         <div className="mt-6 flex items-center justify-end gap-2">
           {delivery && (
             <button
               onClick={remove}
               disabled={saving}
-              className="mr-auto flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
+              className="mr-auto flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-[14px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
             >
               <Trash2 className="h-3.5 w-3.5" /> Удалить
             </button>
           )}
-          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[13.5px] font-semibold text-[var(--color-text-muted)]">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[14.5px] font-semibold text-[var(--color-text-muted)]">
             Отмена
           </button>
           <button
             disabled={!canSave}
             onClick={save}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[14.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving ? "Сохранение…" : "Сохранить"}
           </button>
@@ -246,7 +246,7 @@ function Field({
 }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">
+      <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
         {label} {required && <span className="text-[var(--color-primary)]">*</span>}
       </span>
       {children}

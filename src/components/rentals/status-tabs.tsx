@@ -50,7 +50,7 @@ export function StatusTabs({
             key={tab.key}
             onClick={() => onChange(tab.key)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[13px] font-semibold transition-colors",
+              "flex shrink-0 items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[14px] font-semibold transition-colors",
               isActive
                 ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                 : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
@@ -59,7 +59,7 @@ export function StatusTabs({
             {tab.label}
             <span
               className={cn(
-                "rounded-full px-1.5 py-0.5 text-[11px]",
+                "rounded-full px-1.5 py-0.5 text-[12px]",
                 isActive ? "bg-[var(--color-surface)]/20" : "bg-[var(--color-border)]"
               )}
             >

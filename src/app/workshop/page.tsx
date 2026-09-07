@@ -76,11 +76,11 @@ export default function WorkshopPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div>
           <h1 className="font-display text-[19px] font-bold">Мастерская</h1>
-          <p className="text-[12.5px] text-[var(--color-text-muted)]">Ремонт, профилактика и история обслуживания оборудования</p>
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">Ремонт, профилактика и история обслуживания оборудования</p>
         </div>
         <button
           onClick={() => setShowNew(true)}
-          className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)]"
+          className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)]"
         >
           <Plus className="h-4 w-4" /> Новая заявка
         </button>
@@ -98,10 +98,10 @@ export default function WorkshopPage() {
           <section className="min-w-0 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="font-display text-[16px] font-bold">Доска заявок</h2>
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">Перетащите карточку при смене этапа</p>
+                <h2 className="font-display text-[17px] font-bold">Доска заявок</h2>
+                <p className="text-[13.5px] text-[var(--color-text-muted)]">Перетащите карточку при смене этапа</p>
               </div>
-              <span className="rounded-full bg-[var(--color-bg)] px-3 py-1 text-[12px] font-semibold text-[var(--color-text-muted)]">
+              <span className="rounded-full bg-[var(--color-bg)] px-3 py-1 text-[13px] font-semibold text-[var(--color-text-muted)]">
                 {totals.active} активных
               </span>
             </div>
@@ -121,11 +121,11 @@ export default function WorkshopPage() {
                     className="min-h-[360px] rounded-[12px] bg-[var(--color-bg)] p-3"
                   >
                     <div className="mb-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-[13px] font-semibold">
+                      <div className="flex items-center gap-2 text-[14px] font-semibold">
                         <span className={cn("h-2.5 w-2.5 rounded-full", column.dot)} />
                         {column.label}
                       </div>
-                      <span className="text-[12px] text-[var(--color-text-muted)]">{columnTickets.length}</span>
+                      <span className="text-[13px] text-[var(--color-text-muted)]">{columnTickets.length}</span>
                     </div>
                     <div className="space-y-2">
                       {columnTickets.map((ticket) => (
@@ -141,19 +141,19 @@ export default function WorkshopPage() {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="truncate text-[13px] font-semibold">{ticket.inventoryItem?.name ?? ticket.title}</div>
-                              <div className="mt-0.5 text-[11.5px] text-[var(--color-text-muted)]">{ticket.title}</div>
+                              <div className="truncate text-[14px] font-semibold">{ticket.inventoryItem?.name ?? ticket.title}</div>
+                              <div className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">{ticket.title}</div>
                             </div>
                             {ticket.reason === "repair" ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[#C0272D]" /> : <Settings2 className="h-3.5 w-3.5 shrink-0 text-[#B8860B]" />}
                           </div>
-                          <div className="mt-2 flex items-center justify-between text-[11.5px]">
+                          <div className="mt-2 flex items-center justify-between text-[12.5px]">
                             <span className="text-[var(--color-text-muted)]">{ticket.number}</span>
                             <span className="font-semibold">{formatMoney(ticket.total)}</span>
                           </div>
                         </button>
                       ))}
                       {columnTickets.length === 0 && (
-                        <div className="grid h-24 place-items-center rounded-[10px] border border-dashed border-[var(--color-border)] text-[12px] text-[var(--color-text-muted)]">
+                        <div className="grid h-24 place-items-center rounded-[10px] border border-dashed border-[var(--color-border)] text-[13px] text-[var(--color-text-muted)]">
                           Нет заявок
                         </div>
                       )}
@@ -169,9 +169,9 @@ export default function WorkshopPage() {
               <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-[12px] font-semibold text-[var(--color-primary)]">{selected.number}</div>
-                    <h2 className="mt-1 text-[16px] font-bold">{selected.inventoryItem?.name ?? "Оборудование"}</h2>
-                    <p className="text-[12.5px] text-[var(--color-text-muted)]">{reasonLabels[selected.reason]} · {selected.title}</p>
+                    <div className="text-[13px] font-semibold text-[var(--color-primary)]">{selected.number}</div>
+                    <h2 className="mt-1 text-[17px] font-bold">{selected.inventoryItem?.name ?? "Оборудование"}</h2>
+                    <p className="text-[13.5px] text-[var(--color-text-muted)]">{reasonLabels[selected.reason]} · {selected.title}</p>
                   </div>
                   <button
                     onClick={async () => {
@@ -192,7 +192,7 @@ export default function WorkshopPage() {
                       key={column.key}
                       onClick={() => moveTicket(selected, column.key)}
                       className={cn(
-                        "rounded-[10px] border px-2 py-2 text-[12px] font-semibold transition",
+                        "rounded-[10px] border px-2 py-2 text-[13px] font-semibold transition",
                         selected.status === column.key
                           ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                           : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
@@ -203,54 +203,54 @@ export default function WorkshopPage() {
                   ))}
                 </div>
 
-                {selected.description && <p className="mb-4 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">{selected.description}</p>}
+                {selected.description && <p className="mb-4 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">{selected.description}</p>}
 
                 <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-[13.5px] font-semibold">Запчасти и услуги</h3>
+                  <h3 className="text-[14.5px] font-semibold">Запчасти и услуги</h3>
                   <button onClick={() => addLine(selected)} className="grid h-7 w-7 place-items-center rounded-[8px] bg-[var(--color-primary)] text-[var(--color-on-primary)]">
                     <Plus className="h-3.5 w-3.5" />
                   </button>
                 </div>
                 <div className="space-y-2">
                   {selected.lines.map((line) => (
-                    <div key={line.id} className="rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[12.5px]">
+                    <div key={line.id} className="rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[13.5px]">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{line.name}</span>
                         <span className="font-semibold">{formatMoney(line.qty * line.price)}</span>
                       </div>
-                      <div className="mt-1 text-[11.5px] text-[var(--color-text-muted)]">
+                      <div className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">
                         {line.type === "part" ? "Запчасть" : "Услуга"} · {line.qty} × {formatMoney(line.price)}
                       </div>
                     </div>
                   ))}
-                  {selected.lines.length === 0 && <p className="rounded-[10px] bg-[var(--color-bg)] px-3 py-3 text-[12.5px] text-[var(--color-text-muted)]">Добавьте детали и работы, итог посчитается автоматически.</p>}
+                  {selected.lines.length === 0 && <p className="rounded-[10px] bg-[var(--color-bg)] px-3 py-3 text-[13.5px] text-[var(--color-text-muted)]">Добавьте детали и работы, итог посчитается автоматически.</p>}
                 </div>
                 <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
-                  <span className="text-[13px] text-[var(--color-text-muted)]">Итого</span>
+                  <span className="text-[14px] text-[var(--color-text-muted)]">Итого</span>
                   <span className="text-[17px] font-bold">{formatMoney(selected.total)}</span>
                 </div>
                 {selected.inventoryItem && (
-                  <Link href={`/catalog/${selected.inventoryItemId}`} className="mt-3 block rounded-[10px] border border-[var(--color-border)] py-2 text-center text-[12.5px] font-semibold transition hover:bg-[var(--color-bg)]">
+                  <Link href={`/catalog/${selected.inventoryItemId}`} className="mt-3 block rounded-[10px] border border-[var(--color-border)] py-2 text-center text-[13.5px] font-semibold transition hover:bg-[var(--color-bg)]">
                     Открыть карточку инвентаря
                   </Link>
                 )}
               </section>
             ) : (
-              <section className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-[13px] text-[var(--color-text-muted)]">
+              <section className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-[14px] text-[var(--color-text-muted)]">
                 Выберите заявку на доске
               </section>
             )}
 
             <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-              <h2 className="mb-3 text-[14px] font-semibold">Аналитика поломок</h2>
+              <h2 className="mb-3 text-[15px] font-semibold">Аналитика поломок</h2>
               <div className="space-y-2">
                 {brokenByItem.map((row) => (
-                  <div key={row.item?.id ?? row.count} className="flex items-center justify-between rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">
+                  <div key={row.item?.id ?? row.count} className="flex items-center justify-between rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">
                     <span className="truncate">{row.item?.name ?? "Оборудование"}</span>
                     <span className="shrink-0 font-semibold">{row.count} · {formatMoney(row.cost)}</span>
                   </div>
                 ))}
-                {brokenByItem.length === 0 && <p className="text-[12.5px] text-[var(--color-text-muted)]">Данные появятся после первых заявок.</p>}
+                {brokenByItem.length === 0 && <p className="text-[13.5px] text-[var(--color-text-muted)]">Данные появятся после первых заявок.</p>}
               </div>
             </section>
           </aside>
@@ -265,7 +265,7 @@ export default function WorkshopPage() {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 card-shadow">
-      <div className="text-[12px] text-[var(--color-text-muted)]">{label}</div>
+      <div className="text-[13px] text-[var(--color-text-muted)]">{label}</div>
       <div className="mt-1 text-[18px] font-bold">{value}</div>
     </div>
   );
@@ -315,14 +315,14 @@ function NewTicketModal({
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[520px] sm:rounded-[16px] sm:pb-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-[16px] font-bold">Новая заявка мастерской</h2>
+          <h2 className="text-[17px] font-bold">Новая заявка мастерской</h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-[8px] hover:bg-[var(--color-bg)]">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Оборудование</span>
+            <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Оборудование</span>
             <select value={inventoryItemId} onChange={(event) => setInventoryItemId(event.target.value)} className="crm-input">
               {candidates.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -337,7 +337,7 @@ function NewTicketModal({
                 setReason("repair");
                 setTitle("Ремонт оборудования");
               }}
-              className={cn("rounded-[10px] border py-2 text-[13px] font-semibold", reason === "repair" ? "border-[#F3B7B7] bg-[#FDECEC] text-[#C0272D]" : "border-[var(--color-border)]")}
+              className={cn("rounded-[10px] border py-2 text-[14px] font-semibold", reason === "repair" ? "border-[#F3B7B7] bg-[#FDECEC] text-[#C0272D]" : "border-[var(--color-border)]")}
             >
               Требует ремонта
             </button>
@@ -346,18 +346,18 @@ function NewTicketModal({
                 setReason("maintenance");
                 setTitle("Профилактика оборудования");
               }}
-              className={cn("rounded-[10px] border py-2 text-[13px] font-semibold", reason === "maintenance" ? "border-[#FFDCA8] bg-[#FFF8EA] text-[#B8620A]" : "border-[var(--color-border)]")}
+              className={cn("rounded-[10px] border py-2 text-[14px] font-semibold", reason === "maintenance" ? "border-[#FFDCA8] bg-[#FFF8EA] text-[#B8620A]" : "border-[var(--color-border)]")}
             >
               Требует профилактики
             </button>
           </div>
           <input value={title} onChange={(event) => setTitle(event.target.value)} className="crm-input" placeholder="Название заявки" />
           <textarea value={description} onChange={(event) => setDescription(event.target.value)} className="crm-input min-h-24 resize-none" placeholder="Описание поломки или работы" />
-          {error && <p className="text-[12.5px] font-medium text-[#C0272D]">{error}</p>}
+          {error && <p className="text-[13.5px] font-medium text-[#C0272D]">{error}</p>}
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+            className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
           >
             {submitting ? "Создание…" : "Создать заявку"}
           </button>

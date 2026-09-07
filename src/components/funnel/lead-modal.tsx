@@ -138,7 +138,7 @@ export function LeadModal({
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 className="font-display text-[18px] font-bold">{lead ? `Заявка №${lead.number}` : "Новая заявка"}</h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Основная информация</p>
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">Основная информация</p>
           </div>
           <button onClick={onClose} className="text-[var(--color-text-muted)] transition hover:text-[#C0272D]">
             <X className="h-5 w-5" />
@@ -146,7 +146,7 @@ export function LeadModal({
         </div>
 
         <label className="block">
-          <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">
+          <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
             Что нужно клиенту <span className="text-[var(--color-primary)]">*</span>
           </span>
           <input value={title} onChange={(e) => setTitle(e.target.value)} className="crm-input" placeholder="Перфоратор, бетономешалка…" />
@@ -154,19 +154,19 @@ export function LeadModal({
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Имя клиента</span>
+            <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Имя клиента</span>
             <input value={clientName} onChange={(e) => setClientName(e.target.value)} className="crm-input" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Номер телефона</span>
+            <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Номер телефона</span>
             <input value={phone} onChange={(e) => setPhone(e.target.value)} className="crm-input" placeholder="+7 7XX XXX XX XX" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Сумма сделки, ₸</span>
+            <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Сумма сделки, ₸</span>
             <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} className="crm-input" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Менеджер</span>
+            <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Менеджер</span>
             <select value={managerId} onChange={(e) => setManagerId(e.target.value)} className="crm-input">
               <option value="">Не назначен</option>
               {staff.map((u) => (
@@ -177,7 +177,7 @@ export function LeadModal({
             </select>
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Источник заявки</span>
+            <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Источник заявки</span>
             <select value={source} onChange={(e) => setSource(e.target.value)} className="crm-input">
               <option value="">Канал привлечения</option>
               {acquisitionChannels.map((c) => (
@@ -188,7 +188,7 @@ export function LeadModal({
             </select>
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Когда нужен инструмент</span>
+            <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Когда нужен инструмент</span>
             <input type="date" value={neededAt} onChange={(e) => setNeededAt(e.target.value)} className="crm-input" disabled={unavailable} />
           </label>
         </div>
@@ -200,28 +200,28 @@ export function LeadModal({
             onChange={(e) => setUnavailable(e.target.checked)}
             className="h-4 w-4 accent-[var(--color-primary)]"
           />
-          <span className="text-[13px] font-medium">Инструмента нет в наличии</span>
+          <span className="text-[14px] font-medium">Инструмента нет в наличии</span>
         </label>
 
         <label className="mt-4 block">
-          <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Дополнительно</span>
+          <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Дополнительно</span>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="crm-input" />
         </label>
 
         {previewColumn && (
-          <p className="mt-4 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px] text-[var(--color-text-muted)]">
+          <p className="mt-4 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px] text-[var(--color-text-muted)]">
             Карточка встанет в колонку <span className="font-semibold text-[var(--color-text)]">«{previewColumn.label}»</span>
             {!unavailable && " и сама переедет, когда дата приблизится."}
           </p>
         )}
 
-        {error && <p className="mt-3 text-[13px] text-[#C0272D]">{error}</p>}
+        {error && <p className="mt-3 text-[14px] text-[#C0272D]">{error}</p>}
 
         {lead && lead.status === "open" && can("rentals.edit") && (
           <button
             onClick={convertToRental}
             disabled={saving}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[14.5px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             <FileSignature className="h-4 w-4" /> Оформить аренду
           </button>
@@ -232,14 +232,14 @@ export function LeadModal({
             <button
               onClick={() => setStatus("won")}
               disabled={saving}
-              className="rounded-[10px] bg-[#1C8A46] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-50"
+              className="rounded-[10px] bg-[#1C8A46] py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-50"
             >
               ✓ Успешно завершено
             </button>
             <button
               onClick={() => setStatus("lost")}
               disabled={saving}
-              className="rounded-[10px] border border-[var(--color-border)] py-2.5 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] disabled:opacity-50"
+              className="rounded-[10px] border border-[var(--color-border)] py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] disabled:opacity-50"
             >
               ✕ Не реализовано
             </button>
@@ -250,7 +250,7 @@ export function LeadModal({
           <button
             onClick={() => setStatus("open")}
             disabled={saving}
-            className="mt-5 w-full rounded-[10px] border border-[var(--color-border)] py-2.5 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+            className="mt-5 w-full rounded-[10px] border border-[var(--color-border)] py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
           >
             Вернуть на доску
           </button>
@@ -261,18 +261,18 @@ export function LeadModal({
             <button
               onClick={remove}
               disabled={saving}
-              className="mr-auto flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
+              className="mr-auto flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-[14px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
             >
               <Trash2 className="h-3.5 w-3.5" /> Удалить
             </button>
           )}
-          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[13.5px] font-semibold text-[var(--color-text-muted)]">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[14.5px] font-semibold text-[var(--color-text-muted)]">
             Отмена
           </button>
           <button
             disabled={saving || !title.trim()}
             onClick={save}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[14.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving ? "Сохранение…" : "Сохранить"}
           </button>

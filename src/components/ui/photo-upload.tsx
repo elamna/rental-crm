@@ -52,7 +52,7 @@ export function PhotoUpload({
         ) : (
           <div>
             <ImagePlus className="mx-auto mb-1 h-5 w-5 text-[var(--color-primary)]" />
-            <div className="text-[11px] font-medium text-[var(--color-primary)]">Фото</div>
+            <div className="text-[12px] font-medium text-[var(--color-primary)]">Фото</div>
           </div>
         )}
         {value && !uploading && (
@@ -67,7 +67,7 @@ export function PhotoUpload({
           </button>
         )}
       </div>
-      {error && <p className="mt-1 max-w-[104px] text-[10px] text-[#C0272D]">{error}</p>}
+      {error && <p className="mt-1 max-w-[104px] text-[11px] text-[#C0272D]">{error}</p>}
     </div>
   );
 }

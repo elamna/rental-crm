@@ -22,10 +22,10 @@ export function MobileTopBar({ onMenu }: { onMenu: () => void }) {
       </button>
 
       <Link href="/" className="flex min-w-0 items-center gap-2">
-        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-[var(--color-primary)] font-display text-[12px] font-bold text-[var(--color-on-primary)]">
+        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-[var(--color-primary)] font-display text-[13px] font-bold text-[var(--color-on-primary)]">
           Q
         </div>
-        <span className="truncate font-display text-[14px] font-bold text-[var(--color-sidebar-text)]">QURAL-SAIMAN</span>
+        <span className="truncate font-display text-[15px] font-bold text-[var(--color-sidebar-text)]">QURAL-SAIMAN</span>
       </Link>
 
       {can("rentals.edit") && (

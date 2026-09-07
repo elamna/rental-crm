@@ -45,16 +45,16 @@ export default function LoginPage() {
             <Wrench className="h-7 w-7 text-white" />
           </div>
           <h1 className="font-display text-[22px] font-bold text-[var(--color-text)]">QURAL-SAIMAN</h1>
-          <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">Управление прокатом инструмента</p>
+          <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">Управление прокатом инструмента</p>
         </div>
 
         {/* Форма */}
         <div className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 card-shadow">
-          <h2 className="mb-5 font-display text-[16px] font-semibold">Вход в систему</h2>
+          <h2 className="mb-5 font-display text-[17px] font-semibold">Вход в систему</h2>
 
           <div className="space-y-3">
             <label className="block">
-              <span className="mb-1.5 block text-[12px] font-medium text-[var(--color-text-muted)]">Логин</span>
+              <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text-muted)]">Логин</span>
               <input
                 autoFocus
                 value={login}
@@ -66,7 +66,7 @@ export default function LoginPage() {
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-[12px] font-medium text-[var(--color-text-muted)]">Пароль</span>
+              <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text-muted)]">Пароль</span>
               <div className="relative">
                 <input
                   type={showPw ? "text" : "password"}
@@ -88,7 +88,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="mt-3 rounded-[8px] bg-[#FDECEC] px-3 py-2 text-[12.5px] text-[#C0272D]">
+            <div className="mt-3 rounded-[8px] bg-[#FDECEC] px-3 py-2 text-[13.5px] text-[#C0272D]">
               {error}
             </div>
           )}
@@ -96,7 +96,7 @@ export default function LoginPage() {
           <button
             onClick={handleSubmit}
             disabled={loading || !login || !password}
-            className="mt-5 w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="mt-5 w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             {loading ? "Входим…" : "Войти"}
           </button>

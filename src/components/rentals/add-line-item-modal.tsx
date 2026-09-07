@@ -34,35 +34,35 @@ export function AddLineItemModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-t-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:rounded-[var(--radius-card)] sm:pb-5">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[15px] font-semibold">{categoryTitles[category]}</h3>
+          <h3 className="text-[16px] font-semibold">{categoryTitles[category]}</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Название</span>
+            <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Название</span>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Например, Перфоратор Bosch GBH 5-40" />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Цена за сутки, ₸</span>
+              <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Цена за сутки, ₸</span>
               <input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="crm-input" placeholder="6000" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Кол-во</span>
+              <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Кол-во</span>
               <input type="number" min={1} value={qty} onChange={(e) => setQty(e.target.value)} className="crm-input" />
             </label>
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[13px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[14px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             Отмена
           </button>
           <button
             disabled={!canSubmit}
             onClick={submit}
-            className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Добавить
           </button>

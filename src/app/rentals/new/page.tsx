@@ -281,7 +281,7 @@ export default function NewRentalPage() {
           </button>
           <div className="flex items-center gap-2">
             <h1 className="font-display text-[18px] font-bold">{number ? `Аренда №${number}` : "Новая аренда"}</h1>
-            <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold", st.bg, st.text)}>
+            <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold", st.bg, st.text)}>
               <span className={cn("h-1.5 w-1.5 rounded-full", st.dot)} />
               {statusLabels.request}
             </span>
@@ -294,7 +294,7 @@ export default function NewRentalPage() {
             </button>
             {menuOpen && (
               <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-56 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 card-shadow">
-                <Link href="/rentals" className="block rounded-[8px] px-2.5 py-2 text-[13px] font-medium text-[#C0272D] hover:bg-[#FDECEC]">
+                <Link href="/rentals" className="block rounded-[8px] px-2.5 py-2 text-[14px] font-medium text-[#C0272D] hover:bg-[#FDECEC]">
                   Отменить и выйти без сохранения
                 </Link>
               </div>
@@ -305,7 +305,7 @@ export default function NewRentalPage() {
           <button
             onClick={handleSaveDraft}
             disabled={saving}
-            className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-[13px] font-medium transition hover:bg-[var(--color-bg)] disabled:opacity-50"
+            className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-[14px] font-medium transition hover:bg-[var(--color-bg)] disabled:opacity-50"
           >
             {saving ? "Сохранение…" : "Сохранить изменения"}
           </button>
@@ -317,7 +317,7 @@ export default function NewRentalPage() {
           {fromLead && (
             <div className="flex items-start gap-2.5 rounded-[var(--radius-card)] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-4 py-3">
               <FileSignature className="mt-[2px] h-4 w-4 shrink-0 text-[var(--color-primary)]" />
-              <div className="text-[12.5px]">
+              <div className="text-[13.5px]">
                 <div className="font-semibold text-[var(--color-primary)]">Оформление по заявке из воронки</div>
                 <div className="text-[var(--color-text-muted)]">
                   Клиент подставлен{fromLead.title ? `, клиенту нужен: ${fromLead.title}` : ""}. Заявка закроется как
@@ -327,25 +327,25 @@ export default function NewRentalPage() {
             </div>
           )}
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-            <h2 className="mb-3 text-[14px] font-semibold">Клиент</h2>
+            <h2 className="mb-3 text-[15px] font-semibold">Клиент</h2>
             {selectedClient ? (
               <>
               <div className="flex items-center gap-3 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[12px] font-bold text-[var(--color-primary)]">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[13px] font-bold text-[var(--color-primary)]">
                   {selectedClient.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="truncate text-[13.5px] font-semibold">{selectedClient.name}</span>
+                    <span className="truncate text-[14.5px] font-semibold">{selectedClient.name}</span>
                     {selectedClient.blacklisted && (
-                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#FDECEC] px-1.5 py-0.5 text-[10px] font-semibold text-[#C0272D]">
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#FDECEC] px-1.5 py-0.5 text-[11px] font-semibold text-[#C0272D]">
                         <Ban className="h-2.5 w-2.5" /> ЧС
                       </span>
                     )}
                   </div>
-                  <div className="text-[12px] text-[var(--color-text-muted)]">{selectedClient.phone}</div>
+                  <div className="text-[13px] text-[var(--color-text-muted)]">{selectedClient.phone}</div>
                 </div>
-                <button onClick={() => setSelectedClient(null)} className="shrink-0 text-[12.5px] font-medium text-[var(--color-primary)] hover:underline">
+                <button onClick={() => setSelectedClient(null)} className="shrink-0 text-[13.5px] font-medium text-[var(--color-primary)] hover:underline">
                   Изменить
                 </button>
               </div>
@@ -355,12 +355,12 @@ export default function NewRentalPage() {
                 <div className="mt-3 rounded-[12px] border border-[#F3B7B7] bg-[#FDECEC] p-4">
                   <div className="flex items-center gap-2 text-[#C0272D]">
                     <Siren className="h-4 w-4 shrink-0" />
-                    <span className="text-[13px] font-bold">Внимание! Клиент в чёрном списке</span>
+                    <span className="text-[14px] font-bold">Внимание! Клиент в чёрном списке</span>
                   </div>
                   {clientStolenRentals.length > 0 ? (
                     <div className="mt-2 space-y-2">
                       {clientStolenRentals.map((r) => (
-                        <div key={r.id} className="rounded-[8px] bg-[var(--color-surface)]/70 px-3 py-2 text-[12.5px]">
+                        <div key={r.id} className="rounded-[8px] bg-[var(--color-surface)]/70 px-3 py-2 text-[13.5px]">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-semibold text-[#C0272D]">Аренда №{r.number}</span>
                             <span className="font-semibold text-[#C0272D]">{formatMoney(r.total)}</span>
@@ -374,7 +374,7 @@ export default function NewRentalPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="mt-1.5 text-[12.5px] text-[#C0272D]/80">
+                    <p className="mt-1.5 text-[13.5px] text-[#C0272D]/80">
                       Добавлен в чёрный список вручную. Уточните причину перед оформлением аренды.
                     </p>
                   )}
@@ -389,7 +389,7 @@ export default function NewRentalPage() {
                     value={clientQuery}
                     onChange={(e) => setClientQuery(e.target.value)}
                     placeholder="Найти по имени или номеру телефона"
-                    className="w-full rounded-[10px] border border-[var(--color-border)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none focus:border-[var(--color-primary)]"
+                    className="w-full rounded-[10px] border border-[var(--color-border)] py-2.5 pl-9 pr-3 text-[14.5px] outline-none focus:border-[var(--color-primary)]"
                   />
                   {filteredClients.length > 0 && (
                     <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-64 overflow-y-auto rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
@@ -406,12 +406,12 @@ export default function NewRentalPage() {
                               setClientQuery("");
                             }
                           }}
-                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] hover:bg-[var(--color-bg)]"
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[14px] hover:bg-[var(--color-bg)]"
                         >
                           <span className="font-medium">{c.name}</span>
                           <span className="text-[var(--color-text-muted)]">{c.phone}</span>
                           {c.blacklisted && (
-                            <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-[#FDECEC] px-1.5 py-0.5 text-[10px] font-semibold text-[#C0272D]">
+                            <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-[#FDECEC] px-1.5 py-0.5 text-[11px] font-semibold text-[#C0272D]">
                               <Ban className="h-2.5 w-2.5" /> ЧС
                             </span>
                           )}
@@ -420,14 +420,14 @@ export default function NewRentalPage() {
                     </div>
                   )}
                   {clientQuery.trim() && filteredClients.length === 0 && (
-                    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[12.5px] text-[var(--color-text-muted)] card-shadow">
+                    <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13.5px] text-[var(--color-text-muted)] card-shadow">
                       Клиент не найден
                     </div>
                   )}
                 </div>
                 <button
                   onClick={() => setShowClientModal(true)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[var(--color-text)] px-3.5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-black"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[var(--color-text)] px-3.5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-black"
                 >
                   <UserPlus className="h-4 w-4" /> Новый клиент
                 </button>
@@ -437,8 +437,8 @@ export default function NewRentalPage() {
 
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[14px] font-semibold">Аренда</h2>
-              <span className="rounded-full bg-[var(--color-bg)] px-3 py-1 text-[12px] font-medium text-[var(--color-text-muted)]">
+              <h2 className="text-[15px] font-semibold">Аренда</h2>
+              <span className="rounded-full bg-[var(--color-bg)] px-3 py-1 text-[13px] font-medium text-[var(--color-text-muted)]">
                 Длительность: {duration} {periodSuffix}
               </span>
             </div>
@@ -475,12 +475,12 @@ export default function NewRentalPage() {
                   key={t.key}
                   onClick={() => setTab(t.key)}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[12.5px] font-semibold transition",
+                    "flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition",
                     tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
                   )}
                 >
                   {t.label}
-                  <span className={cn("rounded-full px-1.5 py-0.5 text-[11px]", tab === t.key ? "bg-[var(--color-primary-soft)]" : "bg-[var(--color-surface)]")}>
+                  <span className={cn("rounded-full px-1.5 py-0.5 text-[12px]", tab === t.key ? "bg-[var(--color-primary-soft)]" : "bg-[var(--color-surface)]")}>
                     {countFor(t.key)}
                   </span>
                 </button>
@@ -495,10 +495,10 @@ export default function NewRentalPage() {
                 return (
                   <div key={cat} className="mb-4 last:mb-0">
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{catLabel}</span>
+                      <span className="text-[13px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{catLabel}</span>
                       <button
                         onClick={() => setAddModalCategory(cat)}
-                        className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                        className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                       >
                         <Plus className="h-3 w-3" /> Добавить
                       </button>
@@ -509,15 +509,15 @@ export default function NewRentalPage() {
                           <div key={item.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 hover:border-[var(--color-primary-soft)]">
                             {/* Иконка */}
                             <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
-                              <span className="text-[10px] font-bold">{item.qty}</span>
+                              <span className="text-[11px] font-bold">{item.qty}</span>
                             </div>
                             {/* Название */}
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-[12.5px] font-medium">{item.name}</div>
-                              <div className="text-[11px] text-[var(--color-text-muted)]">{formatMoney(item.pricePerDay)}{isOneTimeLine(item) ? " за шт." : "/сут"}</div>
+                              <div className="truncate text-[13.5px] font-medium">{item.name}</div>
+                              <div className="text-[12px] text-[var(--color-text-muted)]">{formatMoney(item.pricePerDay)}{isOneTimeLine(item) ? " за шт." : "/сут"}</div>
                             </div>
                             {/* Сумма */}
-                            <span className="shrink-0 text-[12.5px] font-semibold">{formatMoney(lineTotal(item, duration))}</span>
+                            <span className="shrink-0 text-[13.5px] font-semibold">{formatMoney(lineTotal(item, duration))}</span>
                             {/* Удалить */}
                             <button onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))} className="shrink-0 text-[var(--color-text-muted)] hover:text-[#C0272D]">
                               <Trash2 className="h-3.5 w-3.5" />
@@ -528,7 +528,7 @@ export default function NewRentalPage() {
                     ) : (
                       <button
                         onClick={() => setAddModalCategory(cat)}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2.5 text-[12px] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                        className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2.5 text-[13px] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                       >
                         <Plus className="h-3 w-3" /> Добавить {catLabel.toLowerCase()}
                       </button>
@@ -537,12 +537,12 @@ export default function NewRentalPage() {
                 );
               })}
 
-            {visibleItems.length === 0 && <p className="py-4 text-center text-[12.5px] text-[var(--color-text-muted)]">Пока ничего не добавлено</p>}
+            {visibleItems.length === 0 && <p className="py-4 text-center text-[13.5px] text-[var(--color-text-muted)]">Пока ничего не добавлено</p>}
 
             {items.length > 0 && (
               <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
-                <span className="text-[13px] text-[var(--color-text-muted)]">Итого за {duration} {periodSuffix}</span>
-                <span className="text-[16px] font-bold">{formatMoney(itemsTotal)}</span>
+                <span className="text-[14px] text-[var(--color-text-muted)]">Итого за {duration} {periodSuffix}</span>
+                <span className="text-[17px] font-bold">{formatMoney(itemsTotal)}</span>
               </div>
             )}
           </section>
@@ -552,21 +552,21 @@ export default function NewRentalPage() {
           <button
             onClick={handleBook}
             disabled={saving}
-            className="w-full rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="w-full rounded-[12px] bg-[var(--color-primary)] py-3 text-[15px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             {saving ? "Сохранение…" : "Забронировать аренду →"}
           </button>
-          {saveError && <p className="text-center text-[12.5px] text-[#C0272D]">{saveError}</p>}
+          {saveError && <p className="text-center text-[13.5px] text-[#C0272D]">{saveError}</p>}
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             {/* Строки сумм */}
-            <div className="mb-3 space-y-1.5 text-[13px]">
+            <div className="mb-3 space-y-1.5 text-[14px]">
               <div className="flex items-center justify-between">
                 <span className="text-[var(--color-text-muted)]">Инвентарь</span>
                 <span className="font-medium">{formatMoney(total)}</span>
               </div>
               {discountValue > 0 && (
-                <div className="flex items-center justify-between text-[12px]">
+                <div className="flex items-center justify-between text-[13px]">
                   <span className="text-[var(--color-text-muted)]">Скидка {discountPct}%</span>
                   <span className="text-[#1C8A46]">−{formatMoney(discountValue)}</span>
                 </div>
@@ -578,13 +578,13 @@ export default function NewRentalPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between rounded-[8px] bg-[var(--color-bg)] px-2.5 py-2">
-                <span className="text-[12.5px] font-semibold text-[var(--color-text-muted)]">К оплате</span>
-                <span className={`text-[15px] font-bold ${remaining > 0 ? "text-[#C0272D]" : "text-[#1C8A46]"}`}>
+                <span className="text-[13.5px] font-semibold text-[var(--color-text-muted)]">К оплате</span>
+                <span className={`text-[16px] font-bold ${remaining > 0 ? "text-[#C0272D]" : "text-[#1C8A46]"}`}>
                   {formatMoney(remaining)}
                 </span>
               </div>
               {paid > 0 && remaining > 0 && (
-                <div className="flex items-center justify-between text-[12px]">
+                <div className="flex items-center justify-between text-[13px]">
                   <span className="text-[var(--color-text-muted)]">Уже оплачено</span>
                   <span className="font-medium text-[#1C8A46]">{formatMoney(paid)}</span>
                 </div>
@@ -593,7 +593,7 @@ export default function NewRentalPage() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setShowPaymentModal(true)}
-                className="flex items-center justify-center gap-1.5 rounded-[10px] bg-[#1C8A46] py-2 text-[12.5px] font-semibold text-white transition hover:bg-[#167A3C]"
+                className="flex items-center justify-center gap-1.5 rounded-[10px] bg-[#1C8A46] py-2 text-[13.5px] font-semibold text-white transition hover:bg-[#167A3C]"
               >
                 + Принять оплату
               </button>
@@ -604,7 +604,7 @@ export default function NewRentalPage() {
                   const val = Number(input);
                   if (!isNaN(val) && val >= 0 && val <= 100) setDiscountPct(val);
                 }}
-                className="flex items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+                className="flex items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
               >
                 <Tag className="h-3.5 w-3.5" /> Скидка
               </button>
@@ -625,7 +625,7 @@ export default function NewRentalPage() {
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <button onClick={() => setDocsOpen((v) => !v)} className="flex w-full items-center justify-between">
-              <span className="flex items-center gap-2 text-[13.5px] font-semibold">
+              <span className="flex items-center gap-2 text-[14.5px] font-semibold">
                 <FileText className="h-4 w-4 text-[var(--color-primary)]" /> Документы
               </span>
               {docsOpen ? <ChevronUp className="h-4 w-4 text-[var(--color-text-muted)]" /> : <ChevronDown className="h-4 w-4 text-[var(--color-text-muted)]" />}
@@ -633,7 +633,7 @@ export default function NewRentalPage() {
             {docsOpen && (
               <div className="mt-3 space-y-1.5">
                 {documents.map((d, i) => (
-                  <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">
+                  <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">
                     {d}
                   </div>
                 ))}
@@ -642,7 +642,7 @@ export default function NewRentalPage() {
                     const name = prompt("Название документа");
                     if (name?.trim()) setDocuments((d) => [...d, name.trim()]);
                   }}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
                 >
                   <Plus className="h-3.5 w-3.5" /> Добавить документ
                 </button>
@@ -652,7 +652,7 @@ export default function NewRentalPage() {
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-[13.5px] font-semibold">
+              <span className="flex items-center gap-2 text-[14.5px] font-semibold">
                 <ShieldCheck className="h-4 w-4 text-[var(--color-primary)]" /> Залог
               </span>
               <button onClick={() => setDepositFormOpen((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md border border-[var(--color-border)] hover:bg-[var(--color-bg)]">
@@ -660,7 +660,7 @@ export default function NewRentalPage() {
               </button>
             </div>
             {deposit && (
-              <div className="mt-2 flex items-center justify-between text-[12.5px]">
+              <div className="mt-2 flex items-center justify-between text-[13.5px]">
                 <span className="text-[var(--color-text-muted)]">{depositTypeLabels[deposit.type]}</span>
                 <span className="font-medium">{formatMoney(deposit.amount)}</span>
               </div>
@@ -694,7 +694,7 @@ export default function NewRentalPage() {
                       setDepositDraft({ type: "money", amount: "" });
                     }
                   }}
-                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
+                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[13.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                 >
                   Сохранить залог
                 </button>
@@ -704,7 +704,7 @@ export default function NewRentalPage() {
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-[13.5px] font-semibold">
+              <span className="flex items-center gap-2 text-[14.5px] font-semibold">
                 <AlertOctagon className="h-4 w-4 text-[var(--color-primary)]" /> Штраф
               </span>
               <button onClick={() => setPenaltyFormOpen((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md border border-[var(--color-border)] hover:bg-[var(--color-bg)]">
@@ -713,19 +713,19 @@ export default function NewRentalPage() {
             </div>
             <label className="mt-3 flex items-center justify-between rounded-[10px] bg-[var(--color-bg)] px-3 py-2">
               <div>
-                <div className="text-[12.5px] font-medium">Почасовой штраф</div>
-                <div className="text-[11px] text-[var(--color-text-muted)]">Автоматический штраф за просрочку</div>
+                <div className="text-[13.5px] font-medium">Почасовой штраф</div>
+                <div className="text-[12px] text-[var(--color-text-muted)]">Автоматический штраф за просрочку</div>
               </div>
               <input type="checkbox" checked={autoPenalty} onChange={(e) => setAutoPenalty(e.target.checked)} className="h-4 w-4 accent-[var(--color-primary)]" />
             </label>
             {autoPenalty && (
               <label className="mt-2 block">
-                <span className="mb-1 block text-[11.5px] font-medium text-[var(--color-text-muted)]">Ставка, ₸ за час просрочки</span>
+                <span className="mb-1 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Ставка, ₸ за час просрочки</span>
                 <input type="number" min={0} value={penaltyRate} onChange={(e) => setPenaltyRate(e.target.value)} className="crm-input" />
               </label>
             )}
             {penalties.map((p, i) => (
-              <div key={i} className="mt-2 flex items-center justify-between text-[12.5px]">
+              <div key={i} className="mt-2 flex items-center justify-between text-[13.5px]">
                 <span className="text-[var(--color-text-muted)]">{p.reason}</span>
                 <span className="font-medium text-[#C0272D]">{formatMoney(p.amount)}</span>
               </div>
@@ -749,7 +749,7 @@ export default function NewRentalPage() {
                       setPenaltyDraft({ reason: "", amount: "" });
                     }
                   }}
-                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
+                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[13.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                 >
                   Добавить штраф
                 </button>
@@ -759,7 +759,7 @@ export default function NewRentalPage() {
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-[13.5px] font-semibold">
+              <span className="flex items-center gap-2 text-[14.5px] font-semibold">
                 <Receipt className="h-4 w-4 text-[var(--color-primary)]" /> Расходы
               </span>
               <button onClick={() => setExpenseFormOpen((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md border border-[var(--color-border)] hover:bg-[var(--color-bg)]">
@@ -767,7 +767,7 @@ export default function NewRentalPage() {
               </button>
             </div>
             {expenses.map((e, i) => (
-              <div key={i} className="mt-2 flex items-center justify-between text-[12.5px]">
+              <div key={i} className="mt-2 flex items-center justify-between text-[13.5px]">
                 <span className="text-[var(--color-text-muted)]">{e.type}</span>
                 <span className="font-medium">{formatMoney(e.amount)}</span>
               </div>
@@ -796,7 +796,7 @@ export default function NewRentalPage() {
                       setExpenseDraft({ type: "", amount: "" });
                     }
                   }}
-                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[12.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
+                  className="w-full rounded-[10px] bg-[var(--color-primary)] py-2 text-[13.5px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                 >
                   Добавить расход
                 </button>
@@ -805,12 +805,12 @@ export default function NewRentalPage() {
           </div>
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
-            <span className="flex items-center gap-2 text-[13.5px] font-semibold">
+            <span className="flex items-center gap-2 text-[14.5px] font-semibold">
               <MessageSquare className="h-4 w-4 text-[var(--color-primary)]" /> Заметки и файлы
             </span>
             <div className="mt-3 space-y-2">
               {notes.map((n, i) => (
-                <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">
+                <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">
                   {n}
                 </div>
               ))}
@@ -823,7 +823,7 @@ export default function NewRentalPage() {
                       setNoteDraft("");
                     }
                   }}
-                  className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[13px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
+                  className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[14px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                 >
                   +
                 </button>
@@ -873,7 +873,7 @@ export default function NewRentalPage() {
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12px] font-medium text-[var(--color-text-muted)]">
+      <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text-muted)]">
         {label} {required && <span className="text-[var(--color-primary)]">*</span>}
       </span>
       {children}
@@ -905,8 +905,8 @@ function BlacklistWarningModal({
               <Siren className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-[16px] font-bold text-white">Клиент в чёрном списке!</h3>
-              <p className="text-[12.5px] text-white/80">Требуется подтверждение менеджера</p>
+              <h3 className="text-[17px] font-bold text-white">Клиент в чёрном списке!</h3>
+              <p className="text-[13.5px] text-white/80">Требуется подтверждение менеджера</p>
             </div>
           </div>
         </div>
@@ -914,12 +914,12 @@ function BlacklistWarningModal({
         {/* Данные клиента */}
         <div className="border-b border-[var(--color-border)] px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FDECEC] text-[13px] font-bold text-[#C0272D]">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FDECEC] text-[14px] font-bold text-[#C0272D]">
               {client.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
             </div>
             <div>
-              <div className="text-[14px] font-bold">{client.name}</div>
-              <div className="text-[12.5px] text-[var(--color-text-muted)]">{client.phone}</div>
+              <div className="text-[15px] font-bold">{client.name}</div>
+              <div className="text-[13.5px] text-[var(--color-text-muted)]">{client.phone}</div>
             </div>
           </div>
         </div>
@@ -928,18 +928,18 @@ function BlacklistWarningModal({
         <div className="px-6 py-4 space-y-3 max-h-[280px] overflow-y-auto">
           {stolenRentals.length > 0 && (
             <div>
-              <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#C0272D]">
+              <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-[#C0272D]">
                 🚨 Кражи инструмента ({stolenRentals.length})
               </p>
               <div className="space-y-1.5">
                 {stolenRentals.map((r) => (
                   <div key={r.id} className="rounded-[8px] border border-[#F3B7B7] bg-[#FFF5F5] px-3 py-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[12.5px] font-semibold">Аренда №{r.number}</span>
-                      <span className="text-[12.5px] font-bold text-[#C0272D]">{formatMoney(r.total)}</span>
+                      <span className="text-[13.5px] font-semibold">Аренда №{r.number}</span>
+                      <span className="text-[13.5px] font-bold text-[#C0272D]">{formatMoney(r.total)}</span>
                     </div>
                     {r.items.length > 0 && (
-                      <div className="mt-0.5 text-[11.5px] text-[var(--color-text-muted)]">
+                      <div className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">
                         {r.items.map((i) => i.name).join(", ")}
                       </div>
                     )}
@@ -947,7 +947,7 @@ function BlacklistWarningModal({
                 ))}
               </div>
               {totalStolenAmount > 0 && (
-                <p className="mt-1.5 text-right text-[12px] font-semibold text-[#C0272D]">
+                <p className="mt-1.5 text-right text-[13px] font-semibold text-[#C0272D]">
                   Итого украдено: {formatMoney(totalStolenAmount)}
                 </p>
               )}
@@ -956,15 +956,15 @@ function BlacklistWarningModal({
 
           {overdueRentals.length > 0 && (
             <div>
-              <p className="mb-2 text-[12px] font-bold uppercase tracking-wide text-[#B8620A]">
+              <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-[#B8620A]">
                 ⏰ Просроченные аренды ({overdueRentals.length})
               </p>
               <div className="space-y-1.5">
                 {overdueRentals.map((r) => (
                   <div key={r.id} className="rounded-[8px] border border-[#FFDCA8] bg-[#FFF8EA] px-3 py-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[12.5px] font-semibold">Аренда №{r.number}</span>
-                      <span className="text-[12.5px] font-bold text-[#B8620A]">
+                      <span className="text-[13.5px] font-semibold">Аренда №{r.number}</span>
+                      <span className="text-[13.5px] font-bold text-[#B8620A]">
                         долг {formatMoney(Math.max(0, r.total - r.paid))}
                       </span>
                     </div>
@@ -972,7 +972,7 @@ function BlacklistWarningModal({
                 ))}
               </div>
               {totalDebt > 0 && (
-                <p className="mt-1.5 text-right text-[12px] font-semibold text-[#B8620A]">
+                <p className="mt-1.5 text-right text-[13px] font-semibold text-[#B8620A]">
                   Общий долг: {formatMoney(totalDebt)}
                 </p>
               )}
@@ -980,7 +980,7 @@ function BlacklistWarningModal({
           )}
 
           {stolenRentals.length === 0 && overdueRentals.length === 0 && (
-            <p className="text-[13px] text-[var(--color-text-muted)]">
+            <p className="text-[14px] text-[var(--color-text-muted)]">
               Клиент добавлен в чёрный список вручную. Уточните причину перед оформлением аренды.
             </p>
           )}
@@ -988,18 +988,18 @@ function BlacklistWarningModal({
 
         {/* Кнопки */}
         <div className="border-t border-[var(--color-border)] px-6 py-4 space-y-2">
-          <p className="mb-3 text-[12.5px] text-[var(--color-text-muted)] text-center">
+          <p className="mb-3 text-[13.5px] text-[var(--color-text-muted)] text-center">
             Вы уверены, что хотите оформить аренду этому клиенту?
           </p>
           <button
             onClick={onConfirm}
-            className="w-full rounded-[10px] border-2 border-[#C0272D] bg-[var(--color-surface)] py-2.5 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
+            className="w-full rounded-[10px] border-2 border-[#C0272D] bg-[var(--color-surface)] py-2.5 text-[14px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
           >
             Да, оформить аренду (беру ответственность)
           </button>
           <button
             onClick={onCancel}
-            className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)]"
+            className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)]"
           >
             Отмена — выбрать другого клиента
           </button>
@@ -1040,7 +1040,7 @@ function NewRentalPaymentModal({
       <div className="w-full max-w-[380px] overflow-hidden rounded-[20px] bg-[var(--color-surface)] card-shadow">
         {/* Шапка */}
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-          <h3 className="text-[15px] font-bold">Оплатить сейчас</h3>
+          <h3 className="text-[16px] font-bold">Оплатить сейчас</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             <X className="h-4 w-4" />
           </button>
@@ -1049,7 +1049,7 @@ function NewRentalPaymentModal({
         <div className="p-5 space-y-4">
           {/* Тип оплаты */}
           <div>
-            <p className="mb-2 text-[12px] font-semibold text-[var(--color-text-muted)]">
+            <p className="mb-2 text-[13px] font-semibold text-[var(--color-text-muted)]">
               Тип оплаты <span className="text-[#C0272D]">*</span>
             </p>
             <div className="flex flex-wrap gap-2">
@@ -1059,7 +1059,7 @@ function NewRentalPaymentModal({
                   <button
                     key={m}
                     onClick={() => setMethod(m)}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition border ${
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition border ${
                       method === m
                         ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                         : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
@@ -1075,7 +1075,7 @@ function NewRentalPaymentModal({
 
           {/* Сумма */}
           <div>
-            <p className="mb-1.5 text-[12px] font-semibold text-[var(--color-text-muted)]">
+            <p className="mb-1.5 text-[13px] font-semibold text-[var(--color-text-muted)]">
               Сумма оплаты <span className="text-[#C0272D]">*</span>
             </p>
             <input
@@ -1083,7 +1083,7 @@ function NewRentalPaymentModal({
               type="number"
               value={amountStr}
               onChange={(e) => setAmountStr(e.target.value)}
-              className="crm-input text-[16px] font-semibold"
+              className="crm-input text-[17px] font-semibold"
               placeholder="0"
               min={0}
             />
@@ -1097,7 +1097,7 @@ function NewRentalPaymentModal({
           <button
             onClick={() => onPay(amount, method)}
             disabled={amount <= 0}
-            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[15px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             <CreditCard className="h-4 w-4" />
             {amount > 0 ? `Принять оплату ${amount.toLocaleString("ru-RU")} ₸` : "Принять оплату"}

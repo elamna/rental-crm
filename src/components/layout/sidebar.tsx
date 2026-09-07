@@ -24,13 +24,13 @@ const mainNav: NavItem[] = [
   { href: "/rentals", label: "Аренды", icon: ClipboardList, permission: "rentals.view" },
   { href: "/catalog", label: "Каталог", icon: Boxes, permission: "catalog.view" },
   { href: "/shop", label: "Магазин", icon: Store, permission: "shop.view" },
-  { href: "/workshop", label: "Мастерская", icon: Wrench, permission: "workshop.view" },
   { href: "/clients", label: "Клиенты", icon: Users, permission: "clients.view" },
-  { href: "/funnel", label: "Воронка", icon: Filter, permission: "leads.view" },
-  { href: "/analytics", label: "Аналитика", icon: BarChart3, permission: "analytics.view" },
 ];
 
 const secondaryNav: NavItem[] = [
+  { href: "/workshop", label: "Мастерская", icon: Wrench, permission: "workshop.view" },
+  { href: "/funnel", label: "Воронка", icon: Filter, permission: "leads.view" },
+  { href: "/analytics", label: "Аналитика", icon: BarChart3, permission: "analytics.view" },
   { href: "/delivery", label: "Доставка", icon: Truck, permission: "delivery.view" },
   { href: "/finance", label: "Финансы", icon: Wallet, permission: "finance.view" },
   { href: "/documents", label: "Документы", icon: FileText, permission: "documents.view" },
@@ -99,7 +99,7 @@ export function Sidebar({
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-[var(--color-primary)] font-display text-sm font-bold text-[var(--color-on-primary)]">Q</div>
-            <span className="font-display text-[15px] font-bold text-[var(--color-sidebar-text)]">QURAL-SAIMAN</span>
+            <span className="font-display text-[16px] font-bold text-[var(--color-sidebar-text)]">QURAL-SAIMAN</span>
           </div>
         )}
         {mobile ? (
@@ -138,7 +138,7 @@ export function Sidebar({
         </div>
         {secondaryNav.some(visible) && (
           <div>
-            {!isCollapsed && <div className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-sidebar-muted)]/70">Разделы</div>}
+            {!isCollapsed && <div className="mb-1.5 px-3 text-[12px] font-semibold uppercase tracking-wider text-[var(--color-sidebar-muted)]/70">Разделы</div>}
             <div className="space-y-0.5">
               {secondaryNav.filter(visible).map((item) => (
                 <SidebarLink key={item.href} {...item} active={pathname.startsWith(item.href)} collapsed={isCollapsed} />
@@ -161,8 +161,8 @@ export function Sidebar({
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[13px] font-medium text-[var(--color-sidebar-text)]">{user?.name}</div>
-              <div className="truncate text-[11px] text-[var(--color-sidebar-muted)]">{user?.isAdmin ? "Администратор" : "Менеджер"}</div>
+              <div className="truncate text-[14px] font-medium text-[var(--color-sidebar-text)]">{user?.name}</div>
+              <div className="truncate text-[12px] text-[var(--color-sidebar-muted)]">{user?.isAdmin ? "Администратор" : "Менеджер"}</div>
             </div>
           )}
           {!isCollapsed && (
@@ -184,7 +184,7 @@ function SidebarLink({ href, label, icon: Icon, active, collapsed }: {
     <Link
       href={href}
       className={cn(
-        "group flex items-center gap-3 rounded-[12px] px-3 py-2 text-[13.5px] font-medium transition-colors",
+        "group flex items-center gap-3 rounded-[12px] px-3 py-2 text-[14.5px] font-medium transition-colors",
         active ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[var(--color-sidebar-muted)] hover:bg-black/[0.05] hover:text-[var(--color-sidebar-text)]",
         collapsed && "justify-center px-0"
       )}

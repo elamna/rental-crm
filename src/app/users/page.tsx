@@ -36,7 +36,7 @@ export default function UsersPage() {
         <div className="text-center">
           <div className="text-[48px]">🔒</div>
           <h2 className="mt-3 text-[18px] font-bold">Нет доступа</h2>
-          <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">У вас нет прав для просмотра этого раздела</p>
+          <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">У вас нет прав для просмотра этого раздела</p>
         </div>
       </div>
     );
@@ -70,10 +70,10 @@ export default function UsersPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="font-display text-[20px] font-bold">Пользователи</h1>
-            <p className="text-[13px] text-[var(--color-text-muted)]">Управление доступом к системе</p>
+            <p className="text-[14px] text-[var(--color-text-muted)]">Управление доступом к системе</p>
           </div>
           {can("users.edit") && (
-            <button onClick={() => { setSelected(null); setModal("create"); }} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]">
+            <button onClick={() => { setSelected(null); setModal("create"); }} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]">
               <Plus className="h-4 w-4" /> Новый пользователь
             </button>
           )}
@@ -82,17 +82,17 @@ export default function UsersPage() {
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {loading ? (
-          <p className="text-[13px] text-[var(--color-text-muted)]">Загрузка…</p>
+          <p className="text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : (
           <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
-            <table className="w-full text-[13px]">
+            <table className="w-full text-[14px]">
               <thead>
                 <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)]">
-                  <th className="px-4 py-3 text-left text-[12px] font-semibold text-[var(--color-text-muted)]">Пользователь</th>
-                  <th className="px-4 py-3 text-left text-[12px] font-semibold text-[var(--color-text-muted)]">Логин</th>
-                  <th className="px-4 py-3 text-left text-[12px] font-semibold text-[var(--color-text-muted)]">Должность</th>
-                  <th className="px-4 py-3 text-left text-[12px] font-semibold text-[var(--color-text-muted)]">Права</th>
-                  <th className="px-4 py-3 text-left text-[12px] font-semibold text-[var(--color-text-muted)]">Статус</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Пользователь</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Логин</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Должность</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Права</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Статус</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -101,20 +101,20 @@ export default function UsersPage() {
                   <tr key={u.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)]">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[11px] font-bold text-[var(--color-primary)]">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[12px] font-bold text-[var(--color-primary)]">
                           {u.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
                         </div>
                         <div>
                           <div className="font-medium">{u.name}</div>
                           {u.isOwner ? (
-                            <span className="text-[11px] font-semibold text-[var(--color-primary)]">Главный администратор</span>
+                            <span className="text-[12px] font-semibold text-[var(--color-primary)]">Главный администратор</span>
                           ) : u.isAdmin ? (
-                            <span className="text-[11px] font-semibold text-[var(--color-primary)]">Администратор</span>
+                            <span className="text-[12px] font-semibold text-[var(--color-primary)]">Администратор</span>
                           ) : null}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-[12px] text-[var(--color-text-muted)]">{u.login}</td>
+                    <td className="px-4 py-3 font-mono text-[13px] text-[var(--color-text-muted)]">{u.login}</td>
                     <td className="px-4 py-3 text-[var(--color-text-muted)]">{u.position ?? "—"}</td>
                     <td className="px-4 py-3">
                       {u.isAdmin ? (
@@ -124,7 +124,7 @@ export default function UsersPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${u.isActive ? "bg-[#EAF7EE] text-[#1C8A46]" : "bg-[#F1F2F6] text-[#8A8F9C]"}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold ${u.isActive ? "bg-[#EAF7EE] text-[#1C8A46]" : "bg-[#F1F2F6] text-[#8A8F9C]"}`}>
                         {u.isActive ? "Активен" : "Заблокирован"}
                       </span>
                     </td>
@@ -239,7 +239,7 @@ function UserModal({
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-8">
       <div className="w-full max-w-2xl rounded-[16px] bg-[var(--color-surface)] card-shadow mb-8">
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-          <h3 className="text-[15px] font-bold">{isEdit ? "Редактировать пользователя" : "Новый пользователь"}</h3>
+          <h3 className="text-[16px] font-bold">{isEdit ? "Редактировать пользователя" : "Новый пользователь"}</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
         </div>
 
@@ -247,24 +247,24 @@ function UserModal({
           {/* Основные данные */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block col-span-2">
-              <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">ФИО *</span>
+              <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">ФИО *</span>
               <input value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Иванов Иван Иванович" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Логин *</span>
+              <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Логин *</span>
               <input value={login} onChange={(e) => setLogin(e.target.value)} className="crm-input" placeholder="ivanov" disabled={isEdit} />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">{isEdit ? "Новый пароль (оставьте пустым чтобы не менять)" : "Пароль *"}</span>
+              <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">{isEdit ? "Новый пароль (оставьте пустым чтобы не менять)" : "Пароль *"}</span>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="crm-input" placeholder="••••••••" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Должность</span>
+              <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Должность</span>
               <input value={position} onChange={(e) => setPosition(e.target.value)} className="crm-input" placeholder="Менеджер" />
             </label>
             <label className="flex items-center gap-2 pt-5">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-4 w-4 accent-[var(--color-primary)]" />
-              <span className="text-[13px] font-medium">Активен</span>
+              <span className="text-[14px] font-medium">Активен</span>
             </label>
           </div>
 
@@ -284,8 +284,8 @@ function UserModal({
                 {isAdmin && <Check className="h-3 w-3 text-[var(--color-on-primary)]" strokeWidth={3} />}
               </span>
               <span>
-                <span className="block text-[13.5px] font-semibold">Права администратора</span>
-                <span className="block text-[12px] text-[var(--color-text-muted)]">
+                <span className="block text-[14.5px] font-semibold">Права администратора</span>
+                <span className="block text-[13px] text-[var(--color-text-muted)]">
                   Полный доступ ко всем разделам без отдельных галочек — для руководителя.
                   Выдавать и забирать эту роль может только главный администратор.
                 </span>
@@ -294,7 +294,7 @@ function UserModal({
           )}
 
           {user?.isOwner && (
-            <p className="rounded-[12px] bg-[var(--color-bg)] px-3.5 py-3 text-[12.5px] text-[var(--color-text-muted)]">
+            <p className="rounded-[12px] bg-[var(--color-bg)] px-3.5 py-3 text-[13.5px] text-[var(--color-text-muted)]">
               Это главный администратор: у него полный доступ, его нельзя заблокировать, удалить
               или лишить прав.
             </p>
@@ -303,17 +303,17 @@ function UserModal({
           {/* Права доступа */}
           <div className={isAdmin || user?.isOwner ? "pointer-events-none opacity-40" : undefined}>
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[13.5px] font-semibold">
+              <span className="text-[14.5px] font-semibold">
                 Права доступа
                 {(isAdmin || user?.isOwner) && (
-                  <span className="ml-2 text-[12px] font-normal text-[var(--color-text-muted)]">не нужны при полном доступе</span>
+                  <span className="ml-2 text-[13px] font-normal text-[var(--color-text-muted)]">не нужны при полном доступе</span>
                 )}
               </span>
               <div className="flex gap-2">
-                <button onClick={selectAll} className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[12px] hover:bg-[var(--color-bg)]">
+                <button onClick={selectAll} className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] hover:bg-[var(--color-bg)]">
                   <ShieldCheck className="h-3.5 w-3.5" /> Выбрать все
                 </button>
-                <button onClick={selectNone} className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[12px] hover:bg-[var(--color-bg)]">
+                <button onClick={selectNone} className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] hover:bg-[var(--color-bg)]">
                   <ShieldOff className="h-3.5 w-3.5" /> Снять все
                 </button>
               </div>
@@ -321,10 +321,10 @@ function UserModal({
             <div className="rounded-[12px] border border-[var(--color-border)] divide-y divide-[var(--color-border)]">
               {PERMISSION_GROUPS.map((group) => (
                 <div key={group.label} className="flex items-center justify-between px-4 py-3">
-                  <span className="text-[13px] font-medium">{group.label}</span>
+                  <span className="text-[14px] font-medium">{group.label}</span>
                   <div className="flex gap-3">
                     {group.permissions.map((p) => (
-                      <label key={p} className="flex items-center gap-1.5 text-[12.5px] text-[var(--color-text-muted)] first-letter:uppercase">
+                      <label key={p} className="flex items-center gap-1.5 text-[13.5px] text-[var(--color-text-muted)] first-letter:uppercase">
                         <input
                           type="checkbox"
                           checked={permissions.includes(p)}
@@ -343,11 +343,11 @@ function UserModal({
           </div>
         </div>
 
-        {error && <p className="px-5 pb-2 text-[12px] text-[#C0272D]">{error}</p>}
+        {error && <p className="px-5 pb-2 text-[13px] text-[#C0272D]">{error}</p>}
 
         <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">
-          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-          <button onClick={submit} disabled={saving || !name || !login} className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[14px] hover:bg-[var(--color-bg)]">Отмена</button>
+          <button onClick={submit} disabled={saving || !name || !login} className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
             {saving ? "Сохранение…" : isEdit ? "Сохранить" : "Создать"}
           </button>
         </div>
@@ -379,15 +379,15 @@ function PasswordModal({ user, onClose, onSaved }: { user: AppUser; onClose: () 
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
       <div className="w-full max-w-sm rounded-[16px] bg-[var(--color-surface)] p-5 card-shadow">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-[15px] font-bold">Сменить пароль</h3>
+          <h3 className="text-[16px] font-bold">Сменить пароль</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
         </div>
-        <p className="mb-3 text-[12.5px] text-[var(--color-text-muted)]">Новый пароль для пользователя <strong>{user.name}</strong></p>
+        <p className="mb-3 text-[13.5px] text-[var(--color-text-muted)]">Новый пароль для пользователя <strong>{user.name}</strong></p>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="crm-input mb-3" placeholder="Новый пароль" autoFocus />
-        {error && <p className="mb-2 text-[12px] text-[#C0272D]">{error}</p>}
+        {error && <p className="mb-2 text-[13px] text-[#C0272D]">{error}</p>}
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-          <button onClick={submit} disabled={saving || !password} className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[14px] hover:bg-[var(--color-bg)]">Отмена</button>
+          <button onClick={submit} disabled={saving || !password} className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50">
             {saving ? "Сохранение…" : "Сохранить"}
           </button>
         </div>

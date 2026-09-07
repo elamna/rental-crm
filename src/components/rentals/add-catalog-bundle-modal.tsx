@@ -108,7 +108,7 @@ export function AddCatalogBundleModal({
         style={{ maxHeight: "88dvh" }}
       >
         <div className="flex shrink-0 items-center justify-between p-5 pb-3">
-          <h3 className="text-[15px] font-semibold">{title}</h3>
+          <h3 className="text-[16px] font-semibold">{title}</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             <X className="h-4 w-4" />
           </button>
@@ -125,12 +125,12 @@ export function AddCatalogBundleModal({
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center">
               <Boxes className="h-6 w-6 text-[var(--color-text-muted)]" />
-              <p className="text-[12.5px] text-[var(--color-text-muted)]">
+              <p className="text-[13.5px] text-[var(--color-text-muted)]">
                 {category === "kit" ? "Комплектов пока нет." : "Услуг пока нет."}
                 <br />
                 Добавьте их во вкладке «{category === "kit" ? "Комплекты" : "Услуги"}».
               </p>
-              <Link href="/catalog" className="text-[12.5px] font-semibold text-[var(--color-primary)]">
+              <Link href="/catalog" className="text-[13.5px] font-semibold text-[var(--color-primary)]">
                 Перейти в каталог →
               </Link>
             </div>
@@ -154,29 +154,29 @@ export function AddCatalogBundleModal({
                       {isSelected && <Check className="h-3 w-3 text-[var(--color-on-primary)]" strokeWidth={3} />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13px] font-medium">{row.name}</div>
-                      <div className="text-[11.5px] text-[var(--color-text-muted)]">{row.hint}</div>
+                      <div className="truncate text-[14px] font-medium">{row.name}</div>
+                      <div className="text-[12.5px] text-[var(--color-text-muted)]">{row.hint}</div>
                     </div>
-                    <span className="shrink-0 text-[12.5px] font-semibold">{formatMoney(row.price)}</span>
+                    <span className="shrink-0 text-[13.5px] font-semibold">{formatMoney(row.price)}</span>
                   </button>
 
                   {isSelected && sel && (
                     <div className="flex items-center gap-2 border-t border-[var(--color-primary)]/20 px-3 pb-2.5 pt-2">
-                      <span className="text-[12px] text-[var(--color-text-muted)]">{priceLabel}</span>
+                      <span className="text-[13px] text-[var(--color-text-muted)]">{priceLabel}</span>
                       <input
                         type="number"
                         min={0}
                         value={sel.price}
                         onChange={(e) => patch(row.id, { price: e.target.value })}
-                        className="crm-input ml-auto w-24 text-right text-[13px] font-semibold"
+                        className="crm-input ml-auto w-24 text-right text-[14px] font-semibold"
                       />
-                      <span className="text-[12px] text-[var(--color-text-muted)]">×</span>
+                      <span className="text-[13px] text-[var(--color-text-muted)]">×</span>
                       <input
                         type="number"
                         min={1}
                         value={sel.qty}
                         onChange={(e) => patch(row.id, { qty: e.target.value })}
-                        className="crm-input w-16 text-right text-[13px] font-semibold"
+                        className="crm-input w-16 text-right text-[14px] font-semibold"
                       />
                     </div>
                   )}
@@ -190,7 +190,7 @@ export function AddCatalogBundleModal({
           <button
             onClick={submitAll}
             disabled={count === 0}
-            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
           >
             {count > 0 ? `Добавить (${count})` : category === "kit" ? "Выберите комплекты" : "Выберите услуги"}
           </button>

@@ -126,7 +126,7 @@ export function InventoryCheckTab() {
               setPage(1);
             }}
             className={cn(
-              "rounded-[8px] px-3.5 py-1.5 text-[12.5px] font-semibold transition",
+              "rounded-[8px] px-3.5 py-1.5 text-[13.5px] font-semibold transition",
               sub === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
             )}
           >
@@ -160,12 +160,12 @@ export function InventoryCheckTab() {
                 setPage(1);
               }}
               className={cn(
-                "flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[12.5px] font-semibold transition",
+                "flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition",
                 condition === t.key ? "bg-[var(--color-bg)] text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
               )}
             >
               {t.label}
-              <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-[1px] text-[11px] text-[var(--color-primary)]">{t.count}</span>
+              <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-[1px] text-[12px] text-[var(--color-primary)]">{t.count}</span>
             </button>
           ))}
         </div>
@@ -200,12 +200,12 @@ export function InventoryCheckTab() {
                           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[var(--color-bg)]">
                             <Tag className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
                           </div>
-                          <Link href={`/catalog/${u.id}`} className="text-[13px] font-semibold transition hover:text-[var(--color-primary)]">
+                          <Link href={`/catalog/${u.id}`} className="text-[14px] font-semibold transition hover:text-[var(--color-primary)]">
                             {u.name}
                           </Link>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-[12.5px] text-[var(--color-text-muted)]">#{u.sku || "—"}</td>
+                      <td className="px-4 py-3 text-[13.5px] text-[var(--color-text-muted)]">#{u.sku || "—"}</td>
                       <td className="px-4 py-3">
                         <Pill tone={u.status === "available" ? "green" : u.status === "rented" ? "amber" : "red"}>
                           {inventoryStatusLabels[u.status]}
@@ -218,7 +218,7 @@ export function InventoryCheckTab() {
                           <Pill tone="grey">Не проверено</Pill>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-[12.5px] text-[var(--color-text-muted)]">
+                      <td className="px-4 py-3 text-[13.5px] text-[var(--color-text-muted)]">
                         {c ? (
                           <span className="flex items-center gap-1.5">
                             <User className="h-3.5 w-3.5" />
@@ -228,7 +228,7 @@ export function InventoryCheckTab() {
                           "—"
                         )}
                       </td>
-                      <td className="px-4 py-3 text-[12.5px]">
+                      <td className="px-4 py-3 text-[13.5px]">
                         {rental ? (
                           <Link href={`/rentals/${rental.id}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
                             Аренда №{rental.number}
@@ -237,11 +237,11 @@ export function InventoryCheckTab() {
                           <span className="text-[var(--color-text-muted)]">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-[12.5px] text-[#C0272D]">{c ? formatDateTimeDisplay(c.createdAt) : "—"}</td>
+                      <td className="px-4 py-3 text-[13.5px] text-[#C0272D]">{c ? formatDateTimeDisplay(c.createdAt) : "—"}</td>
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => setCheckItem(u)}
-                          className="rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[12px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                          className="rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                         >
                           Проверить
                         </button>
@@ -272,14 +272,14 @@ export function InventoryCheckTab() {
               ) : (
                 historyPage.map(({ check, item }) => (
                   <tr key={check.id} className="border-b border-[var(--color-border)] transition last:border-0 hover:bg-[var(--color-bg)]">
-                    <td className="px-4 py-3 text-[13px] font-medium">{item?.name ?? "удалённая позиция"}</td>
-                    <td className="px-4 py-3 text-[12.5px] text-[var(--color-text-muted)]">#{item?.sku || "—"}</td>
+                    <td className="px-4 py-3 text-[14px] font-medium">{item?.name ?? "удалённая позиция"}</td>
+                    <td className="px-4 py-3 text-[13.5px] text-[var(--color-text-muted)]">#{item?.sku || "—"}</td>
                     <td className="px-4 py-3">
                       <Pill tone={check.condition === "ok" ? "violet" : "red"}>{check.condition === "ok" ? "Исправен" : "Сломан"}</Pill>
                     </td>
-                    <td className="px-4 py-3 text-[12.5px] text-[var(--color-text-muted)]">{check.checkedByName || "—"}</td>
-                    <td className="px-4 py-3 text-[12.5px] text-[var(--color-text-muted)]">{check.comment || "—"}</td>
-                    <td className="px-4 py-3 text-[12.5px] text-[var(--color-text-muted)]">{formatDateTimeDisplay(check.createdAt)}</td>
+                    <td className="px-4 py-3 text-[13.5px] text-[var(--color-text-muted)]">{check.checkedByName || "—"}</td>
+                    <td className="px-4 py-3 text-[13.5px] text-[var(--color-text-muted)]">{check.comment || "—"}</td>
+                    <td className="px-4 py-3 text-[13.5px] text-[var(--color-text-muted)]">{formatDateTimeDisplay(check.createdAt)}</td>
                   </tr>
                 ))
               )}
@@ -325,7 +325,7 @@ function CheckModal({ item, onClose }: { item: InventoryItem; onClose: () => voi
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h2 className="font-display text-[17px] font-bold">Проверка инвентаря</h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">
               {item.name} · #{item.sku || "без артикула"}
             </p>
           </div>
@@ -345,7 +345,7 @@ function CheckModal({ item, onClose }: { item: InventoryItem; onClose: () => voi
               key={o.key}
               onClick={() => setCondition(o.key)}
               className={cn(
-                "flex items-center justify-center gap-1.5 rounded-[10px] border py-2.5 text-[13px] font-semibold transition",
+                "flex items-center justify-center gap-1.5 rounded-[10px] border py-2.5 text-[14px] font-semibold transition",
                 condition === o.key
                   ? o.key === "ok"
                     ? "border-[#1C8A46] bg-[#EAF7EE] text-[#1C8A46]"
@@ -359,24 +359,24 @@ function CheckModal({ item, onClose }: { item: InventoryItem; onClose: () => voi
         </div>
 
         {condition === "broken" && item.status === "available" && (
-          <p className="mt-3 rounded-[10px] bg-[#FFF4E5] px-3 py-2 text-[12.5px] text-[#B8620A]">
+          <p className="mt-3 rounded-[10px] bg-[#FFF4E5] px-3 py-2 text-[13.5px] text-[#B8620A]">
             Свободная единица будет переведена в статус «Требует ремонта» и перестанет попадать в новые аренды.
           </p>
         )}
 
         <label className="mt-4 block">
-          <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Комментарий</span>
+          <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Комментарий</span>
           <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} className="crm-input" />
         </label>
 
         <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[13.5px] font-semibold text-[var(--color-text-muted)]">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[14.5px] font-semibold text-[var(--color-text-muted)]">
             Отмена
           </button>
           <button
             disabled={saving}
             onClick={save}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[14.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
           >
             {saving ? "Сохранение…" : "Записать проверку"}
           </button>

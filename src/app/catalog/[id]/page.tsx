@@ -26,7 +26,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
   const item = inventory.find((i) => i.id === id);
 
   if (!item) {
-    if (!hydrated) return <div className="grid h-full place-items-center text-[13.5px] text-[var(--color-text-muted)]">Загрузка…</div>;
+    if (!hydrated) return <div className="grid h-full place-items-center text-[14.5px] text-[var(--color-text-muted)]">Загрузка…</div>;
     return notFound();
   }
 
@@ -71,11 +71,11 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
           </Link>
           <div>
             <h1 className="font-display text-[18px] font-bold">{item.name}</h1>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">{item.sku || "без артикула"} · {item.branch}</p>
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">{item.sku || "без артикула"} · {item.branch}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium transition hover:bg-[var(--color-bg)]">
+          <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium transition hover:bg-[var(--color-bg)]">
             <Pencil className="h-3.5 w-3.5" /> Изменить
           </button>
           <button
@@ -85,7 +85,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
                 router.push("/catalog");
               }
             }}
-            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[#C0272D] transition hover:bg-[#FDECEC]"
+            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[#C0272D] transition hover:bg-[#FDECEC]"
           >
             <Trash2 className="h-3.5 w-3.5" /> Удалить
           </button>
@@ -100,7 +100,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={item.photoUrl} alt={item.name} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-[12px] text-[var(--color-text-muted)]">Нет фото</span>
+                <span className="text-[13px] text-[var(--color-text-muted)]">Нет фото</span>
               )}
             </div>
             <Row label="Категория" value={item.category || "—"} />
@@ -110,12 +110,12 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
             {item.purchasePrice ? <Row label="Стоимость покупки" value={formatMoney(item.purchasePrice)} /> : null}
             <Row label="Статус" value={inventoryStatusLabels[item.status]} />
             {item.notes && (
-              <div className="mt-3 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">{item.notes}</div>
+              <div className="mt-3 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">{item.notes}</div>
             )}
           </section>
 
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-            <h3 className="mb-3 text-[13.5px] font-semibold text-center">QR-код</h3>
+            <h3 className="mb-3 text-[14.5px] font-semibold text-center">QR-код</h3>
             <div className="flex justify-center">
               <QrCode
                 value={JSON.stringify({
@@ -129,9 +129,9 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
               />
             </div>
             <div className="mt-2 space-y-0.5 text-center">
-              <p className="text-[12.5px] font-semibold">{item.sku || "—"}</p>
-              <p className="text-[11.5px] text-[var(--color-text-muted)] truncate">{item.name}</p>
-              <p className="text-[10.5px] text-[var(--color-text-muted)] font-mono opacity-50">{item.id}</p>
+              <p className="text-[13.5px] font-semibold">{item.sku || "—"}</p>
+              <p className="text-[12.5px] text-[var(--color-text-muted)] truncate">{item.name}</p>
+              <p className="text-[11.5px] text-[var(--color-text-muted)] font-mono opacity-50">{item.id}</p>
             </div>
             <button
               onClick={() => {
@@ -141,7 +141,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
                 win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR — ${item.name}</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;background:#fff}.card{text-align:center;padding:32px;border:2px solid #eee;border-radius:16px;max-width:320px}.card h2{font-size:15px;margin:12px 0 4px}.card p{font-size:12px;color:#888;margin:2px 0}</style></head><body><div class="card"><div id="qr"></div><h2>${item.name}</h2><p>Артикул: ${item.sku || "—"}</p><p>ID: ${item.id}</p></div><script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"><\/script><script>QRCode.toCanvas(document.createElement("canvas"),"${qrValue.replace(/"/g, '\\"')}",{width:200},function(err,c){if(!c)return;document.getElementById("qr").appendChild(c);setTimeout(function(){window.print();},300);})<\/script></body></html>`);
                 win.document.close();
               }}
-              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
             >
               <Printer className="h-3.5 w-3.5" /> Распечатать QR
             </button>
@@ -152,10 +152,10 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
           <div>
             <div className="mb-3 flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-[var(--color-primary)]" />
-              <h2 className="font-display text-[15px] font-bold">История аренды</h2>
+              <h2 className="font-display text-[16px] font-bold">История аренды</h2>
             </div>
             {relatedRentals.length === 0 ? (
-              <div className="grid h-32 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] text-[var(--color-text-muted)]">
+              <div className="grid h-32 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] text-[var(--color-text-muted)]">
                 Этот инструмент ещё не сдавался в аренду
               </div>
             ) : (
@@ -164,7 +164,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
                   <Link
                     key={r.id}
                     href={`/rentals/${r.id}`}
-                    className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[13px] transition hover:bg-[var(--color-bg)]"
+                    className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[14px] transition hover:bg-[var(--color-bg)]"
                   >
                     <span className="font-medium">№{r.number}</span>
                     <span className="text-[var(--color-text-muted)]">{r.client.name}</span>
@@ -178,10 +178,10 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
           <div>
             <div className="mb-3 flex items-center gap-2">
               <Wrench className="h-4 w-4 text-[var(--color-primary)]" />
-              <h2 className="font-display text-[15px] font-bold">История обслуживания</h2>
+              <h2 className="font-display text-[16px] font-bold">История обслуживания</h2>
             </div>
             {relatedWorkshopTickets.length === 0 ? (
-              <div className="grid h-24 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] text-[var(--color-text-muted)]">
+              <div className="grid h-24 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] text-[var(--color-text-muted)]">
                 Заявок на ремонт и профилактику пока нет
               </div>
             ) : (
@@ -190,7 +190,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
                   <Link
                     key={ticket.id}
                     href="/workshop"
-                    className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[13px] transition hover:bg-[var(--color-bg)]"
+                    className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[14px] transition hover:bg-[var(--color-bg)]"
                   >
                     <span className="font-medium">{ticket.number}</span>
                     <span className="text-[var(--color-text-muted)]">{ticket.title}</span>
@@ -208,7 +208,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-[var(--color-border)] py-2 text-[13px] last:border-none">
+    <div className="flex items-center justify-between border-b border-[var(--color-border)] py-2 text-[14px] last:border-none">
       <span className="text-[var(--color-text-muted)]">{label}</span>
       <span className="font-medium">{value}</span>
     </div>

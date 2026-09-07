@@ -92,16 +92,16 @@ export function ServicesTab({ editing, onCloseEditor }: { editing: boolean; onCl
                       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[var(--color-bg)]">
                         <Wrench className="h-4 w-4 text-[var(--color-text-muted)]" />
                       </div>
-                      <button onClick={() => setEditService(s)} className="text-left text-[13.5px] font-semibold transition hover:text-[var(--color-primary)]">
+                      <button onClick={() => setEditService(s)} className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary)]">
                         {s.name}
                       </button>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-[13px] text-[var(--color-text-muted)]">{usageCountByName(rentals, s.name)}</td>
+                  <td className="px-4 py-3 text-[14px] text-[var(--color-text-muted)]">{usageCountByName(rentals, s.name)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-baseline justify-end gap-3">
-                      <span className="text-[12.5px] text-[var(--color-text-muted)]">{formatTariffs(s) || "тариф не задан"}</span>
-                      <span className="min-w-[90px] border-b border-dashed border-[var(--color-border)] text-right text-[13.5px] font-semibold">
+                      <span className="text-[13.5px] text-[var(--color-text-muted)]">{formatTariffs(s) || "тариф не задан"}</span>
+                      <span className="min-w-[90px] border-b border-dashed border-[var(--color-border)] text-right text-[14.5px] font-semibold">
                         {formatMoney(servicePrice(s))}
                       </span>
                     </div>

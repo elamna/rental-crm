@@ -60,11 +60,11 @@ export default function DashboardPage() {
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h1 className="font-display text-[22px] font-bold">Главная</h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">Сводка по прокату на данный момент</p>
+          <p className="text-[14px] text-[var(--color-text-muted)]">Сводка по прокату на данный момент</p>
         </div>
         <Link
           href="/rentals/new"
-          className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+          className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
         >
           + Новая аренда
         </Link>
@@ -77,7 +77,7 @@ export default function DashboardPage() {
               <c.icon className="h-4.5 w-4.5" />
             </div>
             <div className="font-display text-[20px] font-bold">{c.value}</div>
-            <div className="text-[12px] text-[var(--color-text-muted)]">{c.label}</div>
+            <div className="text-[13px] text-[var(--color-text-muted)]">{c.label}</div>
           </div>
         ))}
       </div>
@@ -85,13 +85,13 @@ export default function DashboardPage() {
       <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-[15px] font-bold">Просроченные аренды</h2>
-            <Link href="/rentals" className="text-[12.5px] font-medium text-[var(--color-primary)]">
+            <h2 className="font-display text-[16px] font-bold">Просроченные аренды</h2>
+            <Link href="/rentals" className="text-[13.5px] font-medium text-[var(--color-primary)]">
               Смотреть все →
             </Link>
           </div>
           {stats.overdueList.length === 0 ? (
-            <div className="grid h-40 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] text-[var(--color-text-muted)]">
+            <div className="grid h-40 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] text-[var(--color-text-muted)]">
               {rentals.length === 0 ? (
                 <div className="text-center">
                   <p>Аренд пока нет.</p>
@@ -116,12 +116,12 @@ export default function DashboardPage() {
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="mb-3 flex items-center gap-2">
               <Bell className="h-4 w-4 text-[var(--color-primary)]" />
-              <h2 className="text-[14px] font-semibold">Уведомления</h2>
+              <h2 className="text-[15px] font-semibold">Уведомления</h2>
             </div>
             {stats.overdueCount === 0 && stats.expectedReturns === 0 ? (
-              <p className="text-[12.5px] text-[var(--color-text-muted)]">Новых уведомлений нет</p>
+              <p className="text-[13.5px] text-[var(--color-text-muted)]">Новых уведомлений нет</p>
             ) : (
-              <div className="space-y-2 text-[13px]">
+              <div className="space-y-2 text-[14px]">
                 {stats.overdueCount > 0 && (
                   <div className="rounded-[10px] bg-[#FDECEC] px-3 py-2 text-[#C0272D]">
                     {stats.overdueCount} аренд просрочено — требуется связь с клиентом
@@ -137,22 +137,22 @@ export default function DashboardPage() {
           </div>
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
-            <h2 className="mb-3 text-[14px] font-semibold">Последние действия</h2>
+            <h2 className="mb-3 text-[15px] font-semibold">Последние действия</h2>
             {activity.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-4 text-center">
                 <Sparkles className="h-5 w-5 text-[var(--color-text-muted)]" />
-                <p className="text-[12.5px] text-[var(--color-text-muted)]">
+                <p className="text-[13.5px] text-[var(--color-text-muted)]">
                   Здесь появятся действия сотрудников — добавление клиентов, оформление аренд, оплаты
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {activity.slice(0, 8).map((a) => (
-                  <div key={a.id} className="flex items-start gap-2.5 text-[12.5px]">
+                  <div key={a.id} className="flex items-start gap-2.5 text-[13.5px]">
                     <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)]" />
                     <div>
                       <div>{a.text}</div>
-                      <div className="text-[11px] text-[var(--color-text-muted)]">{timeAgo(a.time)}</div>
+                      <div className="text-[12px] text-[var(--color-text-muted)]">{timeAgo(a.time)}</div>
                     </div>
                   </div>
                 ))}

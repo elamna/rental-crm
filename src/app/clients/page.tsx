@@ -152,7 +152,7 @@ export default function ClientsPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div>
           <h1 className="font-display text-[20px] font-bold">Клиенты</h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">База клиентов и история отношений</p>
+          <p className="text-[14px] text-[var(--color-text-muted)]">База клиентов и история отношений</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Видео — временно скрыто */}
@@ -163,7 +163,7 @@ export default function ClientsPage() {
                 const menu = document.getElementById("export-menu");
                 menu?.classList.toggle("hidden");
               }}
-              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
             >
               <Download className="h-3.5 w-3.5" /> Экспорт
               <ChevronDown className="h-3.5 w-3.5" />
@@ -174,7 +174,7 @@ export default function ClientsPage() {
                   exportClientsToExcel(filtered);
                   document.getElementById("export-menu")?.classList.add("hidden");
                 }}
-                className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[13px] font-medium hover:bg-[var(--color-bg)]"
+                className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[14px] font-medium hover:bg-[var(--color-bg)]"
               >
                 Скачать Excel (.xlsx)
               </button>
@@ -183,7 +183,7 @@ export default function ClientsPage() {
                   exportClientsToCSV(filtered);
                   document.getElementById("export-menu")?.classList.add("hidden");
                 }}
-                className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[13px] font-medium hover:bg-[var(--color-bg)]"
+                className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[14px] font-medium hover:bg-[var(--color-bg)]"
               >
                 Скачать CSV
               </button>
@@ -193,7 +193,7 @@ export default function ClientsPage() {
           <div className="relative">
             <button
               onClick={() => setAddMenuOpen((v) => !v)}
-              className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+              className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
             >
               <Plus className="h-3.5 w-3.5" /> Добавить
               <ChevronDown className="h-3.5 w-3.5" />
@@ -202,7 +202,7 @@ export default function ClientsPage() {
               <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-52 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 card-shadow">
                 <Link
                   href="/clients/new"
-                  className="flex items-center gap-2 rounded-[8px] px-2.5 py-2 text-[13px] font-medium hover:bg-[var(--color-bg)]"
+                  className="flex items-center gap-2 rounded-[8px] px-2.5 py-2 text-[14px] font-medium hover:bg-[var(--color-bg)]"
                   onClick={() => setAddMenuOpen(false)}
                 >
                   <Plus className="h-3.5 w-3.5" /> Добавить клиента
@@ -213,7 +213,7 @@ export default function ClientsPage() {
                       fileInputRef.current?.click();
                       setAddMenuOpen(false);
                     }}
-                    className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[13px] font-medium hover:bg-[var(--color-bg)]"
+                    className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[14px] font-medium hover:bg-[var(--color-bg)]"
                   >
                     <Upload className="h-3.5 w-3.5" /> Импорт клиентов
                   </button>
@@ -226,7 +226,7 @@ export default function ClientsPage() {
       </header>
 
       {importMsg && (
-        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[13px] font-medium text-[var(--color-primary)]">
+        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[14px] font-medium text-[var(--color-primary)]">
           {importMsg}
         </div>
       )}
@@ -240,13 +240,13 @@ export default function ClientsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по имени, телефону, email…"
-              className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
+              className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[14.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
             />
           </div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
+            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[14px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
           >
             <option value="">Тип клиента</option>
             <option value="individual">{clientTypeLabels.individual}</option>
@@ -255,7 +255,7 @@ export default function ClientsPage() {
           <select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}
-            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
+            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[14px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
           >
             <option value="">Канал привлечения</option>
             {acquisitionChannels.map((c) => (
@@ -267,7 +267,7 @@ export default function ClientsPage() {
           <select
             value={ratingFilter}
             onChange={(e) => setRatingFilter(e.target.value)}
-            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
+            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[14px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
           >
             <option value="">Выберите рейтинг</option>
             {[5, 4, 3, 2, 1].map((r) => (
@@ -291,7 +291,7 @@ export default function ClientsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-[var(--color-border)] text-[12px] font-semibold text-[var(--color-text-muted)]">
+                <tr className="border-b border-[var(--color-border)] text-[13px] font-semibold text-[var(--color-text-muted)]">
                   {canEdit && (
                     <th className="w-10 px-4 py-3">
                       <button
@@ -324,7 +324,7 @@ export default function ClientsPage() {
                   <tr
                     key={c.id}
                     className={cn(
-                      "group border-b border-[var(--color-border)] text-[13px] transition hover:bg-[var(--color-bg)]",
+                      "group border-b border-[var(--color-border)] text-[14px] transition hover:bg-[var(--color-bg)]",
                       selected.has(c.id) && "bg-[var(--color-primary-soft)]"
                     )}
                   >
@@ -337,12 +337,12 @@ export default function ClientsPage() {
                     )}
                     <td className="px-4 py-3">
                       <Link href={`/clients/${c.id}`} className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[11px] font-bold text-[var(--color-primary)]">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[12px] font-bold text-[var(--color-primary)]">
                           {c.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
                         </div>
                         <div className="min-w-0">
                           <div className="truncate font-medium">{c.name}</div>
-                          <div className="truncate text-[11.5px] text-[var(--color-text-muted)]">{c.phone}</div>
+                          <div className="truncate text-[12.5px] text-[var(--color-text-muted)]">{c.phone}</div>
                         </div>
                       </Link>
                     </td>
@@ -374,15 +374,15 @@ export default function ClientsPage() {
             {filtered.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-16 text-center">
                 {!hydrated ? (
-                  <p className="text-[13.5px] text-[var(--color-text-muted)]">Загрузка…</p>
+                  <p className="text-[14.5px] text-[var(--color-text-muted)]">Загрузка…</p>
                 ) : (
                   <>
                     {clients.length === 0 ? <Users2 className="h-8 w-8 text-[var(--color-text-muted)]" /> : <FileX2 className="h-8 w-8 text-[var(--color-text-muted)]" />}
-                    <p className="text-[13.5px] text-[var(--color-text-muted)]">
+                    <p className="text-[14.5px] text-[var(--color-text-muted)]">
                       {clients.length === 0 ? "Нет данных" : "Ничего не найдено по текущим фильтрам"}
                     </p>
                     {clients.length === 0 && (
-                      <Link href="/clients/new" className="mt-1 text-[13px] font-medium text-[var(--color-primary)]">
+                      <Link href="/clients/new" className="mt-1 text-[14px] font-medium text-[var(--color-primary)]">
                         Добавить первого клиента →
                       </Link>
                     )}
@@ -425,9 +425,9 @@ export default function ClientsPage() {
                   className="flex w-full items-start gap-2.5 rounded-[10px] border border-[var(--color-border)] p-3 text-left transition hover:border-[var(--color-primary)]"
                 >
                   <SelectBox checked={alsoRentals} className="mt-0.5" />
-                  <span className="text-[12.5px]">
+                  <span className="text-[13.5px]">
                     Удалить вместе с арендами
-                    <span className="block text-[11.5px] text-[var(--color-text-muted)]">
+                    <span className="block text-[12.5px] text-[var(--color-text-muted)]">
                       Уйдут {rentalCount} аренд(ы) со всей историей, инвентарь освободится
                     </span>
                   </span>
@@ -449,7 +449,7 @@ function StatItem({ value, label, highlight }: { value: string | number; label: 
   return (
     <div>
       <div className={cn("font-display text-[20px] font-bold", highlight && "text-[#C0272D]")}>{value}</div>
-      <div className="text-[12px] text-[var(--color-text-muted)]">{label}</div>
+      <div className="text-[13px] text-[var(--color-text-muted)]">{label}</div>
     </div>
   );
 }

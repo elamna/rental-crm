@@ -92,7 +92,7 @@ export default function DeliveryPage() {
 
   if (!can("delivery.view")) {
     return (
-      <div className="grid h-full place-items-center p-6 text-center text-[13.5px] text-[var(--color-text-muted)]">
+      <div className="grid h-full place-items-center p-6 text-center text-[14.5px] text-[var(--color-text-muted)]">
         Нет доступа к разделу «Доставка»
       </div>
     );
@@ -103,7 +103,7 @@ export default function DeliveryPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div className="min-w-0">
           <h1 className="font-display text-[20px] font-bold">Доставка</h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">
+          <p className="text-[14px] text-[var(--color-text-muted)]">
             {counts.new + counts.in_progress} в работе, {counts.done} завершено
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function DeliveryPage() {
           <button
             onClick={() => setShowStats((v) => !v)}
             className={cn(
-              "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3.5 py-2 text-[13px] font-semibold transition",
+              "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3.5 py-2 text-[14px] font-semibold transition",
               showStats
                 ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                 : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]"
@@ -122,7 +122,7 @@ export default function DeliveryPage() {
           {canEdit && (
             <button
               onClick={() => setCreating(true)}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
             >
               <Plus className="h-3.5 w-3.5" /> Новая доставка
             </button>
@@ -140,14 +140,14 @@ export default function DeliveryPage() {
                 setLoading(true);
               }}
               className={cn(
-                "relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 pb-3 pt-2.5 text-[13.5px] font-semibold transition",
+                "relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 pb-3 pt-2.5 text-[14.5px] font-semibold transition",
                 tab === t.key ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               )}
             >
               {t.label}
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[11px]",
+                  "rounded-full px-1.5 py-0.5 text-[12px]",
                   tab === t.key ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "bg-[var(--color-bg)]"
                 )}
               >
@@ -162,9 +162,9 @@ export default function DeliveryPage() {
       <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
         {showStats && (
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
-            <h2 className="mb-3 font-display text-[15px] font-bold">Аналитика за 30 дней</h2>
+            <h2 className="mb-3 font-display text-[16px] font-bold">Аналитика за 30 дней</h2>
             {!stats ? (
-              <p className="text-[13px] text-[var(--color-text-muted)]">Считаем…</p>
+              <p className="text-[14px] text-[var(--color-text-muted)]">Считаем…</p>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -178,7 +178,7 @@ export default function DeliveryPage() {
                 {stats.byCourier.length > 0 && (
                   <div className="mt-3 space-y-1.5">
                     {stats.byCourier.map((c) => (
-                      <div key={c.courier} className="flex items-center justify-between rounded-[8px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">
+                      <div key={c.courier} className="flex items-center justify-between rounded-[8px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">
                         <span className="font-medium">{c.courier}</span>
                         <span className="text-[var(--color-text-muted)]">
                           {c.done} из {c.total} · {formatMoney(c.revenue)}
@@ -198,15 +198,15 @@ export default function DeliveryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск по адресу, клиенту или номеру"
-            className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[13.5px] outline-none transition focus:border-[var(--color-primary)]"
+            className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[14.5px] outline-none transition focus:border-[var(--color-primary)]"
           />
         </div>
 
         {loading ? (
-          <p className="py-10 text-center text-[13px] text-[var(--color-text-muted)]">Загрузка…</p>
+          <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : deliveries.length === 0 ? (
           <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center card-shadow">
-            <p className="text-[13.5px] text-[var(--color-text-muted)]">
+            <p className="text-[14.5px] text-[var(--color-text-muted)]">
               {tab === "new" ? "Новых запросов нет. Доставка создаётся из карточки аренды или кнопкой выше." : "Пусто"}
             </p>
           </div>
@@ -235,8 +235,8 @@ export default function DeliveryPage() {
 function Metric({ label, value, tone }: { label: string; value: string; tone?: "bad" }) {
   return (
     <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2">
-      <div className="text-[11px] text-[var(--color-text-muted)]">{label}</div>
-      <div className={cn("font-display text-[16px] font-bold", tone === "bad" && "text-[#C0272D]")}>{value}</div>
+      <div className="text-[12px] text-[var(--color-text-muted)]">{label}</div>
+      <div className={cn("font-display text-[17px] font-bold", tone === "bad" && "text-[#C0272D]")}>{value}</div>
     </div>
   );
 }

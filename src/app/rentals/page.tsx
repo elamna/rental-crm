@@ -110,19 +110,19 @@ export default function RentalsPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div>
           <h1 className="font-display text-[20px] font-bold">Аренды</h1>
-          <p className="text-[13px] text-[var(--color-text-muted)]">Все текущие и прошедшие аренды инструмента</p>
+          <p className="text-[14px] text-[var(--color-text-muted)]">Все текущие и прошедшие аренды инструмента</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             <Video className="h-3.5 w-3.5" /> Видео
           </button>
-          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             <Download className="h-3.5 w-3.5" /> Экспорт
           </button>
           {canImport && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
             >
               <Upload className="h-3.5 w-3.5" /> Импорт
             </button>
@@ -131,7 +131,7 @@ export default function RentalsPage() {
             <button
               onClick={() => (selecting ? exitSelection() : setSelecting(true))}
               className={cn(
-                "flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-[13px] font-medium transition",
+                "flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-[14px] font-medium transition",
                 selecting
                   ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
@@ -143,7 +143,7 @@ export default function RentalsPage() {
           )}
           <Link
             href="/rentals/new"
-            className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+            className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
           >
             + Новая аренда
           </Link>
@@ -152,7 +152,7 @@ export default function RentalsPage() {
       </header>
 
       {importMsg && (
-        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[13px] font-medium text-[var(--color-primary)]">
+        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[14px] font-medium text-[var(--color-primary)]">
           {importMsg}
         </div>
       )}
@@ -166,11 +166,11 @@ export default function RentalsPage() {
         {filtered.length === 0 ? (
           <div className="grid h-64 place-items-center text-center text-[var(--color-text-muted)]">
             {!hydrated ? (
-              <p className="text-[13.5px]">Загрузка…</p>
+              <p className="text-[14.5px]">Загрузка…</p>
             ) : allRentals.length === 0 ? (
               <div>
-                <p className="text-[13.5px]">Аренд пока нет</p>
-                <Link href="/rentals/new" className="mt-1 inline-block text-[13px] font-medium text-[var(--color-primary)]">
+                <p className="text-[14.5px]">Аренд пока нет</p>
+                <Link href="/rentals/new" className="mt-1 inline-block text-[14px] font-medium text-[var(--color-primary)]">
                   Оформить первую аренду →
                 </Link>
               </div>

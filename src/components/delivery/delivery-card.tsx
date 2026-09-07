@@ -52,25 +52,25 @@ export function DeliveryCard({
       <div className="flex items-start justify-between gap-3 p-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-[var(--color-text-muted)]">№{delivery.number}</span>
-            <span className="flex items-center gap-1 rounded-[6px] bg-[var(--color-bg)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-muted)]">
+            <span className="text-[14px] font-semibold text-[var(--color-text-muted)]">№{delivery.number}</span>
+            <span className="flex items-center gap-1 rounded-[6px] bg-[var(--color-bg)] px-1.5 py-0.5 text-[12px] text-[var(--color-text-muted)]">
               <Package className="h-3 w-3" />
               {delivery.items.length}
             </span>
           </div>
-          <div className="mt-1 text-[12px] text-[var(--color-text-muted)]">Доставить до:</div>
-          <div className="text-[14px] font-bold">{formatWhen(delivery.deliverBy)}</div>
+          <div className="mt-1 text-[13px] text-[var(--color-text-muted)]">Доставить до:</div>
+          <div className="text-[15px] font-bold">{formatWhen(delivery.deliverBy)}</div>
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           {overdue ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-[#FDECEC] px-2.5 py-1 text-[11px] font-semibold text-[#C0272D]">
+            <span className="flex items-center gap-1.5 rounded-full bg-[#FDECEC] px-2.5 py-1 text-[12px] font-semibold text-[#C0272D]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#C0272D]" /> Просрочено
             </span>
           ) : soon ? (
-            <span className="rounded-full bg-[#FFF4E5] px-2.5 py-1 text-[11px] font-semibold text-[#B8620A]">Скоро срок</span>
+            <span className="rounded-full bg-[#FFF4E5] px-2.5 py-1 text-[12px] font-semibold text-[#B8620A]">Скоро срок</span>
           ) : delivery.status === "done" ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-[#EAF7EE] px-2.5 py-1 text-[11px] font-semibold text-[#1C8A46]">
+            <span className="flex items-center gap-1.5 rounded-full bg-[#EAF7EE] px-2.5 py-1 text-[12px] font-semibold text-[#1C8A46]">
               <CheckCircle2 className="h-3 w-3" /> Выполнено
             </span>
           ) : null}
@@ -78,7 +78,7 @@ export function DeliveryCard({
           {canEdit && delivery.status === "new" && (
             <button
               onClick={() => onAdvance("in_progress")}
-              className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1.5 text-[12px] font-semibold transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1.5 text-[13px] font-semibold transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
             >
               <Truck className="h-3.5 w-3.5" /> Доставить
             </button>
@@ -86,7 +86,7 @@ export function DeliveryCard({
           {canEdit && delivery.status === "in_progress" && (
             <button
               onClick={() => onAdvance("done")}
-              className="flex items-center gap-1.5 rounded-[8px] bg-[#1C8A46] px-2.5 py-1.5 text-[12px] font-semibold text-white transition hover:bg-[#167A3C]"
+              className="flex items-center gap-1.5 rounded-[8px] bg-[#1C8A46] px-2.5 py-1.5 text-[13px] font-semibold text-white transition hover:bg-[#167A3C]"
             >
               <CheckCircle2 className="h-3.5 w-3.5" /> Завершить
             </button>
@@ -94,7 +94,7 @@ export function DeliveryCard({
 
           <button
             onClick={onOpen}
-            className="rounded-[8px] bg-[var(--color-primary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)]"
+            className="rounded-[8px] bg-[var(--color-primary)] px-3 py-1.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)]"
           >
             Запрос
           </button>
@@ -102,16 +102,16 @@ export function DeliveryCard({
       </div>
 
       <div className="border-t border-[var(--color-border)] px-4 py-2">
-        <span className="border-l-[3px] border-[var(--color-primary)] pl-2 text-[12px] font-semibold uppercase italic tracking-wide text-[var(--color-text-muted)]">
+        <span className="border-l-[3px] border-[var(--color-primary)] pl-2 text-[13px] font-semibold uppercase italic tracking-wide text-[var(--color-text-muted)]">
           {DELIVERY_DIRECTION_LABELS[delivery.direction]} · {DELIVERY_KIND_LABELS[delivery.kind]}
         </span>
       </div>
 
       <div className="border-t border-[var(--color-border)] px-4 py-3">
         {overdue && (
-          <div className="mb-1.5 text-[13px] font-semibold text-[#C0272D]">Уже просрочено на {formatLateness(lateMs)}</div>
+          <div className="mb-1.5 text-[14px] font-semibold text-[#C0272D]">Уже просрочено на {formatLateness(lateMs)}</div>
         )}
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px]">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px]">
           <span className="text-[var(--color-text-muted)]">Откуда:</span>
           <span className="font-semibold">{delivery.addressFrom || "—"}</span>
           <ArrowRight className="h-3 w-3 text-[var(--color-text-muted)]" />
@@ -119,7 +119,7 @@ export function DeliveryCard({
           <span className="font-semibold">{delivery.addressTo || "—"}</span>
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--color-text-muted)]">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[var(--color-text-muted)]">
           {delivery.courierName && (
             <span className="flex items-center gap-1">
               <User className="h-3 w-3" /> {delivery.courierName}
@@ -147,11 +147,11 @@ export function DeliveryCard({
                 <Camera className="h-3.5 w-3.5" />
               </span>
               <div className="min-w-0">
-                <div className="truncate text-[13px] font-semibold">
+                <div className="truncate text-[14px] font-semibold">
                   {item.name}
                   {item.qty > 1 && <span className="ml-1 text-[var(--color-text-muted)]">×{item.qty}</span>}
                 </div>
-                <div className="text-[11.5px] text-[var(--color-text-muted)]">Артикул: {item.sku || "—"}</div>
+                <div className="text-[12.5px] text-[var(--color-text-muted)]">Артикул: {item.sku || "—"}</div>
               </div>
             </div>
           ))}

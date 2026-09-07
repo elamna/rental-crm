@@ -89,7 +89,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
       >
         {/* Шапка */}
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-          <h3 className="text-[16px] font-bold">Новый клиент</h3>
+          <h3 className="text-[17px] font-bold">Новый клиент</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             <X className="h-4 w-4" />
           </button>
@@ -98,18 +98,18 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
         <div className="p-5 space-y-6">
           {/* Основная информация */}
           <div>
-            <h4 className="mb-3 text-[13.5px] font-semibold">Основная информация</h4>
+            <h4 className="mb-3 text-[14.5px] font-semibold">Основная информация</h4>
             <div className="flex gap-4">
               <div className="flex-1 space-y-3">
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">
+                  <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">
                     ФИО / Название компании <span className="text-[var(--color-primary)]">*</span>
                   </span>
                   <input autoFocus value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Иванов Иван Иванович" />
                 </label>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="block">
-                    <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">
+                    <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">
                       Тип клиента <span className="text-[var(--color-primary)]">*</span>
                     </span>
                     <select value={type} onChange={(e) => setType(e.target.value as ClientType)} className="crm-input">
@@ -118,7 +118,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
                     </select>
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">
+                    <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">
                       Номер телефона <span className="text-[var(--color-primary)]">*</span>
                     </span>
                     <input value={phone} onChange={(e) => setPhone(e.target.value)} className="crm-input" placeholder="+7 7XX XXX XX XX" />
@@ -128,7 +128,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
 
               {/* Фото */}
               <div className="w-[120px] shrink-0">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Фото</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Фото</span>
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0])} />
                 <button
                   type="button"
@@ -139,7 +139,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
                   {!photoUrl && (
                     <>
                       <Upload className="h-5 w-5 text-[var(--color-primary)]" />
-                      <span className="text-[11px] font-medium text-[var(--color-primary)]">
+                      <span className="text-[12px] font-medium text-[var(--color-primary)]">
                         {uploading ? "Загрузка…" : "Выберите файл"}
                       </span>
                     </>
@@ -151,58 +151,58 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
 
           {/* Документ клиента */}
           <div>
-            <h4 className="mb-3 text-[13.5px] font-semibold">Документ клиента</h4>
+            <h4 className="mb-3 text-[14.5px] font-semibold">Документ клиента</h4>
             {type === "company" ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">БИН</span>
+                  <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">БИН</span>
                   <input value={bin} onChange={(e) => setBin(e.target.value)} className="crm-input" placeholder="000000000000" maxLength={12} />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Юридический адрес (офис)</span>
+                  <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Юридический адрес (офис)</span>
                   <input value={legalAddress} onChange={(e) => setLegalAddress(e.target.value)} className="crm-input" />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Руководитель компании</span>
+                  <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Руководитель компании</span>
                   <input value={companyDirector} onChange={(e) => setCompanyDirector(e.target.value)} className="crm-input" />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">ИИК (Номер счёта)</span>
+                  <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">ИИК (Номер счёта)</span>
                   <input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="crm-input" placeholder="KZ00 0000 0000 0000 0000" />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Банк</span>
+                  <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Банк</span>
                   <input value={bank} onChange={(e) => setBank(e.target.value)} className="crm-input" />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">БИК</span>
+                  <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">БИК</span>
                   <input value={bik} onChange={(e) => setBik(e.target.value)} className="crm-input" placeholder="БИК" />
                 </label>
               </div>
             ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">ИИН</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">ИИН</span>
                 <input value={iin} onChange={(e) => setIin(e.target.value)} className="crm-input" placeholder="000000000000" maxLength={12} />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Дата рождения</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Дата рождения</span>
                 <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="crm-input" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Номер документа</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Номер документа</span>
                 <input value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} className="crm-input" placeholder="AB1234567" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Где или кем выдан</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Где или кем выдан</span>
                 <input value={documentIssuedBy} onChange={(e) => setDocumentIssuedBy(e.target.value)} className="crm-input" placeholder="МВД РК" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Дата выдачи</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Дата выдачи</span>
                 <input type="date" value={documentIssuedAt} onChange={(e) => setDocumentIssuedAt(e.target.value)} className="crm-input" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Дата истечения срока</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Дата истечения срока</span>
                 <input type="date" value={documentExpiresAt} onChange={(e) => setDocumentExpiresAt(e.target.value)} className="crm-input" />
               </label>
             </div>
@@ -212,15 +212,15 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
 
         {/* Футер */}
         <div className="flex items-center justify-between border-t border-[var(--color-border)] px-5 py-4">
-          {error && <p className="text-[12px] text-[#C0272D]">{error}</p>}
+          {error && <p className="text-[13px] text-[#C0272D]">{error}</p>}
           <div className="ml-auto flex gap-2">
-            <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[13px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
+            <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2 text-[14px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
               Отмена
             </button>
             <button
               disabled={!canSubmit}
               onClick={submit}
-              className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {saving ? "Создание…" : "Создать клиента"}
             </button>

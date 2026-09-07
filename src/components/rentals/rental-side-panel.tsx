@@ -40,7 +40,7 @@ function Section({
           <div className="grid h-7 w-7 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
             <Icon className="h-3.5 w-3.5" />
           </div>
-          <h3 className="text-[13.5px] font-semibold">{title}</h3>
+          <h3 className="text-[14.5px] font-semibold">{title}</h3>
         </div>
         {action}
       </div>
@@ -373,14 +373,14 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       {canIssue && (
         <div className="space-y-1.5">
           {!isFullyPaid && (
-            <div className="rounded-[10px] border border-[#FFDCA8] bg-[#FFF8EA] px-3 py-2 text-[12px] font-medium text-[#B8620A]">
+            <div className="rounded-[10px] border border-[#FFDCA8] bg-[#FFF8EA] px-3 py-2 text-[13px] font-medium text-[#B8620A]">
               Есть неоплаченный остаток {formatMoney(rental.total - rental.paid)} — клиент попадёт в «Должники»
             </div>
           )}
           <button
             onClick={handleIssue}
             disabled={issuing}
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-primary)] py-3.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-primary)] py-3.5 text-[15px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
           >
             <PackageCheck className="h-4 w-4" />
             {issuing ? "Выдаём…" : "Выдать в аренду"}
@@ -388,19 +388,19 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         </div>
       )}
       {rental.status === "booked" && !isFullyPaid && !canIssue && (
-        <div className="rounded-[var(--radius-card)] border border-[#FFDCA8] bg-[#FFF8EA] p-3 text-[12.5px] font-medium text-[#B8620A]">
+        <div className="rounded-[var(--radius-card)] border border-[#FFDCA8] bg-[#FFF8EA] p-3 text-[13.5px] font-medium text-[#B8620A]">
           После полной оплаты появится кнопка «Выдать в аренду».
         </div>
       )}
       {rental.status === "stolen" && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-[#5C1A1A] bg-[#2A0E0E] p-3 text-[12.5px] font-semibold text-[#FF6B6B]">
+          <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-[#5C1A1A] bg-[#2A0E0E] p-3 text-[13.5px] font-semibold text-[#FF6B6B]">
             <Siren className="h-4 w-4 shrink-0" />
             Товар отмечен украденным, клиент в чёрном списке
           </div>
           <button
             onClick={() => setShowStolenReturnModal(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#10B981] bg-[var(--color-surface)] py-2.5 text-[13px] font-semibold text-[#10B981] transition hover:bg-[#EAF7EE]"
+            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#10B981] bg-[var(--color-surface)] py-2.5 text-[14px] font-semibold text-[#10B981] transition hover:bg-[#EAF7EE]"
           >
             <Undo2 className="h-4 w-4" /> Товар возвращён клиентом
           </button>
@@ -409,20 +409,20 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       {canMarkStolen && (
         <button
           onClick={() => setShowStolenModal(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#F3B7B7] bg-[var(--color-surface)] py-2.5 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
+          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[#F3B7B7] bg-[var(--color-surface)] py-2.5 text-[14px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC]"
         >
           <Siren className="h-4 w-4" /> Украдено
         </button>
       )}
       {actionError && (
-        <div className="rounded-[10px] border border-[#F3B7B7] bg-[#FDECEC] px-3 py-2 text-[12.5px] font-medium text-[#C0272D]">
+        <div className="rounded-[10px] border border-[#F3B7B7] bg-[#FDECEC] px-3 py-2 text-[13.5px] font-medium text-[#C0272D]">
           {actionError}
         </div>
       )}
       {/* Payment */}
       <Section icon={Receipt} title="К оплате">
         {/* Строки сумм */}
-        <div className="space-y-1.5 text-[13px]">
+        <div className="space-y-1.5 text-[14px]">
           <div className="flex items-center justify-between">
             <span className="text-[var(--color-text-muted)]">Инвентарь</span>
             <span className="font-medium">{formatMoney(rental.total)}</span>
@@ -434,13 +434,13 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             </div>
           </div>
           <div className="flex items-center justify-between rounded-[8px] bg-[var(--color-bg)] px-2.5 py-2">
-            <span className="text-[12.5px] font-semibold text-[var(--color-text-muted)]">К оплате</span>
-            <span className={`text-[15px] font-bold ${remaining > 0 ? "text-[#C0272D]" : "text-[#1C8A46]"}`}>
+            <span className="text-[13.5px] font-semibold text-[var(--color-text-muted)]">К оплате</span>
+            <span className={`text-[16px] font-bold ${remaining > 0 ? "text-[#C0272D]" : "text-[#1C8A46]"}`}>
               {formatMoney(remaining)}
             </span>
           </div>
           {rental.paid > 0 && remaining > 0 && (
-            <div className="flex items-center justify-between text-[12px]">
+            <div className="flex items-center justify-between text-[13px]">
               <span className="text-[var(--color-text-muted)]">Уже оплачено</span>
               <span className="font-medium text-[#1C8A46]">{formatMoney(rental.paid)}</span>
             </div>
@@ -451,29 +451,29 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           <button
             onClick={() => setShowPaymentModal(true)}
             disabled={paying}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] bg-[#1C8A46] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-60"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] bg-[#1C8A46] py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-60"
           >
             <CreditCard className="h-4 w-4" />
             {paying ? "Оплата…" : `Принять оплату +`}
           </button>
         ) : (
-          <div className="mt-3 rounded-[10px] bg-[#EAF7EE] py-2.5 text-center text-[13px] font-semibold text-[#1C8A46]">
+          <div className="mt-3 rounded-[10px] bg-[#EAF7EE] py-2.5 text-center text-[14px] font-semibold text-[#1C8A46]">
             ✓ Оплачено полностью
           </div>
         )}
 
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <button onClick={() => setShowDiscountModal(true)} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button onClick={() => setShowDiscountModal(true)} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             Скидка
           </button>
-          <button onClick={() => setShowRefundModal(true)} disabled={rental.paid <= 0} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] disabled:opacity-40">
+          <button onClick={() => setShowRefundModal(true)} disabled={rental.paid <= 0} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] disabled:opacity-40">
             Возврат средств
           </button>
         </div>
         {canReturn && (
           <button
             onClick={() => setShowReturnModal(true)}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
           >
             <Undo2 className="h-3.5 w-3.5" /> Возврат товара
           </button>
@@ -486,26 +486,26 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
           <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">Применить скидку</h3>
+              <h3 className="text-[16px] font-semibold">Применить скидку</h3>
               <button onClick={() => setShowDiscountModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
               <div className="flex gap-2">
-                <button onClick={() => setDiscountType("fixed")} className={`flex-1 rounded-[8px] border py-2 text-[12.5px] font-medium transition ${discountType === "fixed" ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"}`}>
+                <button onClick={() => setDiscountType("fixed")} className={`flex-1 rounded-[8px] border py-2 text-[13.5px] font-medium transition ${discountType === "fixed" ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"}`}>
                   Сумма (₸)
                 </button>
-                <button onClick={() => setDiscountType("percent")} className={`flex-1 rounded-[8px] border py-2 text-[12.5px] font-medium transition ${discountType === "percent" ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"}`}>
+                <button onClick={() => setDiscountType("percent")} className={`flex-1 rounded-[8px] border py-2 text-[13.5px] font-medium transition ${discountType === "percent" ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"}`}>
                   Процент (%)
                 </button>
               </div>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">
                   {discountType === "fixed" ? "Сумма скидки, ₸" : "Процент скидки, %"}
                 </span>
                 <input autoFocus type="number" value={discountInput} onChange={(e) => setDiscountInput(e.target.value)} className="crm-input" placeholder={discountType === "fixed" ? "0" : "0-100"} min={0} max={discountType === "percent" ? 100 : undefined} />
               </label>
               {discountInput && (
-                <p className="text-[12px] text-[var(--color-text-muted)]">
+                <p className="text-[13px] text-[var(--color-text-muted)]">
                   Итого после скидки: <span className="font-semibold text-[var(--color-text)]">
                     {formatMoney(Math.max(0, rental.total - (discountType === "percent" ? Math.round(rental.total * parseFloat(discountInput) / 100) : parseFloat(discountInput) || 0)))}
                   </span>
@@ -513,8 +513,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
               )}
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowDiscountModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveDiscount} disabled={savingDiscount || !discountInput} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+              <button onClick={() => setShowDiscountModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[14px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={saveDiscount} disabled={savingDiscount || !discountInput} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[14px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
                 {savingDiscount ? "Применяем…" : "Применить"}
               </button>
             </div>
@@ -527,27 +527,27 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
           <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">Автоматический штраф</h3>
+              <h3 className="text-[16px] font-semibold">Автоматический штраф</h3>
               <button onClick={() => setShowAutopenaltyModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
               <label className="flex items-center gap-3">
                 <input type="checkbox" checked={autoEnabled} onChange={(e) => setAutoEnabled(e.target.checked)} className="h-4 w-4 accent-[var(--color-primary)]" />
-                <span className="text-[13px] font-medium">Включить почасовой штраф при просрочке</span>
+                <span className="text-[14px] font-medium">Включить почасовой штраф при просрочке</span>
               </label>
               {autoEnabled && (
                 <label className="block">
-                  <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Ставка штрафа, ₸/час</span>
+                  <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Ставка штрафа, ₸/час</span>
                   <input autoFocus type="number" value={penaltyRate} onChange={(e) => setPenaltyRate(e.target.value)} className="crm-input" placeholder="500" min={0} />
                 </label>
               )}
-              <p className="text-[11.5px] text-[var(--color-text-muted)]">
+              <p className="text-[12.5px] text-[var(--color-text-muted)]">
                 Система автоматически начисляет штраф каждый час после истечения срока аренды.
               </p>
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowAutopenaltyModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveAutoPenalty} disabled={savingAutoPenalty} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+              <button onClick={() => setShowAutopenaltyModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[14px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={saveAutoPenalty} disabled={savingAutoPenalty} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[14px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
                 {savingAutoPenalty ? "Сохранение…" : "Сохранить"}
               </button>
             </div>
@@ -560,21 +560,21 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
           <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">Возврат средств</h3>
+              <h3 className="text-[16px] font-semibold">Возврат средств</h3>
               <button onClick={() => setShowRefundModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
-              <div className="rounded-[8px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">
+              <div className="rounded-[8px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">
                 <div className="flex justify-between"><span className="text-[var(--color-text-muted)]">Оплачено клиентом</span><span className="font-semibold">{formatMoney(rental.paid)}</span></div>
               </div>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Сумма возврата, ₸</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Сумма возврата, ₸</span>
                 <input autoFocus type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} className="crm-input" placeholder="0" min={0} max={rental.paid} />
               </label>
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowRefundModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveRefund} disabled={savingRefund || !refundAmount} className="flex-1 rounded-[10px] bg-[#C0272D] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[#A31F24]">
+              <button onClick={() => setShowRefundModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[14px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={saveRefund} disabled={savingRefund || !refundAmount} className="flex-1 rounded-[10px] bg-[#C0272D] py-2 text-[14px] font-semibold text-white disabled:opacity-50 hover:bg-[#A31F24]">
                 {savingRefund ? "Возвращаем…" : "Вернуть средства"}
               </button>
             </div>
@@ -587,12 +587,12 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
           <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">Добавить залог</h3>
+              <h3 className="text-[16px] font-semibold">Добавить залог</h3>
               <button onClick={() => setShowDepositModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Тип залога</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Тип залога</span>
                 <select value={depositType} onChange={(e) => setDepositType(e.target.value as typeof depositType)} className="crm-input">
                   <option value="money">Денежный</option>
                   <option value="equipment">Оборудование</option>
@@ -600,13 +600,13 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Сумма, ₸</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Сумма, ₸</span>
                 <input autoFocus type="number" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="crm-input" placeholder="0" min={0} />
               </label>
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowDepositModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveDeposit} disabled={savingDeposit || !depositAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+              <button onClick={() => setShowDepositModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[14px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={saveDeposit} disabled={savingDeposit || !depositAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[14px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
                 {savingDeposit ? "Сохранение…" : "Добавить"}
               </button>
             </div>
@@ -619,22 +619,22 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
           <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">Ручной штраф</h3>
+              <h3 className="text-[16px] font-semibold">Ручной штраф</h3>
               <button onClick={() => setShowPenaltyModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Причина</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Причина</span>
                 <input autoFocus value={penaltyReason} onChange={(e) => setPenaltyReason(e.target.value)} className="crm-input" placeholder="Повреждение, утеря и т.д." />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Сумма штрафа, ₸</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Сумма штрафа, ₸</span>
                 <input type="number" value={penaltyAmount} onChange={(e) => setPenaltyAmount(e.target.value)} className="crm-input" placeholder="0" min={0} />
               </label>
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowPenaltyModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={savePenalty} disabled={savingPenalty || !penaltyAmount} className="flex-1 rounded-[10px] bg-[#C0272D] py-2 text-[13px] font-semibold text-white disabled:opacity-50 hover:bg-[#A31F24]">
+              <button onClick={() => setShowPenaltyModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[14px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={savePenalty} disabled={savingPenalty || !penaltyAmount} className="flex-1 rounded-[10px] bg-[#C0272D] py-2 text-[14px] font-semibold text-white disabled:opacity-50 hover:bg-[#A31F24]">
                 {savingPenalty ? "Сохранение…" : "Добавить штраф"}
               </button>
             </div>
@@ -647,22 +647,22 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
           <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 card-shadow safe-bottom sm:max-w-[360px] sm:rounded-[16px] sm:pb-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">Добавить расход</h3>
+              <h3 className="text-[16px] font-semibold">Добавить расход</h3>
               <button onClick={() => setShowExpenseModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3">
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Тип расхода</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Тип расхода</span>
                 <input autoFocus value={expenseType} onChange={(e) => setExpenseType(e.target.value)} className="crm-input" placeholder="Доставка, ремонт и т.д." />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Сумма, ₸</span>
+                <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Сумма, ₸</span>
                 <input type="number" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} className="crm-input" placeholder="0" min={0} />
               </label>
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowExpenseModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[13px] hover:bg-[var(--color-bg)]">Отмена</button>
-              <button onClick={saveExpense} disabled={savingExpense || !expenseAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
+              <button onClick={() => setShowExpenseModal(false)} className="flex-1 rounded-[10px] border border-[var(--color-border)] py-2 text-[14px] hover:bg-[var(--color-bg)]">Отмена</button>
+              <button onClick={saveExpense} disabled={savingExpense || !expenseAmount} className="flex-1 rounded-[10px] bg-[var(--color-primary)] py-2 text-[14px] font-semibold text-[var(--color-on-primary)] disabled:opacity-50 hover:bg-[var(--color-primary-hover)]">
                 {savingExpense ? "Сохранение…" : "Добавить"}
               </button>
             </div>
@@ -680,8 +680,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                   <Undo2 className="h-5 w-5 text-[#1C8A46]" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-bold text-[#1C8A46]">Товар возвращён клиентом</h3>
-                  <p className="text-[12px] text-[#1C8A46]/70">Аренда будет завершена, товар отправлен на проверку</p>
+                  <h3 className="text-[16px] font-bold text-[#1C8A46]">Товар возвращён клиентом</h3>
+                  <p className="text-[13px] text-[#1C8A46]/70">Аренда будет завершена, товар отправлен на проверку</p>
                 </div>
               </div>
             </div>
@@ -689,12 +689,12 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             {/* Клиент */}
             <div className="border-b border-[var(--color-border)] px-5 py-3">
               <div className="flex items-center gap-2.5">
-                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#FDECEC] text-[11px] font-bold text-[#C0272D]">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#FDECEC] text-[12px] font-bold text-[#C0272D]">
                   {rental.client.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
                 </div>
                 <div>
-                  <div className="text-[13px] font-semibold">{rental.client.name}</div>
-                  <div className="flex items-center gap-1 text-[11.5px] text-[#C0272D]">
+                  <div className="text-[14px] font-semibold">{rental.client.name}</div>
+                  <div className="flex items-center gap-1 text-[12.5px] text-[#C0272D]">
                     <Siren className="h-3 w-3" /> Клиент в чёрном списке
                   </div>
                 </div>
@@ -703,8 +703,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
 
             {/* Вопрос о ЧС */}
             <div className="px-5 py-4">
-              <p className="text-[13px] font-semibold">Убрать клиента из чёрного списка?</p>
-              <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">
+              <p className="text-[14px] font-semibold">Убрать клиента из чёрного списка?</p>
+              <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
                 Товар был отмечен украденным. Клиент вернул его — решите, снять ли с него ограничения.
               </p>
 
@@ -712,21 +712,21 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                 <button
                   onClick={() => handleStolenReturn(true)}
                   disabled={stolenReturning}
-                  className="w-full rounded-[12px] bg-[#1C8A46] py-3 text-[13px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-60"
+                  className="w-full rounded-[12px] bg-[#1C8A46] py-3 text-[14px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-60"
                 >
                   {stolenReturning ? "Оформляем…" : "Да, убрать из чёрного списка"}
                 </button>
                 <button
                   onClick={() => handleStolenReturn(false)}
                   disabled={stolenReturning}
-                  className="w-full rounded-[12px] border-2 border-[#C0272D] bg-[var(--color-surface)] py-3 text-[13px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC] disabled:opacity-60"
+                  className="w-full rounded-[12px] border-2 border-[#C0272D] bg-[var(--color-surface)] py-3 text-[14px] font-semibold text-[#C0272D] transition hover:bg-[#FDECEC] disabled:opacity-60"
                 >
                   Нет, оставить в чёрном списке
                 </button>
                 <button
                   onClick={() => setShowStolenReturnModal(false)}
                   disabled={stolenReturning}
-                  className="w-full rounded-[12px] py-2 text-[12.5px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+                  className="w-full rounded-[12px] py-2 text-[13.5px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
                 >
                   Отмена
                 </button>
@@ -753,7 +753,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       {/* Deposit */}
       <Section icon={ShieldCheck} title="Залог">
         {rental.deposit ? (
-          <div className="space-y-1.5 text-[13px]">
+          <div className="space-y-1.5 text-[14px]">
             <Row label="Тип" value={depositLabel(rental.deposit.type)} />
             {rental.deposit.amount && <Row label="Сумма" value={formatMoney(rental.deposit.amount)} />}
             <Row
@@ -763,9 +763,9 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             />
           </div>
         ) : (
-          <p className="text-[12.5px] text-[var(--color-text-muted)]">Залог не добавлен</p>
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">Залог не добавлен</p>
         )}
-        <button onClick={() => setShowDepositModal(true)} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+        <button onClick={() => setShowDepositModal(true)} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
           <Plus className="h-3.5 w-3.5" /> Добавить залог
         </button>
       </Section>
@@ -779,13 +779,13 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             ))}
           </div>
         ) : (
-          <p className="text-[12.5px] text-[var(--color-text-muted)]">Штрафов нет</p>
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">Штрафов нет</p>
         )}
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <button onClick={() => setShowAutopenaltyModal(true)} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button onClick={() => setShowAutopenaltyModal(true)} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             Авто-штраф
           </button>
-          <button onClick={() => setShowPenaltyModal(true)} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button onClick={() => setShowPenaltyModal(true)} className="rounded-[10px] border border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             Ручной штраф
           </button>
         </div>
@@ -800,9 +800,9 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             ))}
           </div>
         ) : (
-          <p className="text-[12.5px] text-[var(--color-text-muted)]">Расходов нет</p>
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">Расходов нет</p>
         )}
-        <button onClick={() => setShowExpenseModal(true)} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+        <button onClick={() => setShowExpenseModal(true)} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
           <Plus className="h-3.5 w-3.5" /> Добавить расход
         </button>
       </Section>
@@ -811,9 +811,9 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       <Section icon={MessageCircle} title="Заметки">
         <div className="space-y-2">
           {notes.map((n, i) => (
-            <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[12.5px]">{n}</div>
+            <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">{n}</div>
           ))}
-          {notes.length === 0 && <p className="text-[12.5px] text-[var(--color-text-muted)]">Комментариев нет</p>}
+          {notes.length === 0 && <p className="text-[13.5px] text-[var(--color-text-muted)]">Комментариев нет</p>}
         </div>
         <div className="mt-2 flex gap-2">
           <input
@@ -821,12 +821,12 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && saveNote()}
             placeholder="Написать комментарий…"
-            className="flex-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--color-primary)]"
+            className="flex-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[13.5px] outline-none focus:border-[var(--color-primary)]"
           />
           <button
             onClick={saveNote}
             disabled={savingNote || !draft.trim()}
-            className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[12.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="rounded-[10px] bg-[var(--color-primary)] px-3 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             +
           </button>
@@ -839,8 +839,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             {/* Шапка */}
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4 shrink-0">
               <div>
-                <h3 className="text-[15px] font-semibold">Возврат товара</h3>
-                <p className="text-[12px] text-[var(--color-text-muted)]">Выберите товары и отметьте состояние каждого</p>
+                <h3 className="text-[16px] font-semibold">Возврат товара</h3>
+                <p className="text-[13px] text-[var(--color-text-muted)]">Выберите товары и отметьте состояние каждого</p>
               </div>
               <button onClick={() => setShowReturnModal(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
                 <X className="h-4 w-4" />
@@ -863,15 +863,15 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                         {state.selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[13px] font-medium">{item.name}</div>
-                        <div className="text-[11.5px] text-[var(--color-text-muted)]">{item.qty} шт · {formatMoney(item.pricePerDay)}/сут</div>
+                        <div className="truncate text-[14px] font-medium">{item.name}</div>
+                        <div className="text-[12.5px] text-[var(--color-text-muted)]">{item.qty} шт · {formatMoney(item.pricePerDay)}/сут</div>
                       </div>
                     </button>
 
                     {/* Состояние — только если выбран */}
                     {state.selected && (
                       <div className="border-t border-[var(--color-primary)]/20 px-3 pb-3 pt-2">
-                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Состояние</p>
+                        <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Состояние</p>
                         <div className="flex gap-1.5">
                           {([
                             { value: "ok", label: "Исправен", color: "text-[#1C8A46]", activeBg: "bg-[#EAF7EE] border-[#1C8A46]" },
@@ -881,7 +881,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                             <button
                               key={opt.value}
                               onClick={(e) => { e.stopPropagation(); setReturnCondition(item.inventoryItemId!, opt.value); }}
-                              className={`flex-1 rounded-[8px] border py-1.5 text-[11.5px] font-semibold transition ${state.condition === opt.value ? `${opt.activeBg} ${opt.color}` : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"}`}
+                              className={`flex-1 rounded-[8px] border py-1.5 text-[12.5px] font-semibold transition ${state.condition === opt.value ? `${opt.activeBg} ${opt.color}` : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"}`}
                             >
                               {opt.label}
                             </button>
@@ -903,19 +903,19 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                 return (
                   <>
                     {selectedCount > 0 && selectedCount < totalCount && (
-                      <p className="mb-2 text-center text-[12px] text-[#B8620A]">
+                      <p className="mb-2 text-center text-[13px] text-[#B8620A]">
                         ⚠ Частичный возврат — аренда останется активной
                       </p>
                     )}
                     {debt > 0 && allSelected && (
-                      <p className="mb-2 rounded-[8px] bg-[#FFF8EA] px-3 py-2 text-center text-[12px] font-medium text-[#B8620A]">
+                      <p className="mb-2 rounded-[8px] bg-[#FFF8EA] px-3 py-2 text-center text-[13px] font-medium text-[#B8620A]">
                         Не оплачено {formatMoney(debt)}. Товар примем, аренда закроется, но клиент останется в «Должниках».
                       </p>
                     )}
                     <button
                       onClick={handleReturn}
                       disabled={returning || selectedCount === 0}
-                      className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+                      className="w-full rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
                     >
                       {returning ? "Оформляем…" : selectedCount === 0 ? "Выберите товары" : `Принять ${selectedCount} из ${totalCount} товар${selectedCount > 1 ? "ов" : "а"}${allSelected ? " и завершить аренду" : ""}`}
                     </button>
@@ -932,9 +932,9 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           <div className="w-full max-w-[380px] rounded-[16px] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="flex items-center gap-2 text-[#C0272D]">
               <Siren className="h-5 w-5" />
-              <h3 className="text-[15px] font-semibold">Отметить как украденное?</h3>
+              <h3 className="text-[16px] font-semibold">Отметить как украденное?</h3>
             </div>
-            <p className="mt-2 text-[12.5px] text-[var(--color-text-muted)]">
+            <p className="mt-2 text-[13.5px] text-[var(--color-text-muted)]">
               Инструмент(ы) из этой аренды будут списаны из каталога (статус «Украден»), аренда получит статус
               «Украдено», а клиент <span className="font-semibold text-[var(--color-text)]">{rental.client.name}</span>{" "}
               автоматически попадёт в чёрный список. Действие можно отменить только вручную.
@@ -943,14 +943,14 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
               <button
                 onClick={handleMarkStolen}
                 disabled={marking}
-                className="w-full rounded-[10px] bg-[#C0272D] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#A31F24] disabled:opacity-60"
+                className="w-full rounded-[10px] bg-[#C0272D] py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#A31F24] disabled:opacity-60"
               >
                 {marking ? "Отмечаем…" : "Да, отметить украденным"}
               </button>
               <button
                 onClick={() => setShowStolenModal(false)}
                 disabled={marking}
-                className="w-full rounded-[10px] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+                className="w-full rounded-[10px] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
               >
                 Отмена
               </button>
@@ -1025,13 +1025,13 @@ function DocumentsSection({ rental }: { rental: Rental }) {
         </button>
       }>
         {docs.length === 0 ? (
-          <button onClick={() => setShowPicker(true)} className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+          <button onClick={() => setShowPicker(true)} className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             <Plus className="h-3.5 w-3.5" /> Добавить документ
           </button>
         ) : (
           <div className="space-y-1.5">
             {docs.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[12.5px]">
+              <div key={doc.id} className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[13.5px]">
                 <button onClick={() => setPreviewDoc(doc)} className="truncate text-left font-medium hover:text-[var(--color-primary)] hover:underline">{doc.name}</button>
                 <div className="flex shrink-0 items-center gap-1 text-[var(--color-text-muted)]">
                   <button onClick={() => setPreviewDoc(doc)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Просмотр"><ExternalLink className="h-3.5 w-3.5" /></button>
@@ -1040,7 +1040,7 @@ function DocumentsSection({ rental }: { rental: Rental }) {
                 </div>
               </div>
             ))}
-            <button onClick={() => setShowPicker(true)} className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-1.5 text-[12px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+            <button onClick={() => setShowPicker(true)} className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-1.5 text-[13px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
               <Plus className="h-3.5 w-3.5" /> Ещё документ
             </button>
           </div>
@@ -1051,17 +1051,17 @@ function DocumentsSection({ rental }: { rental: Rental }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
           <div className="w-full max-w-sm rounded-[16px] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold">Выберите шаблон</h3>
+              <h3 className="text-[16px] font-semibold">Выберите шаблон</h3>
               <button onClick={() => setShowPicker(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><span className="text-[18px]">×</span></button>
             </div>
             {templates.length === 0 ? (
-              <p className="text-[12.5px] text-[var(--color-text-muted)]">Нет шаблонов. Создайте их в разделе <a href="/documents" className="text-[var(--color-primary)] underline">Документы</a>.</p>
+              <p className="text-[13.5px] text-[var(--color-text-muted)]">Нет шаблонов. Создайте их в разделе <a href="/documents" className="text-[var(--color-primary)] underline">Документы</a>.</p>
             ) : (
               <div className="space-y-2">
                 {templates.map((t) => (
                   <button key={t.id} onClick={() => generate(t.id)} disabled={generating} className="flex w-full items-center gap-3 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-left transition hover:bg-[var(--color-primary-soft)] hover:border-[var(--color-primary)] disabled:opacity-60">
                     <FileText className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
-                    <span className="text-[13px] font-medium">{t.name}</span>
+                    <span className="text-[14px] font-medium">{t.name}</span>
                   </button>
                 ))}
               </div>
@@ -1074,9 +1074,9 @@ function DocumentsSection({ rental }: { rental: Rental }) {
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-8" onClick={() => setPreviewDoc(null)}>
           <div className="w-full max-w-3xl rounded-[16px] bg-[var(--color-surface)] card-shadow" style={{ maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
-              <span className="text-[14px] font-semibold">{previewDoc.name}</span>
+              <span className="text-[15px] font-semibold">{previewDoc.name}</span>
               <div className="flex items-center gap-2">
-                <button onClick={() => printDoc(previewDoc.body, previewDoc.name)} className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[12.5px] hover:bg-[var(--color-bg)]">
+                <button onClick={() => printDoc(previewDoc.body, previewDoc.name)} className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[13.5px] hover:bg-[var(--color-bg)]">
                   <Printer className="h-3.5 w-3.5" /> Печать
                 </button>
                 <button onClick={() => setPreviewDoc(null)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><span className="text-[18px]">×</span></button>
@@ -1113,7 +1113,7 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
       <div className="w-full max-w-[380px] overflow-hidden rounded-[20px] bg-[var(--color-surface)] card-shadow">
         {/* Шапка */}
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-          <h3 className="text-[15px] font-bold">Оплатить сейчас</h3>
+          <h3 className="text-[16px] font-bold">Оплатить сейчас</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             <X className="h-4 w-4" />
           </button>
@@ -1122,7 +1122,7 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
         <div className="p-5 space-y-4">
           {/* Тип оплаты */}
           <div>
-            <p className="mb-2 text-[12px] font-semibold text-[var(--color-text-muted)]">
+            <p className="mb-2 text-[13px] font-semibold text-[var(--color-text-muted)]">
               Тип оплаты <span className="text-[#C0272D]">*</span>
             </p>
             <div className="flex flex-wrap gap-2">
@@ -1132,7 +1132,7 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
                   <button
                     key={m}
                     onClick={() => setMethod(m)}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition border ${
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition border ${
                       method === m
                         ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                         : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
@@ -1148,14 +1148,14 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
 
           {/* Сумма */}
           <div>
-            <p className="mb-1.5 text-[12px] font-semibold text-[var(--color-text-muted)]">
+            <p className="mb-1.5 text-[13px] font-semibold text-[var(--color-text-muted)]">
               Сумма оплаты <span className="text-[#C0272D]">*</span>
             </p>
             <input
               type="number"
               value={amountStr}
               onChange={(e) => setAmountStr(e.target.value)}
-              className="crm-input text-[16px] font-semibold"
+              className="crm-input text-[17px] font-semibold"
               placeholder="0"
               min={0}
               max={remaining}
@@ -1170,7 +1170,7 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
           <button
             onClick={() => onPay(amount, method)}
             disabled={paying || amount <= 0}
-            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[15px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             {paying ? "Оплата…" : `Принять оплату ${amount > 0 ? formatMoney(amount) : ""}`}
           </button>
@@ -1232,12 +1232,12 @@ function DeliverySection({ rental }: { rental: Rental }) {
           canEdit ? (
             <button
               onClick={() => setCreating(true)}
-              className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+              className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
             >
               <Plus className="h-3.5 w-3.5" /> Назначить доставку
             </button>
           ) : (
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Доставка не назначена</p>
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">Доставка не назначена</p>
           )
         ) : (
           <div className="space-y-1.5">
@@ -1248,19 +1248,19 @@ function DeliverySection({ rental }: { rental: Rental }) {
                 <button
                   key={d.id}
                   onClick={() => canEdit && setEditing(d)}
-                  className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-left text-[12.5px] transition hover:border-[var(--color-primary)]"
+                  className="flex w-full items-center justify-between gap-2 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-left text-[13.5px] transition hover:border-[var(--color-primary)]"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-medium">
                       №{d.number} · {DELIVERY_KIND_LABELS[d.kind]}
                     </span>
-                    <span className="block truncate text-[11.5px] text-[var(--color-text-muted)]">
+                    <span className="block truncate text-[12.5px] text-[var(--color-text-muted)]">
                       {d.addressTo || "адрес не указан"}
                     </span>
                   </span>
                   <span
                     className={cn(
-                      "shrink-0 rounded-[6px] px-2 py-0.5 text-[11px] font-semibold",
+                      "shrink-0 rounded-[6px] px-2 py-0.5 text-[12px] font-semibold",
                       d.status === "done"
                         ? "bg-[#EAF7EE] text-[#1C8A46]"
                         : overdue

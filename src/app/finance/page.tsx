@@ -78,7 +78,7 @@ export default function FinancePage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="font-display text-[20px] font-bold">Финансы</h1>
-            <p className="text-[13px] text-[var(--color-text-muted)]">Доходы, расходы и движение средств</p>
+            <p className="text-[14px] text-[var(--color-text-muted)]">Доходы, расходы и движение средств</p>
           </div>
           <PeriodPicker value={period} onChange={setPeriod} />
         </div>
@@ -106,7 +106,7 @@ export default function FinancePage() {
             {/* График */}
             {data.dailyChart.length > 1 && (
               <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-                <h2 className="mb-4 text-[15px] font-semibold">Движение средств</h2>
+                <h2 className="mb-4 text-[16px] font-semibold">Движение средств</h2>
                 <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={data.dailyChart} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                     <defs>
@@ -132,10 +132,10 @@ export default function FinancePage() {
                   </AreaChart>
                 </ResponsiveContainer>
                 <div className="mt-2 flex gap-4 justify-end">
-                  <div className="flex items-center gap-1.5 text-[12px] text-[var(--color-text-muted)]">
+                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--color-text-muted)]">
                     <span className="h-2 w-4 rounded-full bg-[#10B981]" /> Доходы
                   </div>
-                  <div className="flex items-center gap-1.5 text-[12px] text-[var(--color-text-muted)]">
+                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--color-text-muted)]">
                     <span className="h-2 w-4 rounded-full bg-[#EF4444]" /> Расходы
                   </div>
                 </div>
@@ -145,11 +145,11 @@ export default function FinancePage() {
             {/* Транзакции */}
             <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
               <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-5 py-4">
-                <h2 className="text-[15px] font-semibold">Транзакции</h2>
+                <h2 className="text-[16px] font-semibold">Транзакции</h2>
                 <div className="flex gap-1 ml-auto">
                   {(["all", "income", "expense", "penalty", "deposit"] as TxType[]).map((t) => (
                     <button key={t} onClick={() => setTypeFilter(t)}
-                      className={`rounded-[8px] px-2.5 py-1 text-[12px] font-medium transition ${typeFilter === t ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"}`}>
+                      className={`rounded-[8px] px-2.5 py-1 text-[13px] font-medium transition ${typeFilter === t ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"}`}>
                       {TYPE_LABELS[t]}
                     </button>
                   ))}
@@ -157,12 +157,12 @@ export default function FinancePage() {
                 <input
                   value={search} onChange={(e) => setSearch(e.target.value)}
                   placeholder="Поиск по клиенту или №..."
-                  className="crm-input w-48 text-[12.5px]"
+                  className="crm-input w-48 text-[13.5px]"
                 />
               </div>
 
               {filtered.length === 0 ? (
-                <div className="py-12 text-center text-[13px] text-[var(--color-text-muted)]">
+                <div className="py-12 text-center text-[14px] text-[var(--color-text-muted)]">
                   Нет транзакций за выбранный период
                 </div>
               ) : (
@@ -172,14 +172,14 @@ export default function FinancePage() {
                     return (
                       <div key={tx.id} className="flex items-center gap-4 px-5 py-3 hover:bg-[var(--color-bg)]">
                         {/* Иконка типа */}
-                        <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[13px] font-bold ${style.bg} ${style.color}`}>
+                        <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[14px] font-bold ${style.bg} ${style.color}`}>
                           {style.sign}
                         </div>
 
                         {/* Описание */}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[13px] font-medium">{tx.description}</div>
-                          <div className="flex items-center gap-2 text-[11.5px] text-[var(--color-text-muted)]">
+                          <div className="truncate text-[14px] font-medium">{tx.description}</div>
+                          <div className="flex items-center gap-2 text-[12.5px] text-[var(--color-text-muted)]">
                             <span>{tx.clientName}</span>
                             <span>·</span>
                             <Link href={`/rentals/${tx.rentalId}`} className="hover:text-[var(--color-primary)] hover:underline">
@@ -190,10 +190,10 @@ export default function FinancePage() {
 
                         {/* Дата */}
                         <div className="shrink-0 text-right">
-                          <div className={`text-[14px] font-semibold ${style.color}`}>
+                          <div className={`text-[15px] font-semibold ${style.color}`}>
                             {style.sign !== "○" ? style.sign : ""}{formatMoney(tx.amount)}
                           </div>
-                          <div className="text-[11px] text-[var(--color-text-muted)]">
+                          <div className="text-[12px] text-[var(--color-text-muted)]">
                             {new Date(tx.date).toLocaleDateString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                           </div>
                         </div>
@@ -204,7 +204,7 @@ export default function FinancePage() {
               )}
 
               {filtered.length > 0 && (
-                <div className="border-t border-[var(--color-border)] px-5 py-3 flex justify-between text-[12.5px] text-[var(--color-text-muted)]">
+                <div className="border-t border-[var(--color-border)] px-5 py-3 flex justify-between text-[13.5px] text-[var(--color-text-muted)]">
                   <span>Показано {filtered.length} транзакций</span>
                   <span className="font-semibold text-[var(--color-text)]">
                     Итого: {formatMoney(filtered.filter((t) => t.type !== "expense").reduce((s, t) => s + t.amount, 0))}
@@ -233,9 +233,9 @@ function FinCard({ icon: Icon, label, value, color, sub }: {
     <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[12px] font-medium text-[var(--color-text-muted)]">{label}</p>
+          <p className="text-[13px] font-medium text-[var(--color-text-muted)]">{label}</p>
           <p className={`mt-1 text-[20px] font-bold leading-tight ${s.text}`}>{value}</p>
-          {sub && <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">{sub}</p>}
+          {sub && <p className="mt-0.5 text-[12px] text-[var(--color-text-muted)]">{sub}</p>}
         </div>
         <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] ${s.bg}`}>
           <Icon className={`h-4 w-4 ${s.icon}`} />

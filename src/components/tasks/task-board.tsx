@@ -57,15 +57,15 @@ export function TaskBoard({
             className="flex w-[260px] shrink-0 flex-col rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow"
           >
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3.5 py-2.5">
-              <span className="text-[13px] font-semibold">{TASK_STATUS_LABELS[col.key]}</span>
-              <span className={cn("rounded-full px-2 py-0.5 text-[11.5px] font-semibold text-[var(--color-text-muted)]", col.tone)}>
+              <span className="text-[14px] font-semibold">{TASK_STATUS_LABELS[col.key]}</span>
+              <span className={cn("rounded-full px-2 py-0.5 text-[12.5px] font-semibold text-[var(--color-text-muted)]", col.tone)}>
                 {items.length}
               </span>
             </div>
 
             <div className="flex-1 space-y-2 p-2.5">
               {items.length === 0 ? (
-                <p className="py-6 text-center text-[12px] text-[var(--color-text-muted)]">Пусто</p>
+                <p className="py-6 text-center text-[13px] text-[var(--color-text-muted)]">Пусто</p>
               ) : (
                 items.map((t) => (
                   <TaskCard
@@ -116,10 +116,10 @@ function TaskCard({
       <button onClick={onOpen} className="block w-full text-left">
         <div className="flex items-start gap-1.5">
           {task.priority === "high" && <Flame className="mt-[2px] h-3.5 w-3.5 shrink-0 text-[#C0272D]" />}
-          <span className="text-[13px] font-semibold leading-snug">{task.title}</span>
+          <span className="text-[14px] font-semibold leading-snug">{task.title}</span>
         </div>
 
-        <div className="mt-2 space-y-1 text-[11.5px] text-[var(--color-text-muted)]">
+        <div className="mt-2 space-y-1 text-[12.5px] text-[var(--color-text-muted)]">
           <span className="flex items-center gap-1.5">
             <User className="h-3 w-3 shrink-0" />
             {task.assigneeName ?? "не назначен"}
@@ -134,7 +134,7 @@ function TaskCard({
       </button>
 
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[10.5px] font-semibold text-[var(--color-primary)]">
+        <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--color-primary)]">
           {task.points} балл{task.points === 1 ? "" : task.points < 5 ? "а" : "ов"}
         </span>
 
@@ -143,7 +143,7 @@ function TaskCard({
           <select
             value={task.status}
             onChange={(e) => onMove(e.target.value as TaskStatus)}
-            className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-[11.5px]"
+            className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-[12.5px]"
           >
             {Object.entries(TASK_STATUS_LABELS).map(([k, v]) => (
               <option key={k} value={k}>

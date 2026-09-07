@@ -105,15 +105,15 @@ export function KitsTab({ editing, onCloseEditor }: { editing: boolean; onCloseE
                             <ImageIcon className="h-4 w-4 text-[var(--color-text-muted)]" />
                           )}
                         </div>
-                        <button onClick={() => setEditKit(k)} className="text-left text-[13.5px] font-semibold transition hover:text-[var(--color-primary)]">
+                        <button onClick={() => setEditKit(k)} className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary)]">
                           {k.name}
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[13px] text-[var(--color-text-muted)]">{k.category || "—"}</td>
-                    <td className="px-4 py-3 text-[13px]">{k.lines.length}</td>
+                    <td className="px-4 py-3 text-[14px] text-[var(--color-text-muted)]">{k.category || "—"}</td>
+                    <td className="px-4 py-3 text-[14px]">{k.lines.length}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-block rounded-[8px] bg-[var(--color-primary-soft)] px-2.5 py-1 text-[12px] font-semibold text-[var(--color-primary)]">
+                      <span className="inline-block rounded-[8px] bg-[var(--color-primary-soft)] px-2.5 py-1 text-[13px] font-semibold text-[var(--color-primary)]">
                         {formatMoney(kitPrice(k))}
                       </span>
                     </td>

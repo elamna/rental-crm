@@ -101,13 +101,13 @@ export function ClientForm({
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
       <button
         onClick={() => router.back()}
-        className="mb-4 flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-text)] transition hover:text-[var(--color-primary)]"
+        className="mb-4 flex items-center gap-1.5 text-[15px] font-semibold text-[var(--color-text)] transition hover:text-[var(--color-primary)]"
       >
         <ChevronLeft className="h-4 w-4" /> {title}
       </button>
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 card-shadow">
-        <h2 className="mb-4 text-[14px] font-semibold">Основная информация</h2>
+        <h2 className="mb-4 text-[15px] font-semibold">Основная информация</h2>
         <div className="flex flex-col gap-4 sm:flex-row">
           <div className="flex-1 space-y-4">
             <Field label="ФИО/Название компании" required>
@@ -137,7 +137,7 @@ export function ClientForm({
 
         <div className="my-6 border-t border-[var(--color-border)]" />
 
-        <h2 className="mb-4 text-[14px] font-semibold">Документ клиента</h2>
+        <h2 className="mb-4 text-[15px] font-semibold">Документ клиента</h2>
         {values.type === "company" ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="БИН">
@@ -184,7 +184,7 @@ export function ClientForm({
 
         <div className="my-6 border-t border-[var(--color-border)]" />
 
-        <h2 className="mb-4 text-[14px] font-semibold">Дополнительно</h2>
+        <h2 className="mb-4 text-[15px] font-semibold">Дополнительно</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Эл. почта">
             <input type="email" value={values.email} onChange={(e) => set("email", e.target.value)} className="crm-input" />
@@ -204,8 +204,8 @@ export function ClientForm({
           </Field>
           {/* Рейтинг вручную не ставится: он складывается из истории аренд */}
           <div className="sm:col-span-1">
-            <span className="mb-1 block text-[12px] font-medium text-[var(--color-text-muted)]">Рейтинг</span>
-            <p className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2.5 text-[12.5px] text-[var(--color-text-muted)]">
+            <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Рейтинг</span>
+            <p className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2.5 text-[13.5px] text-[var(--color-text-muted)]">
               Считается сам: как часто обращается, платит и возвращает в срок
             </p>
           </div>
@@ -215,7 +215,7 @@ export function ClientForm({
           <button
             disabled={!canSubmit}
             onClick={() => onSubmit(values)}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[14.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Создать и сохранить
           </button>
@@ -228,7 +228,7 @@ export function ClientForm({
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">
+      <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
         {label} {required && <span className="text-[var(--color-primary)]">*</span>}
       </span>
       {children}

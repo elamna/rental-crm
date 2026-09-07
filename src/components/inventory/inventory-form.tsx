@@ -80,7 +80,7 @@ export function InventoryForm({
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <button onClick={() => router.back()} className="mb-4 flex items-center gap-1.5 text-[14px] font-semibold transition hover:text-[var(--color-primary)]">
+      <button onClick={() => router.back()} className="mb-4 flex items-center gap-1.5 text-[15px] font-semibold transition hover:text-[var(--color-primary)]">
         <ChevronLeft className="h-4 w-4" /> {title}
       </button>
 
@@ -101,7 +101,7 @@ export function InventoryForm({
             {!initial && (
               <Field label="Количество единиц">
                 <input type="number" min={1} value={values.quantity} onChange={(e) => set("quantity", e.target.value)} className="crm-input" />
-                <span className="mt-1 block text-[11.5px] text-[var(--color-text-muted)]">
+                <span className="mt-1 block text-[12.5px] text-[var(--color-text-muted)]">
                   Больше одной — создадим отдельную единицу на каждый экземпляр, артикулы присвоятся автоматически
                   (QS.0001, QS.0002…). В каталоге они свернутся в один продукт.
                 </span>
@@ -160,13 +160,13 @@ export function InventoryForm({
           </Field>
         </div>
 
-        {error && <p className="mt-3 text-[13px] text-[#C0272D]">{error}</p>}
+        {error && <p className="mt-3 text-[14px] text-[#C0272D]">{error}</p>}
 
         <div className="mt-6 flex justify-end">
           <button
             disabled={!canSubmit || submitting}
             onClick={() => onSubmit(values)}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[14.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {submitting ? "Сохранение…" : "Сохранить"}
           </button>
@@ -179,7 +179,7 @@ export function InventoryForm({
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">
+      <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
         {label} {required && <span className="text-[var(--color-primary)]">*</span>}
       </span>
       {children}

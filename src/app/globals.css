@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Onest:wght@400..800&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -227,3 +227,13 @@ h1, h2, h3, h4, .font-display {
 /* Полосы прокрутки в тёмной теме */
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2E2E33; }
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #3C3C42; }
+
+/* Текст в интерфейсе просили покрупнее и поплотнее: подняли размеры на 1px,
+   а начертания сдвинули на полступени — Onest переменный, промежуточные веса
+   он отрисовывает честно */
+html, body {
+  font-weight: 450;
+}
+.font-medium { font-weight: 550; }
+.font-semibold { font-weight: 620; }
+.font-bold { font-weight: 720; }

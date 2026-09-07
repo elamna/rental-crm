@@ -22,7 +22,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const client = clients.find((c) => c.id === id);
   if (!client) {
     if (!hydrated) {
-      return <div className="grid h-full place-items-center text-[13.5px] text-[var(--color-text-muted)]">Загрузка…</div>;
+      return <div className="grid h-full place-items-center text-[14.5px] text-[var(--color-text-muted)]">Загрузка…</div>;
     }
     return notFound();
   }
@@ -40,12 +40,12 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             <div className="flex items-center gap-2">
               <h1 className="font-display text-[18px] font-bold">{client.name}</h1>
               {client.blacklisted && (
-                <span className="flex items-center gap-1 rounded-full bg-[#FDECEC] px-2 py-0.5 text-[11px] font-semibold text-[#C0272D]">
+                <span className="flex items-center gap-1 rounded-full bg-[#FDECEC] px-2 py-0.5 text-[12px] font-semibold text-[#C0272D]">
                   <Ban className="h-3 w-3" /> В чёрном списке
                 </span>
               )}
             </div>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">{clientTypeLabels[client.type]}</p>
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">{clientTypeLabels[client.type]}</p>
           </div>
         </div>
         <button
@@ -54,7 +54,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               deleteClient(client.id).then(() => router.push("/clients"));
             }
           }}
-          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-medium text-[#C0272D] transition hover:bg-[#FDECEC]"
+          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[#C0272D] transition hover:bg-[#FDECEC]"
         >
           <Trash2 className="h-3.5 w-3.5" /> Удалить
         </button>
@@ -63,7 +63,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto p-6 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-1">
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-            <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[16px] font-bold text-[var(--color-primary)]">
+            <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[17px] font-bold text-[var(--color-primary)]">
               {client.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
             </div>
             <InfoRow icon={Phone} label="Телефон" value={client.phone} />
@@ -72,7 +72,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             {client.discount ? <InfoRow icon={Percent} label="Постоянная скидка" value={`${client.discount}%`} /> : null}
             <div className="mt-3 border-t border-[var(--color-border)] pt-3">
               <div className="mb-2.5 flex items-center justify-between">
-                <span className="text-[12.5px] text-[var(--color-text-muted)]">Рейтинг</span>
+                <span className="text-[13.5px] text-[var(--color-text-muted)]">Рейтинг</span>
                 <RatingStars rating={client.rating} size="lg" />
               </div>
               <RatingBreakdown breakdown={client.ratingBreakdown} />
@@ -80,7 +80,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           </section>
 
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-            <h3 className="mb-3 text-[13.5px] font-semibold">Статистика</h3>
+            <h3 className="mb-3 text-[14.5px] font-semibold">Статистика</h3>
             <div className="grid grid-cols-2 gap-3 text-center">
               <Stat value={client.totalRentals} label="аренд всего" />
               <Stat value={formatMoney(client.totalSpent)} label="потрачено" />
@@ -92,8 +92,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           {client.type === "company"
             ? (client.bin || client.legalAddress || client.bankAccount || client.bank) && (
                 <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-                  <h3 className="mb-3 text-[13.5px] font-semibold">Реквизиты</h3>
-                  <div className="space-y-1.5 text-[12.5px]">
+                  <h3 className="mb-3 text-[14.5px] font-semibold">Реквизиты</h3>
+                  <div className="space-y-1.5 text-[13.5px]">
                     {client.bin && <Row label="БИН" value={client.bin} />}
                     {client.legalAddress && <Row label="Юр. адрес" value={client.legalAddress} />}
                     {client.companyDirector && <Row label="Руководитель" value={client.companyDirector} />}
@@ -105,8 +105,8 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               )
             : client.iin && (
                 <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-                  <h3 className="mb-3 text-[13.5px] font-semibold">Документ</h3>
-                  <div className="space-y-1.5 text-[12.5px]">
+                  <h3 className="mb-3 text-[14.5px] font-semibold">Документ</h3>
+                  <div className="space-y-1.5 text-[13.5px]">
                     <Row label="ИИН" value={client.iin} />
                     {client.documentNumber && <Row label="Номер документа" value={client.documentNumber} />}
                     {client.documentIssuedBy && <Row label="Кем выдан" value={client.documentIssuedBy} />}
@@ -120,10 +120,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         <div className="xl:col-span-2">
           <div className="mb-3 flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-[var(--color-primary)]" />
-            <h2 className="font-display text-[15px] font-bold">История аренд</h2>
+            <h2 className="font-display text-[16px] font-bold">История аренд</h2>
           </div>
           {clientRentals.length === 0 ? (
-            <div className="grid h-40 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[13px] text-[var(--color-text-muted)]">
+            <div className="grid h-40 place-items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] text-[14px] text-[var(--color-text-muted)]">
               У клиента пока нет аренд
             </div>
           ) : (
@@ -141,7 +141,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2.5 border-b border-[var(--color-border)] py-2 text-[13px] last:border-none">
+    <div className="flex items-center gap-2.5 border-b border-[var(--color-border)] py-2 text-[14px] last:border-none">
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
       <span className="text-[var(--color-text-muted)]">{label}</span>
       <span className="ml-auto font-medium">{value}</span>
@@ -153,7 +153,7 @@ function Stat({ value, label, highlight }: { value: string | number; label: stri
   return (
     <div className="rounded-[10px] bg-[var(--color-bg)] py-3">
       <div className={`font-display text-[17px] font-bold ${highlight ? "text-[#C0272D]" : ""}`}>{value}</div>
-      <div className="text-[11px] text-[var(--color-text-muted)]">{label}</div>
+      <div className="text-[12px] text-[var(--color-text-muted)]">{label}</div>
     </div>
   );
 }

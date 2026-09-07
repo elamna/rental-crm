@@ -77,7 +77,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 className="font-display text-[18px] font-bold">{kit ? "Комплект" : "Новый комплект"}</h2>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">Набор позиций, который выдаётся одной строкой в аренде</p>
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">Набор позиций, который выдаётся одной строкой в аренде</p>
           </div>
           <button onClick={onClose} className="text-[var(--color-text-muted)] transition hover:text-[#C0272D]">
             <X className="h-5 w-5" />
@@ -87,14 +87,14 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
         <div className="flex flex-col gap-4 sm:flex-row">
           <div className="flex-1 space-y-4">
             <label className="block">
-              <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">
+              <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
                 Название <span className="text-[var(--color-primary)]">*</span>
               </span>
               <input value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Алмазное бурение (бур)" />
             </label>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Категория</span>
+                <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Категория</span>
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="crm-input">
                   <option value="">Категория</option>
                   {inventoryCategories.map((c) => (
@@ -105,7 +105,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Цена за сутки, ₸</span>
+                <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Цена за сутки, ₸</span>
                 <input
                   type="number"
                   min={0}
@@ -123,17 +123,17 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
         <div className="my-5 border-t border-[var(--color-border)]" />
 
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[12.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Состав комплекта</span>
+          <span className="text-[13.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Состав комплекта</span>
           <button
             onClick={addLine}
-            className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
           >
             <Plus className="h-3 w-3" /> Позиция
           </button>
         </div>
 
         {lines.length === 0 ? (
-          <p className="rounded-[10px] border border-dashed border-[var(--color-border)] py-5 text-center text-[12.5px] text-[var(--color-text-muted)]">
+          <p className="rounded-[10px] border border-dashed border-[var(--color-border)] py-5 text-center text-[13.5px] text-[var(--color-text-muted)]">
             Пока пусто. Позиции, привязанные к каталогу, ограничивают доступность комплекта.
           </p>
         ) : (
@@ -149,7 +149,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
                 <select
                   value={l.inventoryName ? l.inventoryName.trim().toLowerCase() : ""}
                   onChange={(e) => linkProduct(l.id, e.target.value)}
-                  className="crm-input !text-[12px]"
+                  className="crm-input !text-[13px]"
                   title="Привязка к продукту каталога"
                 >
                   <option value="">Без привязки</option>
@@ -181,27 +181,27 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
                 </button>
               </div>
             ))}
-            <div className="pt-1 text-right text-[12.5px] text-[var(--color-text-muted)]">
+            <div className="pt-1 text-right text-[13.5px] text-[var(--color-text-muted)]">
               Сумма состава: <span className="font-semibold text-[var(--color-text)]">{formatMoney(linesTotal)}</span>
             </div>
           </div>
         )}
 
         <label className="mt-4 block">
-          <span className="mb-1.5 block text-[12.5px] font-medium text-[var(--color-text-muted)]">Заметки</span>
+          <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">Заметки</span>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="crm-input" />
         </label>
 
-        {error && <p className="mt-3 text-[13px] text-[#C0272D]">{error}</p>}
+        {error && <p className="mt-3 text-[14px] text-[#C0272D]">{error}</p>}
 
         <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[13.5px] font-semibold text-[var(--color-text-muted)]">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[14.5px] font-semibold text-[var(--color-text-muted)]">
             Отмена
           </button>
           <button
             disabled={!canSave}
             onClick={save}
-            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[14.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving ? "Сохранение…" : "Сохранить"}
           </button>

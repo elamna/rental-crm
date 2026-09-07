@@ -96,8 +96,8 @@ export function AddShopItemModal({
       >
         <div className="flex shrink-0 items-start justify-between p-5 pb-3">
           <div>
-            <h3 className="text-[15px] font-semibold">Добавить товар из магазина</h3>
-            <p className="text-[11.5px] text-[var(--color-text-muted)]">Продаётся насовсем, цена не зависит от срока</p>
+            <h3 className="text-[16px] font-semibold">Добавить товар из магазина</h3>
+            <p className="text-[12.5px] text-[var(--color-text-muted)]">Продаётся насовсем, цена не зависит от срока</p>
           </div>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             <X className="h-4 w-4" />
@@ -119,14 +119,14 @@ export function AddShopItemModal({
 
         <div className="flex-1 space-y-1.5 overflow-y-auto px-5 pb-3">
           {loading ? (
-            <p className="py-8 text-center text-[12.5px] text-[var(--color-text-muted)]">Загрузка…</p>
+            <p className="py-8 text-center text-[13.5px] text-[var(--color-text-muted)]">Загрузка…</p>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center">
               <Store className="h-6 w-6 text-[var(--color-text-muted)]" />
-              <p className="text-[12.5px] text-[var(--color-text-muted)]">
+              <p className="text-[13.5px] text-[var(--color-text-muted)]">
                 {search ? "Ничего не нашлось." : "В магазине пока нет товаров."}
               </p>
-              <Link href="/shop" className="text-[12.5px] font-semibold text-[var(--color-primary)]">
+              <Link href="/shop" className="text-[13.5px] font-semibold text-[var(--color-primary)]">
                 Перейти в магазин →
               </Link>
             </div>
@@ -151,32 +151,32 @@ export function AddShopItemModal({
                       {isSelected && <Check className="h-3 w-3 text-[var(--color-on-primary)]" strokeWidth={3} />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13px] font-medium">{product.name}</div>
-                      <div className="text-[11.5px] text-[var(--color-text-muted)]">
+                      <div className="truncate text-[14px] font-medium">{product.name}</div>
+                      <div className="text-[12.5px] text-[var(--color-text-muted)]">
                         {product.sku || "без номера"} · {outOfStock ? "нет в наличии" : `остаток ${product.qty} шт.`}
                       </div>
                     </div>
-                    <span className="shrink-0 text-[12.5px] font-semibold">{formatMoney(product.price)}</span>
+                    <span className="shrink-0 text-[13.5px] font-semibold">{formatMoney(product.price)}</span>
                   </button>
 
                   {isSelected && sel && (
                     <div className="flex items-center gap-2 border-t border-[var(--color-primary)]/20 px-3 pb-2.5 pt-2">
-                      <span className="text-[12px] text-[var(--color-text-muted)]">Цена, ₸</span>
+                      <span className="text-[13px] text-[var(--color-text-muted)]">Цена, ₸</span>
                       <input
                         type="number"
                         min={0}
                         value={sel.price}
                         onChange={(e) => patch(product.id, { price: e.target.value })}
-                        className="crm-input ml-auto w-24 text-right text-[13px] font-semibold"
+                        className="crm-input ml-auto w-24 text-right text-[14px] font-semibold"
                       />
-                      <span className="text-[12px] text-[var(--color-text-muted)]">×</span>
+                      <span className="text-[13px] text-[var(--color-text-muted)]">×</span>
                       <input
                         type="number"
                         min={1}
                         max={product.qty}
                         value={sel.qty}
                         onChange={(e) => patch(product.id, { qty: e.target.value })}
-                        className="crm-input w-16 text-right text-[13px] font-semibold"
+                        className="crm-input w-16 text-right text-[14px] font-semibold"
                       />
                     </div>
                   )}
@@ -190,7 +190,7 @@ export function AddShopItemModal({
           <button
             onClick={submitAll}
             disabled={count === 0}
-            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
           >
             {count > 0 ? `Добавить (${count})` : "Выберите товары"}
           </button>

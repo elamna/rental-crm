@@ -74,7 +74,7 @@ export function RentalHistoryModal({
         className="flex max-h-[92dvh] w-full max-w-xl flex-col rounded-t-[20px] bg-[var(--color-surface)] shadow-xl safe-bottom sm:rounded-[var(--radius-card)]"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-          <h3 className="font-display text-[16px] font-bold">История аренды</h3>
+          <h3 className="font-display text-[17px] font-bold">История аренды</h3>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
             <X className="h-4 w-4" />
           </button>
@@ -82,9 +82,9 @@ export function RentalHistoryModal({
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <p className="py-10 text-center text-[13px] text-[var(--color-text-muted)]">Загрузка…</p>
+            <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
           ) : events.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-[var(--color-text-muted)]">Пока ничего не происходило</p>
+            <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Пока ничего не происходило</p>
           ) : (
             events.map((e) => (
               <div
@@ -96,15 +96,15 @@ export function RentalHistoryModal({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={cn("rounded-[8px] px-2.5 py-1 text-[12px] font-semibold", EVENT_TONE[e.type])}>{e.title}</span>
-                    {e.actorName && <span className="text-[12px] text-[var(--color-text-muted)]">{e.actorName}</span>}
-                    {e.reverted && <span className="text-[11.5px] text-[#C0272D]">отменено</span>}
+                    <span className={cn("rounded-[8px] px-2.5 py-1 text-[13px] font-semibold", EVENT_TONE[e.type])}>{e.title}</span>
+                    {e.actorName && <span className="text-[13px] text-[var(--color-text-muted)]">{e.actorName}</span>}
+                    {e.reverted && <span className="text-[12.5px] text-[#C0272D]">отменено</span>}
                   </div>
-                  {e.details && <p className="mt-1.5 text-[12.5px] text-[var(--color-text-muted)]">{e.details}</p>}
+                  {e.details && <p className="mt-1.5 text-[13.5px] text-[var(--color-text-muted)]">{e.details}</p>}
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="whitespace-nowrap text-[11.5px] text-[var(--color-text-muted)]">{formatMoment(e.createdAt)}</span>
+                  <span className="whitespace-nowrap text-[12.5px] text-[var(--color-text-muted)]">{formatMoment(e.createdAt)}</span>
                   {/* Откатить можно только то, у чего записаны прежние значения */}
                   {canEdit && !e.reverted && e.before && (
                     <button
@@ -122,8 +122,8 @@ export function RentalHistoryModal({
           )}
         </div>
 
-        {error && <p className="shrink-0 border-t border-[var(--color-border)] px-5 py-3 text-[12.5px] text-[#C0272D]">{error}</p>}
-        <p className="shrink-0 border-t border-[var(--color-border)] px-5 py-3 text-[11.5px] text-[var(--color-text-muted)]">
+        {error && <p className="shrink-0 border-t border-[var(--color-border)] px-5 py-3 text-[13.5px] text-[#C0272D]">{error}</p>}
+        <p className="shrink-0 border-t border-[var(--color-border)] px-5 py-3 text-[12.5px] text-[var(--color-text-muted)]">
           Кнопка отмены возвращает значения, которые были до действия. Сам журнал ничего не теряет: отмена тоже
           записывается отдельной строкой.
         </p>
@@ -154,9 +154,9 @@ export function RentalPausesModal({ rentalId, onClose }: { rentalId: string; onC
       >
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
           <div>
-            <h3 className="font-display text-[16px] font-bold">История пауз</h3>
+            <h3 className="font-display text-[17px] font-bold">История пауз</h3>
             {pauses.length > 0 && (
-              <p className="text-[12px] text-[var(--color-text-muted)]">Всего простоя: {Math.round(total * 10) / 10} ч</p>
+              <p className="text-[13px] text-[var(--color-text-muted)]">Всего простоя: {Math.round(total * 10) / 10} ч</p>
             )}
           </div>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
@@ -166,9 +166,9 @@ export function RentalPausesModal({ rentalId, onClose }: { rentalId: string; onC
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <p className="py-10 text-center text-[13px] text-[var(--color-text-muted)]">Загрузка…</p>
+            <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
           ) : pauses.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-[var(--color-text-muted)]">Аренду ещё не ставили на паузу</p>
+            <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Аренду ещё не ставили на паузу</p>
           ) : (
             pauses.map((p) => (
               <div key={p.id} className="flex items-start gap-3 border-b border-[var(--color-border)] px-5 py-3 last:border-0">
@@ -181,10 +181,10 @@ export function RentalPausesModal({ rentalId, onClose }: { rentalId: string; onC
                   {p.endedAt ? <RotateCcw className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-semibold">
+                  <div className="text-[14px] font-semibold">
                     {formatMoment(p.startedAt)} — {p.endedAt ? formatMoment(p.endedAt) : "идёт сейчас"}
                   </div>
-                  <div className="text-[12px] text-[var(--color-text-muted)]">
+                  <div className="text-[13px] text-[var(--color-text-muted)]">
                     {p.hours} ч{p.reason ? ` · ${p.reason}` : ""}
                     {p.actorName ? ` · ${p.actorName}` : ""}
                   </div>
@@ -194,7 +194,7 @@ export function RentalPausesModal({ rentalId, onClose }: { rentalId: string; onC
           )}
         </div>
 
-        <p className="shrink-0 border-t border-[var(--color-border)] px-5 py-3 text-[11.5px] text-[var(--color-text-muted)]">
+        <p className="shrink-0 border-t border-[var(--color-border)] px-5 py-3 text-[12.5px] text-[var(--color-text-muted)]">
           На паузе аренда не просрочивается и не копит штрафы, а при снятии дата возврата сдвигается на время простоя.
         </p>
       </div>

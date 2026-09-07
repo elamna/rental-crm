@@ -57,7 +57,7 @@ export function PeriodPicker({ value, onChange }: { value: PeriodValue; onChange
             key={p.key}
             onClick={() => onChange({ key: p.key })}
             className={cn(
-              "shrink-0 whitespace-nowrap rounded-[8px] px-3 py-1.5 text-[12.5px] font-medium transition",
+              "shrink-0 whitespace-nowrap rounded-[8px] px-3 py-1.5 text-[13.5px] font-medium transition",
               value.key === p.key
                 ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
@@ -72,7 +72,7 @@ export function PeriodPicker({ value, onChange }: { value: PeriodValue; onChange
         <button
           onClick={() => setOpen((v) => !v)}
           className={cn(
-            "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 py-2 text-[12.5px] font-medium transition",
+            "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 py-2 text-[13.5px] font-medium transition",
             isCustom
               ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
               : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]"
@@ -84,26 +84,26 @@ export function PeriodPicker({ value, onChange }: { value: PeriodValue; onChange
 
         {open && (
           <div className="absolute right-0 z-30 mt-2 w-[280px] rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-xl">
-            <span className="mb-2 block text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+            <span className="mb-2 block text-[13px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
               Свой период
             </span>
             <div className="space-y-2">
               <label className="block">
-                <span className="mb-1 block text-[11.5px] text-[var(--color-text-muted)]">С какого числа</span>
+                <span className="mb-1 block text-[12.5px] text-[var(--color-text-muted)]">С какого числа</span>
                 <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="crm-input" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[11.5px] text-[var(--color-text-muted)]">По какое число</span>
+                <span className="mb-1 block text-[12.5px] text-[var(--color-text-muted)]">По какое число</span>
                 <input type="date" value={to} min={from} max={today()} onChange={(e) => setTo(e.target.value)} className="crm-input" />
               </label>
             </div>
 
-            {invalid && <p className="mt-2 text-[11.5px] text-[#C0272D]">Начало периода позже конца</p>}
+            {invalid && <p className="mt-2 text-[12.5px] text-[#C0272D]">Начало периода позже конца</p>}
 
             <button
               onClick={apply}
               disabled={invalid}
-              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] py-2 text-[13px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] py-2 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
             >
               <Check className="h-3.5 w-3.5" /> Применить
             </button>

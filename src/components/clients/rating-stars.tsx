@@ -17,7 +17,7 @@ export function RatingStars({ rating, size = "sm" }: { rating?: number; size?: "
           className={cn(star, i <= rating ? "fill-[#F59E0B] text-[#F59E0B]" : "text-[var(--color-border)]")}
         />
       ))}
-      <span className={cn("ml-1 font-semibold", size === "lg" ? "text-[13.5px]" : "text-[12.5px]")}>{rating}</span>
+      <span className={cn("ml-1 font-semibold", size === "lg" ? "text-[14.5px]" : "text-[13.5px]")}>{rating}</span>
     </div>
   );
 }
@@ -26,7 +26,7 @@ export function RatingStars({ rating, size = "sm" }: { rating?: number; size?: "
 export function RatingBreakdown({ breakdown }: { breakdown?: ClientRatingBreakdown }) {
   if (!breakdown || breakdown.rentals === 0) {
     return (
-      <p className="text-[12px] text-[var(--color-text-muted)]">
+      <p className="text-[13px] text-[var(--color-text-muted)]">
         Рейтинг появится после первой аренды: он складывается сам из того, как часто клиент обращается,
         платит и возвращает инструмент в срок.
       </p>
@@ -51,7 +51,7 @@ export function RatingBreakdown({ breakdown }: { breakdown?: ClientRatingBreakdo
     <div className="space-y-2">
       {rows.map((r) => (
         <div key={r.label}>
-          <div className="flex items-center justify-between text-[12px]">
+          <div className="flex items-center justify-between text-[13px]">
             <span className="text-[var(--color-text-muted)]">{r.label}</span>
             <span className="text-[var(--color-text-muted)]">{r.hint}</span>
           </div>

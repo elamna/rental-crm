@@ -96,7 +96,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
 
   if (!rental) {
     if (!hydrated) {
-      return <div className="grid h-full place-items-center text-[13.5px] text-[var(--color-text-muted)]">Загрузка…</div>;
+      return <div className="grid h-full place-items-center text-[14.5px] text-[var(--color-text-muted)]">Загрузка…</div>;
     }
     return notFound();
   }
@@ -171,17 +171,17 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-display text-[18px] font-bold">Аренда №{rental.number}</h1>
-              <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold", st.bg, st.text)}>
+              <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold", st.bg, st.text)}>
                 <span className={cn("h-1.5 w-1.5 rounded-full", st.dot)} />
                 {statusLabels[rental.status]}
               </span>
               {rental.pausedAt && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF4E5] px-2.5 py-1 text-[11px] font-semibold text-[#B8620A]">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF4E5] px-2.5 py-1 text-[12px] font-semibold text-[#B8620A]">
                   <Pause className="h-3 w-3" /> На паузе
                 </span>
               )}
             </div>
-            <p className="text-[12.5px] text-[var(--color-text-muted)]">{rental.branch}</p>
+            <p className="text-[13.5px] text-[var(--color-text-muted)]">{rental.branch}</p>
           </div>
         </div>
 
@@ -212,7 +212,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
               onClick={() => togglePause(!!rental.pausedAt)}
               disabled={pauseBusy}
               className={cn(
-                "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] px-4 py-2 text-[13px] font-semibold transition disabled:opacity-50",
+                "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] px-4 py-2 text-[14px] font-semibold transition disabled:opacity-50",
                 rental.pausedAt
                   ? "bg-[#1C8A46] text-white hover:bg-[#167A3C]"
                   : "bg-[#FFF4E5] text-[#B8620A] hover:bg-[#FFE9CC]"
@@ -235,41 +235,41 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
         <div className="min-w-0 flex-1 space-y-4">
           {/* Client block */}
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-            <h2 className="mb-3 text-[14px] font-semibold">Клиент</h2>
+            <h2 className="mb-3 text-[15px] font-semibold">Клиент</h2>
             <div className="flex items-start gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[16px] font-bold text-[var(--color-primary)]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[17px] font-bold text-[var(--color-primary)]">
                 {rental.client.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
               </div>
               <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                 <div>
-                  <div className="text-[12px] text-[var(--color-text-muted)]">ФИО</div>
-                  <div className="text-[13.5px] font-semibold">{rental.client.name}</div>
+                  <div className="text-[13px] text-[var(--color-text-muted)]">ФИО</div>
+                  <div className="text-[14.5px] font-semibold">{rental.client.name}</div>
                 </div>
                 <div>
-                  <div className="text-[12px] text-[var(--color-text-muted)]">Телефон</div>
-                  <div className="flex items-center gap-1 text-[13.5px] font-medium">
+                  <div className="text-[13px] text-[var(--color-text-muted)]">Телефон</div>
+                  <div className="flex items-center gap-1 text-[14.5px] font-medium">
                     <Phone className="h-3.5 w-3.5 text-[var(--color-text-muted)]" /> {rental.client.phone}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[12px] text-[var(--color-text-muted)]">Email</div>
-                  <div className="flex items-center gap-1 text-[13.5px] font-medium">
+                  <div className="text-[13px] text-[var(--color-text-muted)]">Email</div>
+                  <div className="flex items-center gap-1 text-[14.5px] font-medium">
                     <Mail className="h-3.5 w-3.5 text-[var(--color-text-muted)]" /> {rental.client.email}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[12px] text-[var(--color-text-muted)]">Рейтинг клиента</div>
-                  <div className="flex items-center gap-1 text-[13.5px] font-medium">
+                  <div className="text-[13px] text-[var(--color-text-muted)]">Рейтинг клиента</div>
+                  <div className="flex items-center gap-1 text-[14.5px] font-medium">
                     <Star className="h-3.5 w-3.5 fill-[#F59E0B] text-[#F59E0B]" /> {rental.client.rating}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[12px] text-[var(--color-text-muted)]">История аренд</div>
-                  <div className="text-[13.5px] font-medium">{rental.client.totalRentals} аренд · {formatMoney(rental.client.totalSpent)}</div>
+                  <div className="text-[13px] text-[var(--color-text-muted)]">История аренд</div>
+                  <div className="text-[14.5px] font-medium">{rental.client.totalRentals} аренд · {formatMoney(rental.client.totalSpent)}</div>
                 </div>
                 <div>
-                  <div className="text-[12px] text-[var(--color-text-muted)]">Скидка</div>
-                  <div className="text-[13.5px] font-medium">
+                  <div className="text-[13px] text-[var(--color-text-muted)]">Скидка</div>
+                  <div className="text-[14.5px] font-medium">
                     {rental.client.discount ? `${rental.client.discount}%` : "—"}
                   </div>
                 </div>
@@ -280,11 +280,11 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
           {/* Rental fields */}
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[14px] font-semibold">Аренда</h2>
+              <h2 className="text-[15px] font-semibold">Аренда</h2>
               {!editingDates ? (
                 <button
                   onClick={startEditDates}
-                  className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
+                  className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
                 >
                   <Pencil className="h-3.5 w-3.5" /> Изменить даты
                 </button>
@@ -293,14 +293,14 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                   <button
                     onClick={() => setEditingDates(false)}
                     disabled={savingDates}
-                    className="rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[12px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+                    className="rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[13px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
                   >
                     Отмена
                   </button>
                   <button
                     onClick={saveDates}
                     disabled={savingDates}
-                    className="rounded-[8px] bg-[var(--color-primary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+                    className="rounded-[8px] bg-[var(--color-primary)] px-3 py-1.5 text-[13px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
                   >
                     {savingDates ? "Сохранение…" : "Сохранить"}
                   </button>
@@ -312,26 +312,26 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
               {editingDates ? (
                 <>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[var(--color-text-muted)]">Дата начала</span>
+                    <span className="mb-1 block text-[13px] text-[var(--color-text-muted)]">Дата начала</span>
                     <input
                       type="datetime-local"
                       value={startDraft}
                       onChange={(e) => setStartDraft(e.target.value)}
-                      className="w-full rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[13px] outline-none"
+                      className="w-full rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[14px] outline-none"
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-[12px] text-[var(--color-text-muted)]">Дата конца</span>
+                    <span className="mb-1 block text-[13px] text-[var(--color-text-muted)]">Дата конца</span>
                     <input
                       type="datetime-local"
                       value={endDraft}
                       onChange={(e) => setEndDraft(e.target.value)}
-                      className="w-full rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[13px] outline-none"
+                      className="w-full rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[14px] outline-none"
                     />
                   </label>
                   <div>
-                    <span className="mb-1 block text-[12px] text-[var(--color-text-muted)]">Продолжительность</span>
-                    <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13px]">
+                    <span className="mb-1 block text-[13px] text-[var(--color-text-muted)]">Продолжительность</span>
+                    <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[14px]">
                       {startDraft && endDraft
                         ? `${Math.max(1, Math.ceil((new Date(endDraft).getTime() - new Date(startDraft).getTime()) / 86400000))} сут.`
                         : "—"}
@@ -352,18 +352,18 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
 
             <div className="mt-4">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-[12px] text-[var(--color-text-muted)]">Комментарий</span>
+                <span className="text-[13px] text-[var(--color-text-muted)]">Комментарий</span>
                 {!editingComment ? (
                   <button
                     onClick={() => { setCommentDraft(rental.comment ?? ""); setEditingComment(true); }}
-                    className="text-[11.5px] font-medium text-[var(--color-primary)] hover:underline"
+                    className="text-[12.5px] font-medium text-[var(--color-primary)] hover:underline"
                   >
                     Изменить
                   </button>
                 ) : (
                   <div className="flex gap-2">
-                    <button onClick={() => setEditingComment(false)} className="text-[11.5px] text-[var(--color-text-muted)] hover:underline">Отмена</button>
-                    <button onClick={saveComment} disabled={savingComment} className="text-[11.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-50">
+                    <button onClick={() => setEditingComment(false)} className="text-[12.5px] text-[var(--color-text-muted)] hover:underline">Отмена</button>
+                    <button onClick={saveComment} disabled={savingComment} className="text-[12.5px] font-medium text-[var(--color-primary)] hover:underline disabled:opacity-50">
                       {savingComment ? "Сохранение…" : "Сохранить"}
                     </button>
                   </div>
@@ -375,11 +375,11 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                   value={commentDraft}
                   onChange={(e) => setCommentDraft(e.target.value)}
                   rows={3}
-                  className="w-full resize-none rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[13px] outline-none"
+                  className="w-full resize-none rounded-[10px] border border-[var(--color-primary)] px-3 py-2 text-[14px] outline-none"
                   placeholder="Комментарий к аренде…"
                 />
               ) : (
-                <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13px]">
+                <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[14px]">
                   {rental.comment || "Без комментария"}
                 </div>
               )}
@@ -395,7 +395,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                     key={t.label}
                     onClick={() => setActiveTab(t.label)}
                     className={cn(
-                      "rounded-[8px] px-3 py-1.5 text-[12.5px] font-semibold transition",
+                      "rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition",
                       activeTab === t.label ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
                     )}
                   >
@@ -407,50 +407,50 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
                 <input
                   placeholder="Найти товар…"
-                  className="w-52 rounded-[10px] border border-[var(--color-border)] py-1.5 pl-8 pr-3 text-[12.5px] outline-none focus:border-[var(--color-primary)]"
+                  className="w-52 rounded-[10px] border border-[var(--color-border)] py-1.5 pl-8 pr-3 text-[13.5px] outline-none focus:border-[var(--color-primary)]"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               {visibleLines.length === 0 && (
-                <p className="py-4 text-center text-[12.5px] text-[var(--color-text-muted)]">В этой категории пусто</p>
+                <p className="py-4 text-center text-[13.5px] text-[var(--color-text-muted)]">В этой категории пусто</p>
               )}
               {visibleLines.map((item) => (
                 <div key={item.id} className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-3 py-2.5">
                   <div className="flex items-center gap-2 min-w-0">
                     {item.flagged && <AlertTriangle className="h-4 w-4 shrink-0 text-[#EF4444]" />}
                     <div className="min-w-0">
-                      <div className="truncate text-[13px] font-medium">{item.name}</div>
-                      <div className="text-[11.5px] text-[var(--color-text-muted)]">{item.sku} · {item.qty} шт</div>
+                      <div className="truncate text-[14px] font-medium">{item.name}</div>
+                      <div className="text-[12.5px] text-[var(--color-text-muted)]">{item.sku} · {item.qty} шт</div>
                     </div>
                   </div>
-                  <div className="shrink-0 text-[13px] font-semibold">{formatMoney(item.pricePerDay)}{isOneTimeLine(item) ? " за шт." : " / сутки"}</div>
+                  <div className="shrink-0 text-[14px] font-semibold">{formatMoney(item.pricePerDay)}{isOneTimeLine(item) ? " за шт." : " / сутки"}</div>
                 </div>
               ))}
             </div>
 
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
                 <Plus className="h-3.5 w-3.5" /> Добавить товар
               </button>
-              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
                 <Plus className="h-3.5 w-3.5" /> Добавить комплект
               </button>
-              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[12.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
+              <button className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
                 <Plus className="h-3.5 w-3.5" /> Добавить услугу
               </button>
             </div>
 
             <div className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-3">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] text-[var(--color-text-muted)]">Аренда за сутки</span>
-                <span className="text-[16px] font-bold">{formatMoney(perDayTotal)}</span>
+                <span className="text-[14px] text-[var(--color-text-muted)]">Аренда за сутки</span>
+                <span className="text-[17px] font-bold">{formatMoney(perDayTotal)}</span>
               </div>
               {oneTimeTotal > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] text-[var(--color-text-muted)]">Разово (услуги и магазин)</span>
-                  <span className="text-[13.5px] font-semibold">{formatMoney(oneTimeTotal)}</span>
+                  <span className="text-[14px] text-[var(--color-text-muted)]">Разово (услуги и магазин)</span>
+                  <span className="text-[14.5px] font-semibold">{formatMoney(oneTimeTotal)}</span>
                 </div>
               )}
             </div>
@@ -467,8 +467,8 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="mb-1 text-[12px] text-[var(--color-text-muted)]">{label}</div>
-      <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13px] font-medium">{value}</div>
+      <div className="mb-1 text-[13px] text-[var(--color-text-muted)]">{label}</div>
+      <div className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[14px] font-medium">{value}</div>
     </div>
   );
 }
@@ -488,7 +488,7 @@ function MenuItem({
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] font-medium transition hover:bg-[var(--color-bg)]",
+        "flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[14px] font-medium transition hover:bg-[var(--color-bg)]",
         danger ? "text-[#C0272D]" : "text-[var(--color-text)]"
       )}
     >
