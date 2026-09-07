@@ -1,12 +1,17 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
-import { Client, ClientRatingBreakdown, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, ImportReport, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
   const err = new Error(message) as Error & { status: number };
   err.status = status;
   return err;
+}
+
+/** Только цифры: +7 707 370-51-31 и 87073705131 — один и тот же номер */
+function onlyDigits(value: string) {
+  return value.replace(/D/g, "");
 }
 
 function newId(prefix: string) {
@@ -36,6 +41,7 @@ interface ClientRow {
   bik: string | null;
   acquisition_channel: string | null;
   discount: number | null;
+  notes: string | null;
   rating: number | null;
   blacklisted: number;
   created_at: string;
@@ -145,6 +151,7 @@ function clientRowToDomain(row: ClientRow, rentalRows: RentalForRating[]): Clien
     bik: row.bik ?? undefined,
     acquisitionChannel: row.acquisition_channel ?? undefined,
     discount: row.discount ?? undefined,
+    notes: row.notes ?? undefined,
     // Рейтинг считается, а не хранится: колонка rating осталась от ручного
     // выставления и больше не используется
     rating,
@@ -193,8 +200,8 @@ export function createClient(input: Partial<Client>): Client {
   const id = newId("cl");
   const createdAt = new Date().toISOString();
   db.prepare(
-    `INSERT INTO clients (id, name, type, phone, email, photo_url, iin, birth_date, document_number, document_issued_by, document_issued_at, document_expires_at, bin, legal_address, company_director, bank_account, bank, bik, acquisition_channel, discount, rating, blacklisted, created_at)
-     VALUES (@id, @name, @type, @phone, @email, @photoUrl, @iin, @birthDate, @documentNumber, @documentIssuedBy, @documentIssuedAt, @documentExpiresAt, @bin, @legalAddress, @companyDirector, @bankAccount, @bank, @bik, @acquisitionChannel, @discount, @rating, @blacklisted, @createdAt)`
+    `INSERT INTO clients (id, name, type, phone, email, photo_url, iin, birth_date, document_number, document_issued_by, document_issued_at, document_expires_at, bin, legal_address, company_director, bank_account, bank, bik, acquisition_channel, discount, rating, notes, blacklisted, created_at)
+     VALUES (@id, @name, @type, @phone, @email, @photoUrl, @iin, @birthDate, @documentNumber, @documentIssuedBy, @documentIssuedAt, @documentExpiresAt, @bin, @legalAddress, @companyDirector, @bankAccount, @bank, @bik, @acquisitionChannel, @discount, @rating, @notes, @blacklisted, @createdAt)`
   ).run({
     id,
     name: input.name ?? "",
@@ -217,8 +224,10 @@ export function createClient(input: Partial<Client>): Client {
     acquisitionChannel: input.acquisitionChannel ?? null,
     discount: input.discount ?? null,
     rating: input.rating ?? null,
+    notes: input.notes ?? null,
     blacklisted: input.blacklisted ? 1 : 0,
-    createdAt,
+    // При импорте сохраняем дату из выгрузки, иначе вся база «заведена сегодня»
+    createdAt: input.createdAt ?? createdAt,
   });
   logActivity(`Добавлен клиент «${input.name}»`);
   return getClient(id)!;
@@ -231,7 +240,7 @@ export function updateClient(id: string, patch: Partial<Client>) {
     `UPDATE clients SET name=@name, type=@type, phone=@phone, email=@email, photo_url=@photo_url, iin=@iin, birth_date=@birth_date,
      document_number=@document_number, document_issued_by=@document_issued_by, document_issued_at=@document_issued_at, document_expires_at=@document_expires_at,
      bin=@bin, legal_address=@legal_address, company_director=@company_director, bank_account=@bank_account, bank=@bank, bik=@bik,
-     acquisition_channel=@acquisition_channel, discount=@discount, rating=@rating, blacklisted=@blacklisted WHERE id=@id`
+     acquisition_channel=@acquisition_channel, discount=@discount, rating=@rating, notes=@notes, blacklisted=@blacklisted WHERE id=@id`
   ).run({
     id,
     name: patch.name ?? existing.name,
@@ -254,6 +263,7 @@ export function updateClient(id: string, patch: Partial<Client>) {
     acquisition_channel: patch.acquisitionChannel ?? existing.acquisition_channel,
     discount: patch.discount ?? existing.discount,
     rating: patch.rating ?? existing.rating,
+    notes: patch.notes !== undefined ? patch.notes || null : existing.notes,
     blacklisted: patch.blacklisted !== undefined ? (patch.blacklisted ? 1 : 0) : existing.blacklisted,
   });
   return getClient(id);
@@ -316,22 +326,142 @@ export function deleteClients(ids: string[], options: { withRentals?: boolean } 
   return { deleted, deletedRentals, skipped };
 }
 
-export function importClients(rows: Partial<Client>[]): { added: number; skipped: number } {
-  const existingPhones = new Set((db.prepare(`SELECT phone FROM clients`).all() as { phone: string }[]).map((r) => r.phone.replace(/\D/g, "")));
+
+/**
+ * Переносит в уже заведённую карточку признаки из строки-дубля. Обновляем только
+ * то, что усиливает карточку: чёрный список, юрлицо, недостающие поля. Заполненное
+ * не затираем — первая строка обычно свежее.
+ */
+function mergeImportedClient(id: string, row: Partial<Client>) {
+  const existing = getClient(id);
+  if (!existing) return;
+
+  const patch: Partial<Client> = {};
+  if (row.blacklisted && !existing.blacklisted) patch.blacklisted = true;
+  if (row.type === "company" && existing.type !== "company") patch.type = "company";
+  if (row.notes && !existing.notes) patch.notes = row.notes;
+  if (row.email && !existing.email) patch.email = row.email;
+  if (row.acquisitionChannel && !existing.acquisitionChannel) patch.acquisitionChannel = row.acquisitionChannel;
+  if (row.iin && !existing.iin) patch.iin = row.iin;
+  if (row.bin && !existing.bin) patch.bin = row.bin;
+  if (row.phone && !existing.phone) patch.phone = row.phone;
+
+  if (Object.keys(patch).length > 0) updateClient(id, patch);
+}
+
+function countReason(reasons: Record<string, number>, reason: string) {
+  reasons[reason] = (reasons[reason] ?? 0) + 1;
+}
+
+/**
+ * Импорт клиентов из выгрузки. Ключ — телефон без форматирования: в старых базах
+ * один и тот же человек заведён по нескольку раз, и без этой проверки дубли
+ * расползлись бы по всей системе.
+ *
+ * У части записей телефона нет вовсе (в выгрузке там стоит один плюс). Такие тоже
+ * заводим — это живая история клиента, терять её нельзя, — но схлопываем по имени,
+ * иначе дубли старой базы переедут к нам как есть.
+ *
+ * Всё одной транзакцией: десять тысяч отдельных INSERT упираются в диск и идут минутами.
+ */
+export function importClients(rows: Partial<Client>[]): ImportReport {
+  // Ключ → id карточки. Телефон для тех, у кого он есть; имя — для остальных.
+  // Карта строится по всей базе: метка из файла должна доехать и до карточки,
+  // которая существовала до импорта
+  const byKey = new Map<string, string>();
+  for (const row of db.prepare(`SELECT id, name, phone FROM clients`).all() as {
+    id: string;
+    name: string;
+    phone: string;
+  }[]) {
+    const digits = onlyDigits(row.phone);
+    const key = digits || `name:${row.name.trim().toLowerCase()}`;
+    if (!byKey.has(key)) byKey.set(key, row.id);
+  }
+  const reasons: Record<string, number> = {};
   let added = 0;
   let skipped = 0;
-  for (const row of rows) {
-    const phone = (row.phone || "").toString().replace(/\D/g, "");
-    if (!row.name || !phone || existingPhones.has(phone)) {
-      skipped++;
-      continue;
+  let withoutPhone = 0;
+
+  const run = db.transaction(() => {
+    for (const row of rows) {
+      const name = (row.name ?? "").trim();
+      if (!name) {
+        skipped++;
+        countReason(reasons, "без имени");
+        continue;
+      }
+
+      const phone = onlyDigits((row.phone ?? "").toString());
+      const key = phone || `name:${name.toLowerCase()}`;
+
+      const existingId = byKey.get(key);
+      if (existingId) {
+        skipped++;
+        countReason(reasons, phone ? "телефон уже есть в базе" : "такой клиент без телефона уже есть");
+        // Строка-дубль могла принести то, чего не было в первой: чёрный список,
+        // тип «юр. лицо», пометку. Это не теряем, а переносим в карточку
+        mergeImportedClient(existingId, row);
+        continue;
+      }
+
+      if (!phone) withoutPhone++;
+      byKey.set(key, createClient({ ...row, name }).id);
+      added++;
     }
-    existingPhones.add(phone);
-    createClient(row);
-    added++;
-  }
+  });
+  run();
+
   if (added) logActivity(`Импортировано клиентов: ${added}`);
-  return { added, skipped };
+  if (withoutPhone) reasons["добавлено без телефона"] = withoutPhone;
+  return { added, skipped, reasons };
+}
+
+/**
+ * Импорт каталога. Строка выгрузки — это продукт с количеством единиц, поэтому
+ * заводим столько записей, сколько указано в «Количестве»: учёт в системе
+ * поштучный, у каждой единицы свой артикул и своя история.
+ */
+export function importInventoryItems(
+  rows: (Partial<InventoryItem> & { quantity?: number })[]
+): ImportReport & { units: number } {
+  const existingSkus = new Set(
+    (db.prepare(`SELECT sku FROM inventory_items WHERE sku IS NOT NULL`).all() as { sku: string }[]).map((r) =>
+      r.sku.trim().toLowerCase()
+    )
+  );
+  const reasons: Record<string, number> = {};
+  let added = 0;
+  let skipped = 0;
+  let units = 0;
+
+  const run = db.transaction(() => {
+    for (const row of rows) {
+      const name = (row.name ?? "").trim();
+      if (!name) {
+        skipped++;
+        countReason(reasons, "без названия");
+        continue;
+      }
+
+      // Артикул уникален: повторный импорт того же файла не должен плодить копии
+      const sku = (row.sku ?? "").trim();
+      if (sku && existingSkus.has(sku.toLowerCase())) {
+        skipped++;
+        countReason(reasons, "артикул уже есть в базе");
+        continue;
+      }
+      if (sku) existingSkus.add(sku.toLowerCase());
+
+      const quantity = Math.max(1, Math.floor(row.quantity ?? 1));
+      units += createInventoryItems({ ...row, name }, quantity).length;
+      added++;
+    }
+  });
+  run();
+
+  if (units) logActivity(`Импортировано позиций каталога: ${added} (единиц: ${units})`);
+  return { added, skipped, reasons, units };
 }
 
 // ---------- Inventory ----------
@@ -399,7 +529,8 @@ export function createInventoryItem(input: Partial<InventoryItem>): InventoryIte
     status: input.status ?? "available",
     branch: input.branch ?? null,
     notes: input.notes ?? null,
-    createdAt,
+    // Импорт приносит дату из выгрузки: без неё вся база выглядит заведённой сегодня
+    createdAt: input.createdAt ?? createdAt,
   });
   logActivity(`Добавлен инструмент «${input.name}» в каталог`);
   return getInventoryItem(id)!;
@@ -458,8 +589,9 @@ export function createInventoryItems(input: Partial<InventoryItem>, quantity: nu
   const created: InventoryItem[] = [];
   const count = Math.max(1, Math.floor(quantity || 1));
   for (let i = 0; i < count; i++) {
-    // Свой артикул на каждую единицу: заданный вручную подходит только одной из них
-    created.push(createInventoryItem({ ...input, sku: count === 1 ? input.sku : undefined }));
+    // Заданный артикул достаётся первой единице, остальным система присвоит свои:
+    // иначе при импорте номер из файла терялся и повторная загрузка плодила дубли
+    created.push(createInventoryItem({ ...input, sku: i === 0 ? input.sku : undefined }));
   }
   return created;
 }

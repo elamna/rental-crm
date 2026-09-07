@@ -75,6 +75,8 @@ export interface Client {
   // Дополнительно
   acquisitionChannel?: string;
   discount?: number;
+  /** Свободная пометка менеджера */
+  notes?: string;
   /** Звёзды 1–5. Считаются сами по истории аренд, вручную не выставляются */
   rating?: number;
   /** Из чего сложился рейтинг — показываем в подсказке, чтобы он не был магией */
@@ -103,6 +105,14 @@ export interface ClientRatingBreakdown {
   debt: number;
   /** Сколько раз возвращали с опозданием */
   lateReturns: number;
+}
+
+/** Отчёт об импорте: сколько легло, сколько пропущено и по каким причинам */
+export interface ImportReport {
+  added: number;
+  skipped: number;
+  /** Причина → сколько строк */
+  reasons: Record<string, number>;
 }
 
 export type RentalPeriod = "hourly" | "daily" | "weekly" | "monthly";

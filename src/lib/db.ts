@@ -335,6 +335,8 @@ ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0" });
 }
 
 ensureColumns("clients", {
+  // Свободная пометка: при импорте сюда попадают метки старой системы («Умер»)
+  notes: "TEXT",
   bin: "TEXT",
   legal_address: "TEXT",
   company_director: "TEXT",

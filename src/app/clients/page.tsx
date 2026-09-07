@@ -8,6 +8,7 @@ import { formatMoney, cn } from "@/lib/utils";
 import { exportClientsToCSV, exportClientsToExcel, parseClientsFile } from "@/lib/client-io";
 import { RatingStars } from "@/components/clients/rating-stars";
 import { SelectionBar, SelectBox, ConfirmDeleteModal } from "@/components/common/selection-bar";
+import { formatImportReport } from "@/lib/import-utils";
 import { useAuth } from "@/components/auth/auth-provider";
 import {
   Search,
@@ -34,6 +35,8 @@ export default function ClientsPage() {
   // Чекбоксы массового выбора показываем только администратору
   const { user: me } = useAuth();
   const canEdit = !!me?.isAdmin;
+  // Импорт базы — операция разовая и необратимая, её доверяем только владельцу
+  const canImport = !!me?.isOwner;
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
@@ -132,13 +135,15 @@ export default function ClientsPage() {
     e.target.value = "";
     if (!file) return;
     try {
+      setImportMsg(`Читаем файл…`);
       const rows = await parseClientsFile(file);
-      const { added, skipped } = await importClients(rows);
-      setImportMsg(`Импортировано: ${added}${skipped ? `, пропущено: ${skipped}` : ""}`);
-      setTimeout(() => setImportMsg(null), 4000);
-    } catch {
-      setImportMsg("Не удалось прочитать файл. Поддерживаются .csv, .xlsx, .xls");
-      setTimeout(() => setImportMsg(null), 4000);
+      setImportMsg(`Загружаем ${rows.length} строк…`);
+      const report = await importClients(rows);
+      setImportMsg(formatImportReport("Клиенты", report));
+      setTimeout(() => setImportMsg(null), 12000);
+    } catch (err) {
+      setImportMsg(err instanceof Error ? err.message : "Не удалось прочитать файл. Поддерживаются .csv, .xlsx, .xls");
+      setTimeout(() => setImportMsg(null), 8000);
     }
   }
 
@@ -202,15 +207,17 @@ export default function ClientsPage() {
                 >
                   <Plus className="h-3.5 w-3.5" /> Добавить клиента
                 </Link>
-                <button
-                  onClick={() => {
-                    fileInputRef.current?.click();
-                    setAddMenuOpen(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[13px] font-medium hover:bg-[var(--color-bg)]"
-                >
-                  <Upload className="h-3.5 w-3.5" /> Импорт клиентов
-                </button>
+                {canImport && (
+                  <button
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                      setAddMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[13px] font-medium hover:bg-[var(--color-bg)]"
+                  >
+                    <Upload className="h-3.5 w-3.5" /> Импорт клиентов
+                  </button>
+                )}
               </div>
             )}
           </div>

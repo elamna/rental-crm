@@ -1,7 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { Client, InventoryCheck, InventoryItem, Kit, Rental, Service, WorkshopTicket } from "./types";
+import { Client, ImportReport, InventoryCheck, InventoryItem, Kit, Rental, Service, WorkshopTicket } from "./types";
+
 
 interface ActivityEntry {
   id: string;
@@ -34,7 +35,9 @@ interface AppState {
     ids: string[],
     withRentals?: boolean
   ) => Promise<{ deleted: number; deletedRentals: number; skipped: { id: string; name: string; rentals: number }[] }>;
-  importClients: (rows: Partial<Client>[]) => Promise<{ added: number; skipped: number }>;
+  importClients: (rows: Partial<Client>[]) => Promise<ImportReport>;
+  /** Импорт каталога из выгрузки: строка файла разворачивается в несколько единиц */
+  importInventoryItems: (rows: (Partial<InventoryItem> & { quantity?: number })[]) => Promise<ImportReport & { units: number }>;
 
   addInventoryItem: (input: Partial<InventoryItem> & { quantity?: number }) => Promise<InventoryItem>;
   updateInventoryItem: (id: string, patch: Partial<InventoryItem>) => Promise<void>;
@@ -149,12 +152,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   importClients: async (rows) => {
-    const result = await api<{ added: number; skipped: number }>("/api/clients/import", {
+    const result = await api<ImportReport>("/api/clients/import", {
       method: "POST",
       body: JSON.stringify(rows),
     });
     const clients = await api<Client[]>("/api/clients");
     set({ clients });
+    get().refreshActivity();
+    return result;
+  },
+
+  importInventoryItems: async (rows) => {
+    const result = await api<ImportReport & { units: number }>("/api/inventory/import", {
+      method: "POST",
+      body: JSON.stringify(rows),
+    });
+    const inventory = await api<InventoryItem[]>("/api/inventory");
+    set({ inventory });
     get().refreshActivity();
     return result;
   },

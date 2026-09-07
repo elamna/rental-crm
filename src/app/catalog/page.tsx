@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { useCan } from "@/components/auth/auth-provider";
+import { useCan, useAuth } from "@/components/auth/auth-provider";
+import { useAppStore } from "@/lib/store";
+import { parseInventoryFile } from "@/lib/inventory-io";
+import { formatImportReport } from "@/lib/import-utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { cn } from "@/lib/utils";
-import { Package, PackageX, Plus } from "lucide-react";
+import { Package, PackageX, Plus, Upload } from "lucide-react";
 import { ProductsTab } from "@/components/catalog/products-tab";
 import { KitsTab } from "@/components/catalog/kits-tab";
 import { ServicesTab } from "@/components/catalog/services-tab";
@@ -25,6 +28,31 @@ type TabKey = (typeof tabs)[number]["key"];
 export default function CatalogPage() {
   const canEdit = useCan("catalog.edit");
   const isMobile = useIsMobile();
+
+  // Импорт каталога — разовая необратимая операция, её доверяем только владельцу
+  const { user: me } = useAuth();
+  const canImport = !!me?.isOwner;
+  const importInventoryItems = useAppStore((s) => s.importInventoryItems);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      setImportMsg("Читаем файл…");
+      const rows = await parseInventoryFile(file);
+      const units = rows.reduce((sum, r) => sum + Math.max(1, r.quantity ?? 1), 0);
+      setImportMsg(`Загружаем ${rows.length} позиций (${units} единиц)…`);
+      const report = await importInventoryItems(rows);
+      setImportMsg(formatImportReport("Каталог", report));
+      setTimeout(() => setImportMsg(null), 12000);
+    } catch (err) {
+      setImportMsg(err instanceof Error ? err.message : "Не удалось прочитать файл. Поддерживаются .xlsx, .xls, .csv");
+      setTimeout(() => setImportMsg(null), 8000);
+    }
+  }
   const [tab, setTab] = useState<TabKey>("products");
   const [showInactive, setShowInactive] = useState(false);
   const [addKit, setAddKit] = useState(false);
@@ -71,6 +99,14 @@ export default function CatalogPage() {
               </button>
             )}
 
+            {canImport && tab === "products" && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              >
+                <Upload className="h-3.5 w-3.5" /> Импорт
+              </button>
+            )}
             {canEdit && tab === "products" && (
               <Link
                 href="/catalog/new"
@@ -97,7 +133,14 @@ export default function CatalogPage() {
             )}
           </div>
         </div>
+        <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImportFile} />
       </div>
+
+      {importMsg && (
+        <div className="mx-4 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[13px] font-medium text-[var(--color-primary)] sm:mx-6">
+          {importMsg}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
         {tab === "products" && <ProductsTab showInactive={showInactive} />}
