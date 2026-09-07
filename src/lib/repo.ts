@@ -1542,8 +1542,12 @@ interface ShortageRow {
   created_at: string;
   created_by: string | null;
   rental_number?: string | null;
+  client_id?: string | null;
   client_name?: string | null;
   client_phone?: string | null;
+  client_email?: string | null;
+  client_type?: string | null;
+  client_blacklisted?: number | null;
 }
 
 function shortageRowToDomain(r: ShortageRow): ReturnShortage {
@@ -1559,8 +1563,12 @@ function shortageRowToDomain(r: ShortageRow): ReturnShortage {
     createdAt: r.created_at,
     createdBy: r.created_by ?? undefined,
     rentalNumber: r.rental_number ?? undefined,
+    clientId: r.client_id ?? undefined,
     clientName: r.client_name ?? undefined,
     clientPhone: r.client_phone ?? undefined,
+    clientEmail: r.client_email ?? undefined,
+    clientType: (r.client_type as ReturnShortage["clientType"]) ?? undefined,
+    clientBlacklisted: r.client_blacklisted === 1,
   };
 }
 
@@ -1608,7 +1616,9 @@ export function listShortages(status: "open" | "resolved" | "all" = "open") {
 
   const rows = db
     .prepare(
-      `SELECT s.*, r.number AS rental_number, c.name AS client_name, c.phone AS client_phone
+      `SELECT s.*, r.number AS rental_number,
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone,
+              c.email AS client_email, c.type AS client_type, c.blacklisted AS client_blacklisted
        FROM return_shortages s
        LEFT JOIN rentals r ON r.id = s.rental_id
        LEFT JOIN clients c ON c.id = r.client_id

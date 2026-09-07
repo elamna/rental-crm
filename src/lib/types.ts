@@ -151,8 +151,12 @@ export interface ReturnShortage {
   createdBy?: string;
   /** Заполняется в списке: по какой аренде и кто клиент */
   rentalNumber?: string;
+  clientId?: string;
   clientName?: string;
   clientPhone?: string;
+  clientEmail?: string;
+  clientType?: ClientType;
+  clientBlacklisted?: boolean;
 }
 
 export type RentalPeriod = "hourly" | "daily" | "weekly" | "monthly";
