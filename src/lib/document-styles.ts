@@ -12,7 +12,7 @@ export const DOCUMENT_CSS = `
 .doc-render {
   font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: #000;
 }
 .doc-render > *:first-child { margin-top: 0; }
@@ -47,7 +47,7 @@ export const DOCUMENT_CSS = `
 
 /** Дополнительные правила, нужные только окну печати */
 export const DOCUMENT_PRINT_CSS = `
-@page { size: A4; margin: 12mm; }
+@page { size: A4; margin: 10mm; }
 html, body { margin: 0; padding: 0; background: #fff; }
 
 /* Без этого браузер выбрасывает заливку ячеек и цветной текст при печати */

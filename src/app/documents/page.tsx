@@ -18,7 +18,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify, List, ListOrdered,
   Table as TableIcon, Upload, FileText, ChevronRight, Search, Printer, LayoutTemplate,
 } from "lucide-react";
-import { printDocument } from "@/lib/print-document";
+import { printDocument, measurePages, PAGE_MARGIN_MM, PRINTABLE_HEIGHT_PX } from "@/lib/print-document";
 import { DocumentsRegistry } from "@/components/documents/documents-registry";
 import { useCan } from "@/components/auth/auth-provider";
 
@@ -373,6 +373,10 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
   const [openGroups, setOpenGroups] = useState<string[]>([VARIABLES[0].group, VARIABLES[1].group]);
   const [varQuery, setVarQuery] = useState("");
   const [showBlueprints, setShowBlueprints] = useState(false);
+  // Сколько листов займёт шаблон на печати. Без этого «одна страница» в редакторе
+  // ничего не значила: лист тянулся вниз, а на бумаге подписи уезжали на второй
+  const [pages, setPages] = useState(1);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const [editorReady, setEditorReady] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef(initial.body);
@@ -394,10 +398,19 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
     editorProps: {
       attributes: {
         class: "outline-none min-h-[700px]",
-        style: "font-family: Arial, sans-serif; font-size: 13px; line-height: 1.5; min-height: 240mm;",
+        style: "font-family: Arial, sans-serif; font-size: 13px; line-height: 1.5;",
       },
     },
   });
+
+  // Пересчитываем разбивку на страницы после каждой правки
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => setPages(measurePages(sheetRef.current?.querySelector(".ProseMirror") ?? null));
+    update();
+    editor.on("update", update);
+    return () => { editor.off("update", update); };
+  }, [editor]);
 
   function insertVariable(key: string) {
     editor?.chain().focus().insertContent(key).run();
@@ -533,11 +546,38 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
         {/* Редактор */}
         <div className="flex-1 overflow-y-auto bg-[#EBEBEB]">
           {/* Лист ровно A4 с теми же полями, что при печати: что видно, то и напечатается */}
-          <div
-            className="mx-auto my-4 bg-[var(--color-surface)] p-[12mm] shadow-[0_2px_12px_rgba(0,0,0,0.12)] sm:my-8"
-            style={{ width: "210mm", minHeight: "297mm" }}
-          >
-            <EditorContent editor={editor} />
+          <div className="mx-auto my-4 w-fit sm:my-8">
+            <div className="mb-2 flex items-center justify-between px-1 text-[13px]">
+              <span className="text-[var(--color-text-muted)]">A4 · поля {PAGE_MARGIN_MM} мм</span>
+              <span
+                className={cn(
+                  "font-semibold",
+                  pages > 1 ? "text-[#B8620A]" : "text-[var(--color-text-muted)]"
+                )}
+              >
+                {pages === 1 ? "Помещается на один лист" : `Займёт листов: ${pages}`}
+              </span>
+            </div>
+
+            <div
+              ref={sheetRef}
+              className="relative bg-[var(--color-surface)] shadow-[0_2px_12px_rgba(0,0,0,0.12)]"
+              style={{ width: "210mm", minHeight: "297mm", padding: `${PAGE_MARGIN_MM}mm` }}
+            >
+              {/* Линии разрыва: где заканчивается лист на печати */}
+              {Array.from({ length: pages - 1 }, (_, i) => (
+                <div
+                  key={i}
+                  className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-[#C0272D]/40"
+                  style={{ top: `calc(${PAGE_MARGIN_MM}mm + ${(i + 1) * PRINTABLE_HEIGHT_PX}px)` }}
+                >
+                  <span className="absolute right-1 -top-5 rounded-[6px] bg-[#FDECEC] px-1.5 py-0.5 text-[11px] font-semibold text-[#C0272D]">
+                    конец листа {i + 1}
+                  </span>
+                </div>
+              ))}
+              <EditorContent editor={editor} />
+            </div>
           </div>
         </div>
 

@@ -2,6 +2,12 @@
 
 import { buildPrintDocument } from "./document-styles";
 
+/** Поля печатной страницы в миллиметрах — те же, что в `@page` и в редакторе */
+export const PAGE_MARGIN_MM = 10;
+/** Полезная область A4 при этих полях, в пикселях при 96 dpi */
+export const PRINTABLE_WIDTH_PX = ((210 - PAGE_MARGIN_MM * 2) / 25.4) * 96;
+export const PRINTABLE_HEIGHT_PX = ((297 - PAGE_MARGIN_MM * 2) / 25.4) * 96;
+
 /**
  * Печать документа без открытия новой вкладки.
  *
@@ -10,9 +16,7 @@ import { buildPrintDocument } from "./document-styles";
  * могло вообще не открыться из-за блокировщика. Скрытый iframe печатает из той
  * же вкладки — пользователь остаётся там, где был.
  *
- * Ширину подгоняем сами: если документ шире печатного поля A4, ужимаем его
- * ровно настолько, чтобы он влез. Иначе браузер обрезал правый край таблицы,
- * и шаблон «не умещался», сколько бы его ни правили.
+ * Перед печатью документ подгоняется под лист: и по ширине, и по высоте.
  */
 export function printDocument(body: string, title = "Документ") {
   const frame = document.createElement("iframe");
@@ -42,27 +46,59 @@ export function printDocument(body: string, title = "Документ") {
     }
   };
 
-  // Пока не отрисовались шрифты и таблицы, мерить ширину бессмысленно
+  // Пока не отрисовались шрифты и таблицы, мерить размеры бессмысленно
   if (doc.readyState === "complete") setTimeout(run, 120);
   else frame.onload = () => setTimeout(run, 120);
 }
 
-/** Печатное поле A4 при полях 12 мм по бокам — в пикселях при 96 dpi */
-const PRINTABLE_WIDTH_PX = ((210 - 24) / 25.4) * 96;
+/**
+ * Насколько документ можно ужать, чтобы он влез в одну страницу. Ниже 72 %
+ * не опускаемся: дальше текст мельчает так, что подписи под ним не разобрать —
+ * лучше честный перенос на второй лист.
+ */
+const MIN_SCALE = 0.72;
 
 /**
- * Если документ шире печатного поля — ужимаем его. Масштаб ниже 65 % не
- * опускаем: дальше текст перестаёт читаться, и лучше честный перенос.
+ * Во сколько раз ужать документ, чтобы он лёг на лист. Вынесено отдельно от DOM,
+ * чтобы расчёт можно было проверить без браузера.
  */
-function fitToPage(doc: Document) {
+export function computeFitScale(contentWidth: number, contentHeight: number) {
+  const widthScale = contentWidth > PRINTABLE_WIDTH_PX + 1 ? PRINTABLE_WIDTH_PX / contentWidth : 1;
+
+  // Высоту меряем уже с учётом сжатия по ширине: оно само по себе укорачивает документ
+  const heightAfterWidthFit = contentHeight * widthScale;
+  const overflowPages = heightAfterWidthFit / PRINTABLE_HEIGHT_PX;
+
+  // Ужимаем по высоте только «почти помещающийся» документ. Если он честно на две
+  // страницы и больше — оставляем перенос, иначе текст станет нечитаемым
+  const heightScale =
+    overflowPages > 1 && overflowPages <= 1 / MIN_SCALE ? PRINTABLE_HEIGHT_PX / heightAfterWidthFit : 1;
+
+  return Math.max(MIN_SCALE, widthScale * heightScale);
+}
+
+/**
+ * Подгонка под лист: по ширине — чтобы не срезало правый край таблицы, по высоте —
+ * чтобы акт, не помещающийся «на пару строк», не уезжал на вторую страницу.
+ */
+export function fitToPage(doc: Document) {
   const root = doc.querySelector<HTMLElement>(".doc-render");
   if (!root) return;
 
   const contentWidth = Math.max(root.scrollWidth, ...[...root.querySelectorAll("table")].map((t) => t.scrollWidth));
-  if (contentWidth <= PRINTABLE_WIDTH_PX + 1) return;
+  const scale = computeFitScale(contentWidth, root.scrollHeight);
+  if (scale >= 0.999) return;
 
-  const scale = Math.max(0.65, PRINTABLE_WIDTH_PX / contentWidth);
   root.style.transform = `scale(${scale})`;
   root.style.transformOrigin = "top left";
   root.style.width = `${100 / scale}%`;
+}
+
+/**
+ * Сколько печатных страниц займёт документ. Нужно редактору шаблона: он рисует
+ * границы листов, чтобы «одна страница» на экране означала одну и на бумаге.
+ */
+export function measurePages(element: HTMLElement | null): number {
+  if (!element) return 1;
+  return Math.max(1, Math.ceil(element.scrollHeight / PRINTABLE_HEIGHT_PX));
 }
