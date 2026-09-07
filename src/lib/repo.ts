@@ -1,7 +1,7 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
-import { Client, ClientRatingBreakdown, ImportReport, PaymentMethod, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, ImportReport, PaymentMethod, ReturnShortage, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -1526,6 +1526,133 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
   if (itemsCreated) reasons["заведено единиц каталога"] = itemsCreated;
   if (itemsCreated) logActivity(`Импорт аренд: заведено единиц каталога — ${itemsCreated}`);
   return { added, skipped, reasons, clientsCreated, itemsLinked, itemsCreated, itemsUnmatched };
+}
+
+// ---------- Некомплект при возврате ----------
+
+interface ShortageRow {
+  id: string;
+  rental_id: string;
+  inventory_item_id: string | null;
+  item_name: string;
+  note: string | null;
+  resolved: number;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  created_by: string | null;
+  rental_number?: string | null;
+  client_name?: string | null;
+  client_phone?: string | null;
+}
+
+function shortageRowToDomain(r: ShortageRow): ReturnShortage {
+  return {
+    id: r.id,
+    rentalId: r.rental_id,
+    inventoryItemId: r.inventory_item_id ?? undefined,
+    itemName: r.item_name,
+    note: r.note ?? undefined,
+    resolved: r.resolved === 1,
+    resolvedAt: r.resolved_at ?? undefined,
+    resolvedBy: r.resolved_by ?? undefined,
+    createdAt: r.created_at,
+    createdBy: r.created_by ?? undefined,
+    rentalNumber: r.rental_number ?? undefined,
+    clientName: r.client_name ?? undefined,
+    clientPhone: r.client_phone ?? undefined,
+  };
+}
+
+/**
+ * Отметка о неполном комплекте. Заводится при возврате: вещь приняли, но чего-то
+ * в ней не хватает. Аренду не держим — инструмент уже у нас, — зато вопрос
+ * остаётся видимым, пока деталь не вернут или не оплатят.
+ */
+export function createShortage(input: {
+  rentalId: string;
+  inventoryItemId?: string;
+  itemName: string;
+  note?: string;
+  actorName?: string;
+}): ReturnShortage {
+  const id = newId("shg");
+  const now = new Date().toISOString();
+
+  db.prepare(
+    `INSERT INTO return_shortages (id, rental_id, inventory_item_id, item_name, note, resolved, created_at, created_by)
+     VALUES (?, ?, ?, ?, ?, 0, ?, ?)`
+  ).run(id, input.rentalId, input.inventoryItemId ?? null, input.itemName, input.note ?? null, now, input.actorName ?? null);
+
+  logRentalEvent({
+    rentalId: input.rentalId,
+    type: "status",
+    title: "Принял с некомплектом",
+    details: input.note ? `${input.itemName}: ${input.note}` : input.itemName,
+    actorName: input.actorName,
+  });
+  logActivity(`Некомплект при возврате: ${input.itemName}`);
+
+  return getShortage(id)!;
+}
+
+export function getShortage(id: string): ReturnShortage | null {
+  const row = db.prepare(`SELECT * FROM return_shortages WHERE id = ?`).get(id) as ShortageRow | undefined;
+  return row ? shortageRowToDomain(row) : null;
+}
+
+/** Список некомплектов с клиентом и номером аренды — для плашки в разделе «Аренды» */
+export function listShortages(status: "open" | "resolved" | "all" = "open") {
+  const where =
+    status === "open" ? "WHERE s.resolved = 0" : status === "resolved" ? "WHERE s.resolved = 1" : "";
+
+  const rows = db
+    .prepare(
+      `SELECT s.*, r.number AS rental_number, c.name AS client_name, c.phone AS client_phone
+       FROM return_shortages s
+       LEFT JOIN rentals r ON r.id = s.rental_id
+       LEFT JOIN clients c ON c.id = r.client_id
+       ${where}
+       ORDER BY s.created_at DESC LIMIT 300`
+    )
+    .all() as ShortageRow[];
+
+  const counts = db.prepare(`SELECT resolved, COUNT(*) AS c FROM return_shortages GROUP BY resolved`).all() as {
+    resolved: number;
+    c: number;
+  }[];
+
+  return {
+    shortages: rows.map(shortageRowToDomain),
+    counts: {
+      open: counts.find((r) => r.resolved === 0)?.c ?? 0,
+      resolved: counts.find((r) => r.resolved === 1)?.c ?? 0,
+    },
+  };
+}
+
+/** Вопрос закрыт: деталь вернули или клиент за неё заплатил */
+export function resolveShortage(id: string, resolved: boolean, actorName?: string) {
+  const existing = getShortage(id);
+  if (!existing) return null;
+
+  const now = new Date().toISOString();
+  db.prepare(`UPDATE return_shortages SET resolved = ?, resolved_at = ?, resolved_by = ? WHERE id = ?`).run(
+    resolved ? 1 : 0,
+    resolved ? now : null,
+    resolved ? actorName ?? null : null,
+    id
+  );
+
+  logRentalEvent({
+    rentalId: existing.rentalId,
+    type: "status",
+    title: resolved ? "Некомплект закрыт" : "Некомплект снова открыт",
+    details: existing.itemName,
+    actorName,
+  });
+
+  return getShortage(id);
 }
 
 // ---------- Платежи по арендам ----------

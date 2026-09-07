@@ -178,6 +178,19 @@ CREATE TABLE IF NOT EXISTS services (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS return_shortages (
+  id TEXT PRIMARY KEY,
+  rental_id TEXT NOT NULL,
+  inventory_item_id TEXT,
+  item_name TEXT NOT NULL,
+  note TEXT,
+  resolved INTEGER NOT NULL DEFAULT 0,
+  resolved_at TEXT,
+  resolved_by TEXT,
+  created_at TEXT NOT NULL,
+  created_by TEXT
+);
+
 CREATE TABLE IF NOT EXISTS rental_payments (
   id TEXT PRIMARY KEY,
   rental_id TEXT NOT NULL,
@@ -215,6 +228,8 @@ CREATE INDEX IF NOT EXISTS idx_shop_products_name ON shop_products(name);
 CREATE INDEX IF NOT EXISTS idx_rental_payments_rental ON rental_payments(rental_id);
 CREATE INDEX IF NOT EXISTS idx_rental_payments_created ON rental_payments(created_at);
 CREATE INDEX IF NOT EXISTS idx_rental_documents_created ON rental_documents(created_at);
+CREATE INDEX IF NOT EXISTS idx_return_shortages_resolved ON return_shortages(resolved);
+CREATE INDEX IF NOT EXISTS idx_return_shortages_rental ON return_shortages(rental_id);
 
 CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,

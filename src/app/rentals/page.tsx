@@ -9,6 +9,7 @@ import { cn, isDebtorRental } from "@/lib/utils";
 import { CheckSquare, Download, Upload, Video, X } from "lucide-react";
 import Link from "next/link";
 import { SelectionBar, ConfirmDeleteModal } from "@/components/common/selection-bar";
+import { ShortagesButton } from "@/components/rentals/shortages-panel";
 import { parseRentalsFile } from "@/lib/rental-io";
 import { formatImportReport } from "@/lib/import-utils";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -26,7 +27,7 @@ export default function RentalsPage() {
 
   // Режим выбора: включается кнопкой, чтобы обычный клик по карточке по-прежнему открывал аренду
   // Массовое удаление — только администратору
-  const { user: me } = useAuth();
+  const { user: me, can } = useAuth();
   const canEdit = !!me?.isAdmin;
   const deleteRentals = useAppStore((s) => s.deleteRentals);
   const [selecting, setSelecting] = useState(false);
@@ -122,6 +123,9 @@ export default function RentalsPage() {
           <p className="text-[14px] text-[var(--color-text-muted)]">Все текущие и прошедшие аренды инструмента</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Неполные возвраты — на виду: о них забывают, а вспоминают,
+              когда инструмент уже уехал к следующему клиенту */}
+          <ShortagesButton canEdit={can("rentals.edit")} />
           <button className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
             <Video className="h-3.5 w-3.5" /> Видео
           </button>

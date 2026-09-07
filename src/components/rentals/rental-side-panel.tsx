@@ -264,9 +264,28 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   type ItemCondition = "ok" | "maintenance" | "service" | "repair";
   // Проданные товары магазина в возврат не попадают: они ушли насовсем
   const returnableItems = rental.items.filter((i) => i.inventoryItemId && i.category !== "shop");
-  const [returnItems, setReturnItems] = useState<Map<string, { selected: boolean; condition: ItemCondition }>>(
-    () => new Map(returnableItems.map((i) => [i.inventoryItemId!, { selected: false, condition: "ok" }]))
+  // «complete» — вернули всё, что выдавали. Пылесос без трубки принимаем,
+  // но недостачу записываем: иначе о ней вспоминают, только когда инструмент
+  // уже уехал к следующему клиенту
+  type ReturnState = { selected: boolean; condition: ItemCondition; complete: boolean; missing: string };
+  const [returnItems, setReturnItems] = useState<Map<string, ReturnState>>(
+    () =>
+      new Map(
+        returnableItems.map((i) => [
+          i.inventoryItemId!,
+          { selected: false, condition: "ok" as ItemCondition, complete: true, missing: "" },
+        ])
+      )
   );
+
+  function patchReturnItem(id: string, patch: Partial<ReturnState>) {
+    setReturnItems((prev) => {
+      const next = new Map(prev);
+      const cur = next.get(id);
+      if (cur) next.set(id, { ...cur, ...patch });
+      return next;
+    });
+  }
 
   function toggleReturnItem(id: string) {
     setReturnItems((prev) => {
@@ -295,7 +314,22 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
     try {
       for (const item of toReturn) {
         if (!item.inventoryItemId) continue;
-        const { condition } = returnItems.get(item.inventoryItemId)!;
+        const { condition, complete, missing } = returnItems.get(item.inventoryItemId)!;
+
+        // Некомплект фиксируем до смены статуса: если запрос упадёт, инструмент
+        // хотя бы не окажется свободным с потерянной деталью
+        if (!complete) {
+          await fetch("/api/shortages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              rentalId: rental.id,
+              inventoryItemId: item.inventoryItemId,
+              itemName: item.name,
+              note: missing.trim() || undefined,
+            }),
+          });
+        }
         await updateInventoryItem(item.inventoryItemId, {
           // Обслуживание и диагностика для каталога — одно и то же: инструмент
           // временно не выдаётся. Разница видна в заявке мастерской
@@ -901,6 +935,45 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                             </button>
                           ))}
                         </div>
+
+                        {/* Комплектность: пылесос вернули, а трубку «потеряли» */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            patchReturnItem(item.inventoryItemId!, { complete: !state.complete });
+                          }}
+                          className="mt-3 flex w-full items-start gap-2.5 rounded-[8px] border border-[var(--color-border)] px-2.5 py-2 text-left transition hover:bg-[var(--color-bg)]"
+                        >
+                          <span
+                            className={cn(
+                              "mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border-2 transition",
+                              state.complete
+                                ? "border-[#1C8A46] bg-[#1C8A46]"
+                                : "border-[#C0272D] bg-[var(--color-surface)]"
+                            )}
+                          >
+                            {state.complete && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+                          </span>
+                          <span>
+                            <span className="block text-[13.5px] font-semibold">Комплект полный</span>
+                            <span className="block text-[12px] text-[var(--color-text-muted)]">
+                              {state.complete
+                                ? "Вернули всё, что выдавали"
+                                : "Чего-то не хватает — попадёт в «Некомплект» в разделе «Аренды»"}
+                            </span>
+                          </span>
+                        </button>
+
+                        {!state.complete && (
+                          <input
+                            autoFocus
+                            value={state.missing}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => patchReturnItem(item.inventoryItemId!, { missing: e.target.value })}
+                            placeholder="Чего не хватает: трубка, насадка, кейс…"
+                            className="crm-input mt-2 text-[13.5px]"
+                          />
+                        )}
                       </div>
                     )}
                   </div>
@@ -919,6 +992,11 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                     {selectedCount > 0 && selectedCount < totalCount && (
                       <p className="mb-2 text-center text-[13px] text-[#B8620A]">
                         ⚠ Частичный возврат — аренда останется активной
+                      </p>
+                    )}
+                    {Array.from(returnItems.values()).some((s) => s.selected && !s.complete) && (
+                      <p className="mb-2 rounded-[8px] bg-[#FDECEC] px-3 py-2 text-center text-[13px] font-medium text-[#C0272D]">
+                        Принимаем с некомплектом — запись появится в «Некомплекте» на странице аренд
                       </p>
                     )}
                     {debt > 0 && allSelected && (

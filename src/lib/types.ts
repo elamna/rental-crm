@@ -132,6 +132,29 @@ export interface RentalPayment {
   createdAt: string;
 }
 
+/**
+ * Некомплект при возврате: пылесос вернули, а трубку «потеряли». Аренду это
+ * не блокирует — вещь уже у нас, — но вопрос остаётся открытым, пока деталь
+ * не вернут или не оплатят.
+ */
+export interface ReturnShortage {
+  id: string;
+  rentalId: string;
+  inventoryItemId?: string;
+  itemName: string;
+  /** Чего именно не хватает — со слов приёмщика */
+  note?: string;
+  resolved: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  createdAt: string;
+  createdBy?: string;
+  /** Заполняется в списке: по какой аренде и кто клиент */
+  rentalNumber?: string;
+  clientName?: string;
+  clientPhone?: string;
+}
+
 export type RentalPeriod = "hourly" | "daily" | "weekly" | "monthly";
 
 export interface Rental {
