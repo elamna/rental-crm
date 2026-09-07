@@ -852,7 +852,7 @@ export function listShopProducts(search?: string): ShopProduct[] {
     ? (db
         .prepare(
           `SELECT * FROM shop_products
-           WHERE LOWER(name) LIKE @q OR LOWER(COALESCE(sku, '')) LIKE @q OR LOWER(COALESCE(serial_number, '')) LIKE @q
+           WHERE rulower(name) LIKE @q OR rulower(COALESCE(sku, '')) LIKE @q OR rulower(COALESCE(serial_number, '')) LIKE @q
            ORDER BY name`
         )
         .all({ q: `%${search.trim().toLowerCase()}%` }) as ShopProductRow[])
@@ -872,13 +872,13 @@ export function getShopProduct(id: string): ShopProduct | null {
 function assertShopNumbersFree(sku: string, serial: string | undefined, exceptId?: string) {
   if (sku) {
     const clash = db
-      .prepare(`SELECT id FROM shop_products WHERE LOWER(sku) = LOWER(?) AND id != ?`)
+      .prepare(`SELECT id FROM shop_products WHERE rulower(sku) = rulower(?) AND id != ?`)
       .get(sku, exceptId ?? "") as { id: string } | undefined;
     if (clash) throw httpError(409, `Инвентарный номер ${sku} уже занят другим товаром магазина`);
   }
   if (serial) {
     const clash = db
-      .prepare(`SELECT id FROM shop_products WHERE LOWER(serial_number) = LOWER(?) AND id != ?`)
+      .prepare(`SELECT id FROM shop_products WHERE rulower(serial_number) = rulower(?) AND id != ?`)
       .get(serial, exceptId ?? "") as { id: string } | undefined;
     if (clash) throw httpError(409, `Серийный номер ${serial} уже занят другим товаром магазина`);
   }
@@ -2210,21 +2210,154 @@ export function deleteDocumentTemplate(id: string) {
 
 // ---------- Документы аренды ----------
 
+interface RentalDocumentRow {
+  id: string;
+  rental_id: string;
+  template_id: string | null;
+  name: string;
+  body: string;
+  created_at: string;
+  signed: number;
+  signed_at: string | null;
+  signed_by: string | null;
+  sign_method: string | null;
+  rental_number?: string | null;
+  client_name?: string | null;
+  client_phone?: string | null;
+}
+
+function documentRowToDomain(r: RentalDocumentRow): RentalDocument {
+  return {
+    id: r.id,
+    rentalId: r.rental_id,
+    templateId: r.template_id ?? undefined,
+    name: r.name,
+    body: r.body,
+    createdAt: r.created_at,
+    signed: r.signed === 1,
+    signedAt: r.signed_at ?? undefined,
+    signedBy: r.signed_by ?? undefined,
+    signMethod: r.sign_method ?? undefined,
+    rentalNumber: r.rental_number ?? undefined,
+    clientName: r.client_name ?? undefined,
+    clientPhone: r.client_phone ?? undefined,
+  };
+}
+
 export function listRentalDocuments(rentalId: string): RentalDocument[] {
-  return (db.prepare(`SELECT * FROM rental_documents WHERE rental_id = ? ORDER BY created_at DESC`).all(rentalId) as {
-    id: string; rental_id: string; template_id: string | null; name: string; body: string; created_at: string;
-  }[]).map((r) => ({
-    id: r.id, rentalId: r.rental_id, templateId: r.template_id ?? undefined,
-    name: r.name, body: r.body, createdAt: r.created_at,
-  }));
+  const rows = db
+    .prepare(`SELECT * FROM rental_documents WHERE rental_id = ? ORDER BY created_at DESC`)
+    .all(rentalId) as RentalDocumentRow[];
+  return rows.map(documentRowToDomain);
+}
+
+export interface DocumentFilter {
+  /** all — все, signed — подписанные, pending — ждут подписи */
+  status?: "all" | "signed" | "pending";
+  search?: string;
+  from?: string | null;
+  to?: string | null;
+  limit?: number;
+}
+
+/**
+ * Общий реестр документов: что напечатали, по какой аренде и подписал ли клиент.
+ * Тело документа сюда не тянем — на несколько тысяч строк это мегабайты HTML,
+ * а в списке показывается только шапка. Само тело читается при открытии.
+ */
+export function listAllDocuments(filter: DocumentFilter = {}) {
+  const where: string[] = [];
+  const params: Record<string, unknown> = { limit: filter.limit ?? 300 };
+
+  if (filter.status === "signed") where.push("d.signed = 1");
+  if (filter.status === "pending") where.push("d.signed = 0");
+  if (filter.search) {
+    where.push(
+      `(rulower(d.name) LIKE @q OR rulower(COALESCE(c.name, '')) LIKE @q OR COALESCE(c.phone, '') LIKE @q OR CAST(r.number AS TEXT) LIKE @q)`
+    );
+    params.q = `%${filter.search.toLowerCase()}%`;
+  }
+  if (filter.from) {
+    where.push("d.created_at >= @from");
+    params.from = filter.from;
+  }
+  if (filter.to) {
+    where.push("d.created_at <= @to");
+    params.to = filter.to;
+  }
+
+  const rows = db
+    .prepare(
+      `SELECT d.id, d.rental_id, d.template_id, d.name, '' AS body, d.created_at,
+              d.signed, d.signed_at, d.signed_by, d.sign_method,
+              r.number AS rental_number, c.name AS client_name, c.phone AS client_phone
+       FROM rental_documents d
+       LEFT JOIN rentals r ON r.id = d.rental_id
+       LEFT JOIN clients c ON c.id = r.client_id
+       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+       ORDER BY d.created_at DESC LIMIT @limit`
+    )
+    .all(params) as RentalDocumentRow[];
+
+  const counts = db
+    .prepare(`SELECT signed, COUNT(*) AS c FROM rental_documents GROUP BY signed`)
+    .all() as { signed: number; c: number }[];
+
+  return {
+    documents: rows.map(documentRowToDomain),
+    counts: {
+      all: counts.reduce((sum, r) => sum + r.c, 0),
+      signed: counts.find((r) => r.signed === 1)?.c ?? 0,
+      pending: counts.find((r) => r.signed === 0)?.c ?? 0,
+    },
+  };
+}
+
+export function getRentalDocument(id: string): RentalDocument | null {
+  const row = db.prepare(`SELECT * FROM rental_documents WHERE id = ?`).get(id) as RentalDocumentRow | undefined;
+  return row ? documentRowToDomain(row) : null;
+}
+
+/** Отметка подписи. Снять её тоже можно: печатают и ошибаются */
+export function setDocumentSigned(id: string, signed: boolean, actorName?: string) {
+  const existing = getRentalDocument(id);
+  if (!existing) return null;
+
+  const now = new Date().toISOString();
+  db.prepare(`UPDATE rental_documents SET signed = ?, signed_at = ?, signed_by = ?, sign_method = ? WHERE id = ?`).run(
+    signed ? 1 : 0,
+    signed ? now : null,
+    signed ? actorName ?? null : null,
+    signed ? "Ручное подписание" : null,
+    id
+  );
+
+  logRentalEvent({
+    rentalId: existing.rentalId,
+    type: "status",
+    title: signed ? "Документ подписан" : "Снял отметку о подписи",
+    details: existing.name,
+    actorName,
+  });
+
+  return getRentalDocument(id);
 }
 
 export function createRentalDocument(input: { rentalId: string; templateId?: string; name: string; body: string }): RentalDocument {
   const id = newId("doc");
   const now = new Date().toISOString();
-  db.prepare(`INSERT INTO rental_documents (id, rental_id, template_id, name, body, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
-    .run(id, input.rentalId, input.templateId ?? null, input.name, input.body, now);
-  return { id, rentalId: input.rentalId, templateId: input.templateId, name: input.name, body: input.body, createdAt: now };
+  db.prepare(
+    `INSERT INTO rental_documents (id, rental_id, template_id, name, body, signed, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)`
+  ).run(id, input.rentalId, input.templateId ?? null, input.name, input.body, now);
+  return {
+    id,
+    rentalId: input.rentalId,
+    templateId: input.templateId,
+    name: input.name,
+    body: input.body,
+    createdAt: now,
+    signed: false,
+  };
 }
 
 export function deleteRentalDocument(id: string) {
@@ -2583,7 +2716,7 @@ export function listDeliveries(filter: DeliveryFilter = {}): Delivery[] {
   }
   if (filter.search) {
     where.push(
-      "(LOWER(COALESCE(d.address_to, '')) LIKE @q OR LOWER(COALESCE(d.address_from, '')) LIKE @q OR LOWER(COALESCE(c.name, '')) LIKE @q OR CAST(d.number AS TEXT) LIKE @q)"
+      "(rulower(COALESCE(d.address_to, '')) LIKE @q OR rulower(COALESCE(d.address_from, '')) LIKE @q OR rulower(COALESCE(c.name, '')) LIKE @q OR CAST(d.number AS TEXT) LIKE @q)"
     );
     params.q = `%${filter.search.toLowerCase()}%`;
   }
@@ -2852,7 +2985,7 @@ export function listLeads(filter: LeadFilter = {}): Lead[] {
     params.to = filter.to;
   }
   if (filter.search) {
-    where.push("(LOWER(l.title) LIKE @q OR LOWER(COALESCE(l.client_name, '')) LIKE @q OR COALESCE(l.phone, '') LIKE @q OR CAST(l.number AS TEXT) LIKE @q)");
+    where.push("(rulower(l.title) LIKE @q OR rulower(COALESCE(l.client_name, '')) LIKE @q OR COALESCE(l.phone, '') LIKE @q OR CAST(l.number AS TEXT) LIKE @q)");
     params.q = `%${filter.search.toLowerCase()}%`;
   }
 

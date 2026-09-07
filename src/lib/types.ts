@@ -230,6 +230,17 @@ export interface RentalDocument {
   name: string;
   body: string;
   createdAt: string;
+  /** Подписан ли клиентом — отмечается сразу после печати */
+  signed: boolean;
+  signedAt?: string;
+  /** Кто отметил подписание */
+  signedBy?: string;
+  /** Пока способ один — «Ручное подписание», но поле оставлено под ЭЦП */
+  signMethod?: string;
+  /** Заполняется только в общем реестре документов */
+  rentalNumber?: string;
+  clientName?: string;
+  clientPhone?: string;
 }
 
 // ---------- Auth & RBAC ----------

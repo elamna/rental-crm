@@ -19,6 +19,8 @@ import {
   Table as TableIcon, Upload, FileText, ChevronRight, Search, Printer, LayoutTemplate,
 } from "lucide-react";
 import { printDocument } from "@/lib/print-document";
+import { DocumentsRegistry } from "@/components/documents/documents-registry";
+import { useCan } from "@/components/auth/auth-provider";
 
 /**
  * Готовые каркасы документов. Составлять акт с нуля в редакторе долго, а формы
@@ -239,6 +241,9 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<DocumentTemplate | null>(null);
   const [isNew, setIsNew] = useState(false);
+  // Две части раздела: сами документы по арендам и шаблоны, из которых их делают
+  const [tab, setTab] = useState<"documents" | "templates">("documents");
+  const canEdit = useCan("documents.edit");
 
   async function load() {
     const res = await fetch("/api/document-templates");
@@ -284,16 +289,45 @@ export default function DocumentsPage() {
       <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-display text-[20px] font-bold">Шаблоны документов</h1>
-            <p className="text-[14px] text-[var(--color-text-muted)]">Создавайте шаблоны — переменные подставляются автоматически при генерации для аренды</p>
+            <h1 className="font-display text-[20px] font-bold">Документы</h1>
+            <p className="text-[14px] text-[var(--color-text-muted)]">
+              {tab === "documents"
+                ? "Всё, что напечатали по арендам, и отметки о подписании"
+                : "Шаблоны — переменные подставляются автоматически при генерации для аренды"}
+            </p>
           </div>
-          <button onClick={openNew} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]">
-            <Plus className="h-4 w-4" /> Новый шаблон
-          </button>
+          {tab === "templates" && (
+            <button onClick={openNew} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]">
+              <Plus className="h-4 w-4" /> Новый шаблон
+            </button>
+          )}
         </div>
+
+        <nav className="-mb-3 mt-3 flex items-center gap-1">
+          {(
+            [
+              { key: "documents", label: "Созданные документы" },
+              { key: "templates", label: "Шаблоны" },
+            ] as { key: "documents" | "templates"; label: string }[]
+          ).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "relative px-3.5 pb-3 pt-1.5 text-[14.5px] font-semibold transition",
+                tab === t.key ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              )}
+            >
+              {t.label}
+              {tab === t.key && <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-[var(--color-primary)]" />}
+            </button>
+          ))}
+        </nav>
       </header>
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        {loading ? (
+        {tab === "documents" ? (
+          <DocumentsRegistry canEdit={canEdit} />
+        ) : loading ? (
           <p className="text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : templates.length === 0 ? (
           <div className="mx-auto mt-16 max-w-md rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center card-shadow">
@@ -360,7 +394,7 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
     editorProps: {
       attributes: {
         class: "outline-none min-h-[700px]",
-        style: "padding: 40px; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.6;",
+        style: "font-family: Arial, sans-serif; font-size: 13px; line-height: 1.5; min-height: 240mm;",
       },
     },
   });
@@ -498,7 +532,11 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
       <div className={cn("flex flex-1 overflow-hidden", isMobile && "flex-col")}>
         {/* Редактор */}
         <div className="flex-1 overflow-y-auto bg-[#EBEBEB]">
-          <div className="mx-auto my-4 min-h-[600px] w-full max-w-[794px] bg-[var(--color-surface)] p-[14mm] shadow-[0_2px_12px_rgba(0,0,0,0.12)] sm:my-8 sm:min-h-[1000px]">
+          {/* Лист ровно A4 с теми же полями, что при печати: что видно, то и напечатается */}
+          <div
+            className="mx-auto my-4 bg-[var(--color-surface)] p-[12mm] shadow-[0_2px_12px_rgba(0,0,0,0.12)] sm:my-8"
+            style={{ width: "210mm", minHeight: "297mm" }}
+          >
             <EditorContent editor={editor} />
           </div>
         </div>

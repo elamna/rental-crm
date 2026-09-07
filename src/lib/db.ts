@@ -20,6 +20,15 @@ db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.pragma("busy_timeout = 5000");
 
+/**
+ * Понижение регистра с поддержкой кириллицы. Встроенная SQLite `LOWER()` знает
+ * только латиницу: поиск «иванов» не находил запись «ИВАНОВ», и половина базы
+ * была не найдена — при том что выглядело это как «поиск иногда не работает».
+ */
+db.function("rulower", { deterministic: true }, (value: unknown) =>
+  typeof value === "string" ? value.toLowerCase() : value === null || value === undefined ? null : String(value).toLowerCase()
+);
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS clients (
   id TEXT PRIMARY KEY,
@@ -205,6 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_inventory_checks_item ON inventory_checks(invento
 CREATE INDEX IF NOT EXISTS idx_shop_products_name ON shop_products(name);
 CREATE INDEX IF NOT EXISTS idx_rental_payments_rental ON rental_payments(rental_id);
 CREATE INDEX IF NOT EXISTS idx_rental_payments_created ON rental_payments(created_at);
+CREATE INDEX IF NOT EXISTS idx_rental_documents_created ON rental_documents(created_at);
 
 CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
@@ -343,6 +353,14 @@ ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0" });
     if (first) db.prepare(`UPDATE app_users SET is_owner = 1, is_admin = 1 WHERE id = ?`).run(first.id);
   }
 }
+
+ensureColumns("rental_documents", {
+  // Документ живёт дальше печати: его подписывают, и это надо где-то отмечать
+  signed: "INTEGER NOT NULL DEFAULT 0",
+  signed_at: "TEXT",
+  signed_by: "TEXT",
+  sign_method: "TEXT",
+});
 
 ensureColumns("clients", {
   // Свободная пометка: при импорте сюда попадают метки старой системы («Умер»)

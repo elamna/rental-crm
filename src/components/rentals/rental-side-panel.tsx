@@ -1021,7 +1021,34 @@ function DocumentsSection({ rental }: { rental: Rental }) {
     setDocs((prev) => prev.filter((d) => d.id !== id));
   }
 
-  const printDoc = printDocument;
+  // После печати сразу спрашиваем, подписал ли клиент: если не спросить в этот
+  // момент, документ так и останется висеть неподписанным в реестре
+  const [askSignFor, setAskSignFor] = useState<RentalDocument | null>(null);
+  const [savingSign, setSavingSign] = useState(false);
+
+  function printDoc(body: string, name?: string, doc?: RentalDocument) {
+    printDocument(body, name);
+    if (doc && !doc.signed) setAskSignFor(doc);
+  }
+
+  async function answerSigned(signed: boolean) {
+    if (!askSignFor) return;
+    setSavingSign(true);
+    try {
+      const res = await fetch(`/api/rental-documents/${askSignFor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signed }),
+      });
+      if (res.ok) {
+        const updated = (await res.json()) as RentalDocument;
+        setDocs((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+      }
+    } finally {
+      setSavingSign(false);
+      setAskSignFor(null);
+    }
+  }
 
   return (
     <>
@@ -1038,10 +1065,29 @@ function DocumentsSection({ rental }: { rental: Rental }) {
           <div className="space-y-1.5">
             {docs.map((doc) => (
               <div key={doc.id} className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[13.5px]">
-                <button onClick={() => setPreviewDoc(doc)} className="truncate text-left font-medium hover:text-[var(--color-primary)] hover:underline">{doc.name}</button>
+                <div className="min-w-0">
+                  <button onClick={() => setPreviewDoc(doc)} className="block max-w-full truncate text-left font-medium hover:text-[var(--color-primary)] hover:underline">{doc.name}</button>
+                  <span
+                    className={cn(
+                      "text-[12.5px]",
+                      doc.signed ? "text-[#1C8A46]" : "text-[#B8620A]"
+                    )}
+                  >
+                    {doc.signed ? "Подписано" : "Ожидает подписания"}
+                  </span>
+                </div>
                 <div className="flex shrink-0 items-center gap-1 text-[var(--color-text-muted)]">
+                  {!doc.signed && (
+                    <button
+                      onClick={() => setAskSignFor(doc)}
+                      className="grid h-6 w-6 place-items-center rounded-md hover:bg-[#EAF7EE] hover:text-[#1C8A46]"
+                      title="Отметить подписанным"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                   <button onClick={() => setPreviewDoc(doc)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Просмотр"><ExternalLink className="h-3.5 w-3.5" /></button>
-                  <button onClick={() => printDoc(doc.body, doc.name)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Печать"><Printer className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => printDoc(doc.body, doc.name, doc)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Печать"><Printer className="h-3.5 w-3.5" /></button>
                   <button onClick={() => deleteDoc(doc.id)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[#FDECEC] hover:text-[#C0272D]" title="Удалить"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
@@ -1052,6 +1098,33 @@ function DocumentsSection({ rental }: { rental: Rental }) {
           </div>
         )}
       </Section>
+
+      {askSignFor && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 px-4 pb-4 sm:items-center sm:pb-0">
+          <div className="w-full max-w-[380px] rounded-[16px] bg-[var(--color-surface)] p-5 card-shadow">
+            <h3 className="text-[16px] font-semibold">Документ подписан?</h3>
+            <p className="mt-1 text-[13.5px] text-[var(--color-text-muted)]">
+              «{askSignFor.name}» — отметьте сразу, чтобы он не остался висеть в реестре без подписи.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => answerSigned(false)}
+                disabled={savingSign}
+                className="rounded-[10px] border border-[var(--color-border)] py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] disabled:opacity-50"
+              >
+                Нет
+              </button>
+              <button
+                onClick={() => answerSigned(true)}
+                disabled={savingSign}
+                className="rounded-[10px] bg-[#1C8A46] py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#167A3C] disabled:opacity-50"
+              >
+                {savingSign ? "Сохраняем…" : "Да, подписан"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showPicker && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
@@ -1082,7 +1155,7 @@ function DocumentsSection({ rental }: { rental: Rental }) {
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
               <span className="text-[15px] font-semibold">{previewDoc.name}</span>
               <div className="flex items-center gap-2">
-                <button onClick={() => printDoc(previewDoc.body, previewDoc.name)} className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[13.5px] hover:bg-[var(--color-bg)]">
+                <button onClick={() => printDoc(previewDoc.body, previewDoc.name, previewDoc)} className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[13.5px] hover:bg-[var(--color-bg)]">
                   <Printer className="h-3.5 w-3.5" /> Печать
                 </button>
                 <button onClick={() => setPreviewDoc(null)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><span className="text-[18px]">×</span></button>
