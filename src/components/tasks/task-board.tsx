@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Task, TaskStatus, TASK_STATUS_LABELS } from "@/lib/types";
+import Link from "next/link";
+import { Task, TaskStatus, TASK_STATUS_LABELS, TASK_SOURCE_LABELS } from "@/lib/types";
 import { cn, formatDateTimeDisplay } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { CalendarClock, Flame, User } from "lucide-react";
@@ -119,6 +120,12 @@ function TaskCard({
           <span className="text-[14px] font-semibold leading-snug">{task.title}</span>
         </div>
 
+        {task.sourceKind && (
+          <span className="mt-1.5 inline-block rounded-[6px] bg-[var(--color-bg)] px-1.5 py-0.5 text-[11.5px] font-medium text-[var(--color-text-muted)]">
+            {TASK_SOURCE_LABELS[task.sourceKind]} · задача от системы
+          </span>
+        )}
+
         <div className="mt-2 space-y-1 text-[12.5px] text-[var(--color-text-muted)]">
           <span className="flex items-center gap-1.5">
             <User className="h-3 w-3 shrink-0" />
@@ -134,9 +141,15 @@ function TaskCard({
       </button>
 
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--color-primary)]">
-          {task.points} балл{task.points === 1 ? "" : task.points < 5 ? "а" : "ов"}
-        </span>
+        {task.sourceUrl ? (
+          <Link href={task.sourceUrl} className="text-[12px] font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline">
+            Открыть объект
+          </Link>
+        ) : (
+          <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--color-primary)]">
+            {task.points} балл{task.points === 1 ? "" : task.points < 5 ? "а" : "ов"}
+          </span>
+        )}
 
         {/* На телефоне перетаскивание неудобно — статус меняется выбором */}
         {movable && isMobile && (

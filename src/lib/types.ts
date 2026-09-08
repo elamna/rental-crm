@@ -455,6 +455,18 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
   high: "Высокий",
 };
 
+/**
+ * Источник автоматической задачи. Такие задачи система ставит и закрывает сама:
+ * долг оплатили — задача закрылась, аренду вернули — закрылась.
+ */
+export type TaskSource = "rental_overdue" | "rental_debt" | "shortage";
+
+export const TASK_SOURCE_LABELS: Record<TaskSource, string> = {
+  rental_overdue: "Просрочка",
+  rental_debt: "Долг",
+  shortage: "Некомплект",
+};
+
 export interface Task {
   id: string;
   title: string;
@@ -469,10 +481,31 @@ export interface Task {
   doneAt?: string;
   /** Вес задачи в KPI: мелкая — 1, крупная — 3 и т.д. */
   points: number;
+  /** Откуда задача взялась, если её поставила система, а не человек */
+  sourceKind?: TaskSource;
+  /** Объект, из-за которого задача появилась: аренда или запись о некомплекте */
+  sourceId?: string;
+  /** Куда вести по клику: /rentals/<id>, /shortages и т.п. */
+  sourceUrl?: string;
   /** Кому ещё открыт просмотр, кроме исполнителя и постановщика */
   visibleTo: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+/** Строка сводки «Люди»: чем человек занят прямо сейчас */
+export interface TaskWorkloadRow {
+  userId: string;
+  userName: string;
+  todo: number;
+  inProgress: number;
+  review: number;
+  /** Активные задачи, у которых срок уже прошёл */
+  overdue: number;
+  /** Закрыто за последние 7 дней */
+  doneWeek: number;
+  /** Среднее время закрытия за неделю, часы */
+  avgHours: number | null;
 }
 
 /** Строка KPI по сотруднику за период */

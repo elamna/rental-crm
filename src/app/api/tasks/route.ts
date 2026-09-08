@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, hasPermission } from "@/lib/auth";
-import { listTasks, createTask } from "@/lib/repo";
+import { listTasks, createTask, syncAutoTasks } from "@/lib/repo";
 
 export async function GET() {
   try {
     const me = await requireAuth("tasks.view");
+    // Просрочки, долги и некомплект превращаются в задачи здесь же: отдельного
+    // фонового процесса для этого мало — раздел должен быть свежим при открытии
+    syncAutoTasks();
     // Полный список видит только тот, кому открыты все задачи
     const canManageAll = hasPermission(me, "tasks.manage");
     return NextResponse.json(listTasks(me.id, canManageAll));

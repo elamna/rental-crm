@@ -17,11 +17,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // Исполнитель двигает только статус своей задачи. Сроки, вес, исполнителя
     // и список зрителей меняет лишь тот, у кого есть tasks.manage
+    // Задачу без исполнителя (обычно автоматическую) может забрать любой,
+    // кому она видна: иначе такие задачи висят, пока руководитель их не раздаст
+    const takingFree = !task.assigneeId && body.assigneeId === me.id;
+
     const patch: Partial<Task> = canManageAll
       ? body
-      : task.assigneeId === me.id
-        ? { status: body.status }
-        : {};
+      : takingFree
+        ? { assigneeId: me.id, status: body.status ?? task.status }
+        : task.assigneeId === me.id
+          ? { status: body.status }
+          : {};
 
     if (Object.keys(patch).length === 0) throw new ApiError(403, "Можно менять только статус своей задачи");
 

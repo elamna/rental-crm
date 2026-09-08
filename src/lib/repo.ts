@@ -1,7 +1,7 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
-import { Client, ClientRatingBreakdown, ImportReport, LeadConcern, PaymentMethod, RentalPayment, ReturnShortage, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, ImportReport, LeadConcern, PaymentMethod, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -2428,6 +2428,8 @@ if (!global.__penaltySchedulerStarted) {
   const runSweep = () => {
     try {
       const result = applyOverdueAndPenalties();
+      // Просрочки только что пересчитаны — сразу пересобираем задачи по ним
+      syncAutoTasks(true);
       if (result.markedOverdue || result.penaltiesAdded) {
         console.log(`[penalty-scheduler] Просрочено: ${result.markedOverdue}, начислено штрафов: ${result.penaltiesAdded}`);
       }
@@ -3406,6 +3408,9 @@ interface TaskRow {
   due_at: string | null;
   done_at: string | null;
   points: number;
+  source_kind: string | null;
+  source_id: string | null;
+  source_url: string | null;
   created_at: string;
   updated_at: string;
   assignee_name?: string | null;
@@ -3426,6 +3431,9 @@ function taskRowToDomain(row: TaskRow, viewers: string[]): Task {
     dueAt: row.due_at ?? undefined,
     doneAt: row.done_at ?? undefined,
     points: row.points,
+    sourceKind: (row.source_kind as TaskSource) ?? undefined,
+    sourceId: row.source_id ?? undefined,
+    sourceUrl: row.source_url ?? undefined,
     visibleTo: viewers,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -3559,6 +3567,266 @@ export function updateTask(id: string, patch: Partial<Task>): Task | null {
   return getTask(id);
 }
 
+/**
+ * Сводка «Люди»: чем каждый занят прямо сейчас.
+ *
+ * Доска на два десятка сотрудников — это сотни карточек, по которым ничего
+ * не понять. Руководителю нужна не доска, а строка на человека: сколько висит,
+ * сколько горит и сколько закрыто за неделю. Считается одним агрегатом.
+ */
+export function taskWorkload(): { rows: TaskWorkloadRow[]; free: number } {
+  const now = new Date().toISOString();
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+  const rows = db
+    .prepare(
+      `SELECT u.id AS user_id, u.name AS user_name,
+              SUM(CASE WHEN t.status = 'todo' THEN 1 ELSE 0 END) AS todo,
+              SUM(CASE WHEN t.status = 'in_progress' THEN 1 ELSE 0 END) AS in_progress,
+              SUM(CASE WHEN t.status = 'review' THEN 1 ELSE 0 END) AS review,
+              SUM(CASE WHEN t.status NOT IN ('done','cancelled') AND t.due_at IS NOT NULL AND t.due_at < @now THEN 1 ELSE 0 END) AS overdue,
+              SUM(CASE WHEN t.status = 'done' AND t.done_at >= @weekAgo THEN 1 ELSE 0 END) AS done_week,
+              AVG(CASE WHEN t.status = 'done' AND t.done_at >= @weekAgo THEN (julianday(t.done_at) - julianday(t.created_at)) * 24 END) AS avg_hours
+       FROM app_users u
+       LEFT JOIN tasks t ON t.assignee_id = u.id
+       WHERE u.is_active = 1
+       GROUP BY u.id, u.name
+       ORDER BY overdue DESC, in_progress DESC, u.name`
+    )
+    .all({ now, weekAgo }) as {
+      user_id: string; user_name: string; todo: number; in_progress: number; review: number;
+      overdue: number; done_week: number; avg_hours: number | null;
+    }[];
+
+  // Задачи без исполнителя: обычно это автоматические, которые некому было адресовать
+  const free = (
+    db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM tasks WHERE assignee_id IS NULL AND status NOT IN ('done','cancelled')`
+      )
+      .get() as { c: number }
+  ).c;
+
+  return {
+    rows: rows.map((r) => ({
+      userId: r.user_id,
+      userName: r.user_name,
+      todo: r.todo ?? 0,
+      inProgress: r.in_progress ?? 0,
+      review: r.review ?? 0,
+      overdue: r.overdue ?? 0,
+      doneWeek: r.done_week ?? 0,
+      avgHours: r.avg_hours === null ? null : Math.round(r.avg_hours * 10) / 10,
+    })),
+    free,
+  };
+}
+
+// ---------- Автоматические задачи ----------
+
+interface AutoTaskSpec {
+  kind: TaskSource;
+  sourceId: string;
+  title: string;
+  description: string;
+  url: string;
+  dueAt?: string;
+  priority: TaskPriority;
+  /** Имя менеджера из самого объекта — по нему ищем исполнителя */
+  ownerName?: string;
+}
+
+let lastAutoSync = 0;
+
+/**
+ * Задачи, которые система ставит себе сама.
+ *
+ * Половина работы проката и так записана в данных: аренда просрочена, за аренду
+ * недоплатили, вернули без трубки. Заводить на это карточки руками — двойной учёт,
+ * который всегда расходится: долг закрыли, а задача «позвонить должнику» висит.
+ * Поэтому такие задачи создаются из данных и закрываются сами, когда причина ушла.
+ *
+ * Ключ — пара «источник + объект», под ним уникальный индекс: сколько раз ни
+ * запусти проверку, второй такой задачи не появится.
+ */
+export function syncAutoTasks(force = false): { created: number; closed: number; reopened: number } {
+  // Вызывается на каждом открытии «Темпа» — чаще раза в полминуты смысла нет
+  if (!force && Date.now() - lastAutoSync < 30_000) return { created: 0, closed: 0, reopened: 0 };
+  lastAutoSync = Date.now();
+
+  const now = new Date().toISOString();
+  const specs: AutoTaskSpec[] = [];
+
+  const overdue = db
+    .prepare(
+      `SELECT r.id, r.number, r.end_at, r.total, r.paid, r.booked_by_name, r.issued_by_name,
+              c.name AS client_name, c.phone AS client_phone
+       FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
+       WHERE r.status = 'overdue'`
+    )
+    .all() as {
+      id: string; number: string; end_at: string; total: number; paid: number;
+      booked_by_name: string | null; issued_by_name: string | null;
+      client_name: string | null; client_phone: string | null;
+    }[];
+
+  for (const r of overdue) {
+    specs.push({
+      kind: "rental_overdue",
+      sourceId: r.id,
+      title: `Просрочена аренда №${r.number} — ${r.client_name ?? "клиент"}`,
+      description: [
+        `Срок вышел ${formatRu(r.end_at)}.`,
+        r.client_phone ? `Телефон: ${r.client_phone}.` : "",
+        r.total - r.paid > 0 ? `Долг: ${Math.round(r.total - r.paid)} ₸.` : "",
+        "Задача закроется сама, когда инструмент вернут.",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      url: `/rentals/${r.id}`,
+      dueAt: r.end_at,
+      priority: "high",
+      ownerName: r.issued_by_name ?? r.booked_by_name ?? undefined,
+    });
+  }
+
+  const debts = db
+    .prepare(
+      `SELECT r.id, r.number, r.end_at, r.total, r.paid, r.booked_by_name, r.issued_by_name,
+              c.name AS client_name, c.phone AS client_phone
+       FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
+       WHERE r.status IN ('completed','stolen') AND r.total - r.paid > 0.5`
+    )
+    .all() as {
+      id: string; number: string; end_at: string; total: number; paid: number;
+      booked_by_name: string | null; issued_by_name: string | null;
+      client_name: string | null; client_phone: string | null;
+    }[];
+
+  for (const r of debts) {
+    specs.push({
+      kind: "rental_debt",
+      sourceId: r.id,
+      title: `Долг ${Math.round(r.total - r.paid)} ₸ — ${r.client_name ?? "клиент"}, аренда №${r.number}`,
+      description: [
+        `Оплачено ${Math.round(r.paid)} из ${Math.round(r.total)} ₸.`,
+        r.client_phone ? `Телефон: ${r.client_phone}.` : "",
+        "Задача закроется сама, когда долг погасят.",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      url: `/rentals/${r.id}`,
+      priority: "normal",
+      ownerName: r.issued_by_name ?? r.booked_by_name ?? undefined,
+    });
+  }
+
+  const shortages = db
+    .prepare(
+      `SELECT s.id, s.item_name, s.note, s.created_by, s.created_at,
+              r.number AS rental_number, c.name AS client_name, c.phone AS client_phone
+       FROM return_shortages s
+       JOIN rentals r ON r.id = s.rental_id
+       LEFT JOIN clients c ON c.id = r.client_id
+       WHERE s.resolved = 0`
+    )
+    .all() as {
+      id: string; item_name: string; note: string | null; created_by: string | null; created_at: string;
+      rental_number: string; client_name: string | null; client_phone: string | null;
+    }[];
+
+  for (const sh of shortages) {
+    specs.push({
+      kind: "shortage",
+      sourceId: sh.id,
+      title: `Некомплект: ${sh.item_name} — аренда №${sh.rental_number}`,
+      description: [
+        sh.note ? `Не хватает: ${sh.note}.` : "",
+        sh.client_name ? `Клиент: ${sh.client_name}${sh.client_phone ? `, ${sh.client_phone}` : ""}.` : "",
+        "Задача закроется сама, когда вопрос закроют на странице «Некомплект».",
+      ]
+        .filter(Boolean)
+        .join(" "),
+      url: "/shortages",
+      priority: "normal",
+      ownerName: sh.created_by ?? undefined,
+    });
+  }
+
+  // Имя менеджера из аренды — это строка, а не ссылка на пользователя.
+  // Совпало с активным сотрудником — задача уйдёт ему, нет — останется свободной
+  const users = db.prepare(`SELECT id, name FROM app_users WHERE is_active = 1`).all() as { id: string; name: string }[];
+  const userByName = new Map(users.map((u) => [u.name.trim().toLowerCase(), u.id]));
+
+  const existing = db
+    .prepare(`SELECT id, source_kind, source_id, status FROM tasks WHERE source_kind IS NOT NULL`)
+    .all() as { id: string; source_kind: string; source_id: string; status: string }[];
+  const byKey = new Map(existing.map((t) => [`${t.source_kind}:${t.source_id}`, t]));
+
+  let created = 0;
+  let closed = 0;
+  let reopened = 0;
+
+  const insert = db.prepare(
+    `INSERT INTO tasks (id, title, description, status, priority, assignee_id, created_by_id, due_at, done_at,
+                        points, source_kind, source_id, source_url, created_at, updated_at)
+     VALUES (@id, @title, @description, 'todo', @priority, @assigneeId, NULL, @dueAt, NULL,
+             1, @kind, @sourceId, @url, @now, @now)`
+  );
+  const refresh = db.prepare(
+    `UPDATE tasks SET title = @title, description = @description, due_at = @dueAt, priority = @priority,
+         source_url = @url, updated_at = @now WHERE id = @id`
+  );
+  const reopen = db.prepare(`UPDATE tasks SET status = 'todo', done_at = NULL, updated_at = ? WHERE id = ?`);
+  const close = db.prepare(`UPDATE tasks SET status = 'done', done_at = ?, updated_at = ? WHERE id = ?`);
+
+  db.transaction(() => {
+    for (const spec of specs) {
+      const key = `${spec.kind}:${spec.sourceId}`;
+      const task = byKey.get(key);
+      if (!task) {
+        insert.run({
+          id: newId("task"),
+          title: spec.title,
+          description: spec.description,
+          priority: spec.priority,
+          assigneeId: spec.ownerName ? userByName.get(spec.ownerName.trim().toLowerCase()) ?? null : null,
+          dueAt: spec.dueAt ?? null,
+          kind: spec.kind,
+          sourceId: spec.sourceId,
+          url: spec.url,
+          now,
+        });
+        created++;
+        continue;
+      }
+      // Сумма долга и срок меняются — держим текст задачи в актуальном виде
+      refresh.run({ id: task.id, title: spec.title, description: spec.description, dueAt: spec.dueAt ?? null, priority: spec.priority, url: spec.url, now });
+      if (task.status === "done" || task.status === "cancelled") {
+        reopen.run(now, task.id);
+        reopened++;
+      }
+    }
+
+    const alive = new Set(specs.map((sp) => `${sp.kind}:${sp.sourceId}`));
+    for (const task of existing) {
+      const key = `${task.source_kind}:${task.source_id}`;
+      if (alive.has(key) || task.status === "done" || task.status === "cancelled") continue;
+      close.run(now, now, task.id);
+      closed++;
+    }
+  })();
+
+  return { created, closed, reopened };
+}
+
+function formatRu(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function deleteTask(id: string) {
   db.prepare(`DELETE FROM task_viewers WHERE task_id = ?`).run(id);
   db.prepare(`DELETE FROM tasks WHERE id = ?`).run(id);
@@ -3581,6 +3849,7 @@ export function taskKpi(fromIso: string | null, onlyUserId?: string): TaskKpiRow
        FROM app_users u
        LEFT JOIN tasks t
          ON t.assignee_id = u.id
+        AND t.source_kind IS NULL
         AND (@from IS NULL OR t.created_at >= @from)
        WHERE u.is_active = 1 AND (@onlyUser IS NULL OR u.id = @onlyUser)
        GROUP BY u.id, u.name

@@ -360,6 +360,14 @@ ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0" });
 // Чек оплаты показывает, кто принял деньги — раньше в платеже этого не было
 ensureColumns("rental_payments", { created_by: "TEXT" });
 
+// Задачи, которые система ставит себе сама по данным CRM: просрочка, долг,
+// некомплект. Пара «источник + объект» уникальна — иначе на каждую проверку
+// заводился бы дубль той же задачи
+ensureColumns("tasks", { source_kind: "TEXT", source_id: "TEXT", source_url: "TEXT" });
+db.exec(
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_source ON tasks(source_kind, source_id) WHERE source_kind IS NOT NULL`
+);
+
 ensureColumns("leads", {
   // Физлицо или компания — от этого зависит, как оформлять аренду
   client_type: "TEXT",

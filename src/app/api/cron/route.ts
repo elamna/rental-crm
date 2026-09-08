@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { applyOverdueAndPenalties } from "@/lib/repo";
+import { applyOverdueAndPenalties, syncAutoTasks } from "@/lib/repo";
 import { getCurrentUser } from "@/lib/auth";
 
 /**
@@ -18,5 +18,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
     }
   }
-  return NextResponse.json(applyOverdueAndPenalties());
+  const result = applyOverdueAndPenalties();
+  // Статусы аренд только что пересчитаны — задачи по ним пересобираем сразу,
+  // не дожидаясь, пока кто-нибудь откроет «Темп»
+  const tasks = syncAutoTasks(true);
+  return NextResponse.json({ ...result, tasks });
 }
