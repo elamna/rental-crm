@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
     if (!body.title || !String(body.title).trim()) {
       return NextResponse.json({ error: "Укажите, что нужно клиенту" }, { status: 400 });
     }
+    // Заявка без даты оседает в «будущем» и там теряется. Исключение — когда
+    // спрашивать дату не с чего: инструмента нет или клиент из другого города
+    if (!body.neededAt && !body.unavailable && !body.otherCity) {
+      return NextResponse.json({ error: "Укажите дату, когда нужен инструмент" }, { status: 400 });
+    }
     return NextResponse.json(createLead(body), { status: 201 });
   } catch (e: unknown) {
     const err = e as { status?: number; message?: string };

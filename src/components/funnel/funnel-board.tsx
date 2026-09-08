@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Lead } from "@/lib/types";
+import { Lead, LEAD_CONCERN_LABELS, LEAD_MOODS } from "@/lib/types";
 import { FUNNEL_COLUMNS, FunnelBucket, groupLeads } from "@/lib/funnel";
 import { cn, formatMoney } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
@@ -158,9 +158,14 @@ function LeadCard({
     >
       <button onClick={onOpen} className="block w-full text-left">
         <div className="flex items-start justify-between gap-2">
-          <span className="text-[14px] font-semibold uppercase leading-tight text-[var(--color-primary)]">{lead.title}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            {lead.mood ? <span className="shrink-0 text-[14px]">{LEAD_MOODS[lead.mood - 1]}</span> : null}
+            <span className="text-[14px] font-semibold uppercase leading-tight text-[var(--color-primary)]">{lead.title}</span>
+          </span>
           <span className="shrink-0 text-[12.5px] text-[var(--color-text-muted)]">№{lead.number}</span>
         </div>
+
+        {lead.clientName && <div className="mt-1 truncate text-[13.5px] font-medium">{lead.clientName}</div>}
 
         <div className="mt-1.5 flex items-center justify-between gap-2 text-[13px]">
           <span className="flex min-w-0 items-center gap-1 text-[var(--color-text-muted)]">
@@ -183,6 +188,14 @@ function LeadCard({
                 {formatMoney(lead.amount)}
               </span>
             )}
+            {lead.otherCity && (
+              <span className="rounded-[6px] bg-[#E9F0FE] px-1.5 py-0.5 text-[11.5px] font-medium text-[#2B5FD9]">Другой город</span>
+            )}
+            {lead.concerns?.map((c) => (
+              <span key={c} className="rounded-[6px] bg-[#FFF4E5] px-1.5 py-0.5 text-[11.5px] font-medium text-[#B8620A]">
+                {LEAD_CONCERN_LABELS[c]}
+              </span>
+            ))}
           </div>
           <span className={cn("text-[12.5px] text-[var(--color-text-muted)]", overdue && "font-semibold text-[#C0272D]")}>
             {lead.neededAt ? formatShortDate(lead.neededAt) : "без даты"}
@@ -211,5 +224,9 @@ function LeadCard({
 function formatShortDate(iso: string) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const date = d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const pad = (n: number) => String(n).padStart(2, "0");
+  // Полдень ставится по умолчанию при переносе карточки мышью — это не время встречи
+  const noon = d.getHours() === 12 && d.getMinutes() === 0;
+  return noon ? date : `${date}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

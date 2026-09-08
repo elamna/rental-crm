@@ -5,7 +5,9 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { TrendingUp, Users, Package, ClipboardList, AlertCircle, Wrench, CreditCard, ArrowUpRight } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
 import { PeriodPicker } from "@/components/ui/period-picker";
-import { periodQuery, type Granularity, type PeriodValue } from "@/lib/period";
+import { periodQuery, PERIOD_LABELS, type Granularity, type PeriodValue } from "@/lib/period";
+import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/types";
+import Link from "next/link";
 
 interface AnalyticsData {
   period: string;
@@ -33,6 +35,21 @@ interface IncomeData {
   paidTotal: number;
 }
 
+/** Поимённо: кто за период заплатил и кто остался должен */
+interface LedgerData {
+  paid: {
+    id: string; amount: number; method: PaymentMethod; createdAt: string; createdBy?: string;
+    rentalId: string; rentalNumber: string; rentalTotal: number; rentalPaid: number;
+    clientId?: string; clientName?: string; clientPhone?: string;
+  }[];
+  unpaid: {
+    rentalId: string; rentalNumber: string; status: string; total: number; paid: number; debt: number;
+    createdAt: string; endAt: string;
+    clientId?: string; clientName?: string; clientPhone?: string;
+  }[];
+  totals: { paidTotal: number; debtTotal: number; payers: number; debtors: number };
+}
+
 const STATUS_LABELS: Record<string, string> = {
   request: "Запрос", booked: "Забронировано", active: "В аренде",
   completed: "Завершено", overdue: "Просрочено", stolen: "Украдено", cancelled: "Отменено",
@@ -48,6 +65,8 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [income, setIncome] = useState<IncomeData | null>(null);
   const [incomeView, setIncomeView] = useState<"all" | "methods" | "sources">("all");
+  const [ledger, setLedger] = useState<LedgerData | null>(null);
+  const [ledgerView, setLedgerView] = useState<"paid" | "unpaid">("paid");
 
   useEffect(() => {
     setLoading(true);
@@ -59,7 +78,14 @@ export default function AnalyticsPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setIncome)
       .catch(() => setIncome(null));
+
+    fetch(`/api/analytics/payers?${periodQuery(period)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setLedger)
+      .catch(() => setLedger(null));
   }, [period]);
+
+  const periodLabel = period.key === "custom" ? "выбранный период" : PERIOD_LABELS[period.key].toLowerCase();
 
   // Шаг графика задаёт сервер: сутки — по часам, длинный период — по месяцам
   const chartData = data?.revenueByDay.map((d) => ({
@@ -148,6 +174,8 @@ export default function AnalyticsPage() {
                 </p>
               </section>
             )}
+
+            {ledger && <PayersSection ledger={ledger} view={ledgerView} onView={setLedgerView} periodLabel={periodLabel} />}
 
             {/* KPI карточки */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -355,4 +383,138 @@ function formatBucket(value: string, granularity: Granularity) {
 function formatMonth(ym: string) {
   const [y, m] = ym.split("-");
   return new Date(Number(y), Number(m) - 1).toLocaleDateString("ru-RU", { month: "short", year: "2-digit" });
+}
+
+function formatWhen(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Кто заплатил и кто нет.
+ *
+ * Из сводных сумм не видно, кому звонить: за «долги 240 000 ₸» стоят конкретные
+ * люди с телефонами. Списки идут за тот же период, что и вся страница, — на
+ * «24 часах» это ровно сегодняшняя касса и сегодняшние неплательщики.
+ */
+function PayersSection({
+  ledger,
+  view,
+  onView,
+  periodLabel,
+}: {
+  ledger: LedgerData;
+  view: "paid" | "unpaid";
+  onView: (v: "paid" | "unpaid") => void;
+  periodLabel: string;
+}) {
+  const rows = view === "paid" ? ledger.paid : ledger.unpaid;
+
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-[17px] font-bold">Кто заплатил, а кто нет</h2>
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">
+            За {periodLabel}: заплатили {ledger.totals.payers} кл. — {formatMoney(ledger.totals.paidTotal)} · должны{" "}
+            {ledger.totals.debtors} кл. — {formatMoney(ledger.totals.debtTotal)}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 rounded-[10px] bg-[var(--color-bg)] p-1">
+          {(
+            [
+              { key: "paid", label: "Оплатили", count: ledger.paid.length },
+              { key: "unpaid", label: "Не оплатили", count: ledger.unpaid.length },
+            ] as { key: "paid" | "unpaid"; label: string; count: number }[]
+          ).map((o) => (
+            <button
+              key={o.key}
+              onClick={() => onView(o.key)}
+              className={`flex items-center gap-2 rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition ${
+                view === o.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+              }`}
+            >
+              {o.label}
+              <span className="rounded-full bg-[var(--color-surface)] px-1.5 py-0.5 text-[12px]">{o.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="py-8 text-center text-[14px] text-[var(--color-text-muted)]">
+          {view === "paid" ? "За этот период оплат не было" : "Долгов за этот период нет"}
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[620px] text-[14px]">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-left text-[13px] text-[var(--color-text-muted)]">
+                <th className="pb-2 font-semibold">Клиент</th>
+                <th className="pb-2 font-semibold">Аренда</th>
+                <th className="pb-2 font-semibold">{view === "paid" ? "Способ" : "Срок"}</th>
+                <th className="pb-2 font-semibold">{view === "paid" ? "Когда и кто принял" : "Оплачено"}</th>
+                <th className="pb-2 text-right font-semibold">{view === "paid" ? "Сумма" : "Долг"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {view === "paid"
+                ? ledger.paid.map((p) => (
+                    <tr key={p.id} className="border-b border-[var(--color-border)] last:border-0">
+                      <td className="py-2.5">
+                        {p.clientId ? (
+                          <Link href={`/clients/${p.clientId}`} className="font-medium text-[var(--color-primary)] underline-offset-2 hover:underline">
+                            {p.clientName ?? "Клиент"}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{p.clientName ?? "—"}</span>
+                        )}
+                        <div className="text-[12.5px] text-[var(--color-text-muted)]">{p.clientPhone ?? "—"}</div>
+                      </td>
+                      <td className="py-2.5">
+                        <Link href={`/rentals/${p.rentalId}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
+                          №{p.rentalNumber}
+                        </Link>
+                      </td>
+                      <td className="py-2.5">{PAYMENT_METHOD_LABELS[p.method] ?? p.method}</td>
+                      <td className="py-2.5 text-[var(--color-text-muted)]">
+                        {formatWhen(p.createdAt)}
+                        {p.createdBy ? ` · ${p.createdBy}` : ""}
+                      </td>
+                      <td className="py-2.5 text-right font-semibold text-[#1C8A46]">{formatMoney(p.amount)}</td>
+                    </tr>
+                  ))
+                : ledger.unpaid.map((d) => (
+                    <tr key={d.rentalId} className="border-b border-[var(--color-border)] last:border-0">
+                      <td className="py-2.5">
+                        {d.clientId ? (
+                          <Link href={`/clients/${d.clientId}`} className="font-medium text-[var(--color-primary)] underline-offset-2 hover:underline">
+                            {d.clientName ?? "Клиент"}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{d.clientName ?? "—"}</span>
+                        )}
+                        <div className="text-[12.5px] text-[var(--color-text-muted)]">{d.clientPhone ?? "—"}</div>
+                      </td>
+                      <td className="py-2.5">
+                        <Link href={`/rentals/${d.rentalId}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
+                          №{d.rentalNumber}
+                        </Link>
+                        <div className="text-[12.5px] text-[var(--color-text-muted)]">{STATUS_LABELS[d.status] ?? d.status}</div>
+                      </td>
+                      <td className="py-2.5 text-[var(--color-text-muted)]">до {formatWhen(d.endAt)}</td>
+                      <td className="py-2.5 text-[var(--color-text-muted)]">
+                        {formatMoney(d.paid)} из {formatMoney(d.total)}
+                      </td>
+                      <td className="py-2.5 text-right font-bold text-[#C0272D]">{formatMoney(d.debt)}</td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
 }

@@ -10,7 +10,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { DeliveryModal } from "@/components/delivery/delivery-modal";
 import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check, Truck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { PaymentMethod, PAYMENT_METHOD_LABELS } from "@/lib/types";
+import { PaymentMethod, PAYMENT_METHOD_LABELS, RentalPayment } from "@/lib/types";
 
 // Ключи те же, что в аналитике: по ним считается касса за период
 const PAYMENT_METHOD_ICONS: Record<PaymentMethod, React.ElementType> = {
@@ -525,6 +525,8 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             <Undo2 className="h-3.5 w-3.5" /> Возврат товара
           </button>
         )}
+
+        <PaymentReceipts rentalId={rental.id} paid={rental.paid} />
       </Section>
 
       {/* Модалка оплаты */}
@@ -1332,6 +1334,72 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
             {paying ? "Оплата…" : `Принять оплату ${amount > 0 ? formatMoney(amount) : ""}`}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function formatPaidAt(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Чеки оплаты: чем, сколько, когда и кто принял.
+ *
+ * Сумма «оплачено» в аренде отвечает только на вопрос «сколько», а спорят
+ * обычно про остальное: пришли деньги по Kaspi или наличными и кто их взял.
+ * Поэтому каждый платёж показываем строкой, а не одной итоговой цифрой.
+ */
+function PaymentReceipts({ rentalId, paid }: { rentalId: string; paid: number }) {
+  const [payments, setPayments] = useState<RentalPayment[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (paid <= 0) {
+      setPayments([]);
+      return;
+    }
+    // paid в зависимостях: после приёма оплаты список должен обновиться сам
+    fetch(`/api/rentals/${rentalId}/payments`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list) => {
+        if (!cancelled) setPayments(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [rentalId, paid]);
+
+  if (payments.length === 0) return null;
+
+  return (
+    <div className="mt-3 border-t border-[var(--color-border)] pt-3">
+      <p className="mb-2 text-[12.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+        {payments.length > 1 ? "Чеки оплаты" : "Чек оплаты"}
+      </p>
+      <div className="space-y-1.5">
+        {payments.map((p) => {
+          const Icon = PAYMENT_METHOD_ICONS[p.method] ?? Receipt;
+          return (
+            <div key={p.id} className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-1.5 text-[13.5px] font-medium">
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
+                  <span className="truncate">{PAYMENT_METHOD_LABELS[p.method] ?? p.method}</span>
+                </span>
+                <span className="shrink-0 text-[14px] font-bold text-[#1C8A46]">{formatMoney(p.amount)}</span>
+              </div>
+              <p className="mt-0.5 truncate text-[12.5px] text-[var(--color-text-muted)]">
+                {formatPaidAt(p.createdAt)}
+                {p.createdBy ? ` · принял ${p.createdBy}` : ""}
+              </p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

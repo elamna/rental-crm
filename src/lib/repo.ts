@@ -1,7 +1,7 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
-import { Client, ClientRatingBreakdown, ImportReport, PaymentMethod, ReturnShortage, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, ImportReport, LeadConcern, PaymentMethod, RentalPayment, ReturnShortage, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -1672,7 +1672,7 @@ export function resolveShortage(id: string, resolved: boolean, actorName?: strin
  * платежа: без неё способ оплаты пропадал — в модалке его выбирали, а в базе
  * не оставалось следа, и в аналитике нечего было разложить по Kaspi и наличным.
  */
-export function addRentalPayment(rentalId: string, amount: number, method: PaymentMethod) {
+export function addRentalPayment(rentalId: string, amount: number, method: PaymentMethod, actorName?: string) {
   const rental = getRental(rentalId);
   if (!rental) throw httpError(404, "Аренда не найдена");
   if (!(amount > 0)) throw httpError(400, "Сумма оплаты должна быть больше нуля");
@@ -1682,8 +1682,8 @@ export function addRentalPayment(rentalId: string, amount: number, method: Payme
 
   db.transaction(() => {
     db.prepare(
-      `INSERT INTO rental_payments (id, rental_id, amount, method, created_at) VALUES (?, ?, ?, ?, ?)`
-    ).run(newId("pay"), rentalId, amount, method, now);
+      `INSERT INTO rental_payments (id, rental_id, amount, method, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(newId("pay"), rentalId, amount, method, now, actorName ?? null);
     db.prepare(`UPDATE rentals SET paid = ?, payment_status = ?, paid_at = ?, updated_at = ? WHERE id = ?`).run(
       paid,
       paid >= rental.total ? "paid" : "partial",
@@ -1698,15 +1698,148 @@ export function addRentalPayment(rentalId: string, amount: number, method: Payme
     type: "payment",
     title: "Принял оплату",
     details: `${Math.round(amount)} ₸ · ${method === "cash" ? "наличные" : method === "kaspi" ? "Kaspi" : "от компании"}`,
+    actorName,
   });
 
   return getRental(rentalId);
 }
 
-export function listRentalPayments(rentalId: string) {
-  return db
-    .prepare(`SELECT id, rental_id, amount, method, created_at FROM rental_payments WHERE rental_id = ? ORDER BY created_at`)
-    .all(rentalId) as { id: string; rental_id: string; amount: number; method: string; created_at: string }[];
+export function listRentalPayments(rentalId: string): RentalPayment[] {
+  const rows = db
+    .prepare(
+      `SELECT id, rental_id, amount, method, created_at, created_by FROM rental_payments WHERE rental_id = ? ORDER BY created_at`
+    )
+    .all(rentalId) as { id: string; rental_id: string; amount: number; method: string; created_at: string; created_by: string | null }[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    rentalId: r.rental_id,
+    amount: r.amount,
+    method: r.method as PaymentMethod,
+    createdAt: r.created_at,
+    createdBy: r.created_by ?? undefined,
+  }));
+}
+
+/** Строка «кто заплатил» в отчёте за период */
+export interface PaymentLedgerRow {
+  id: string;
+  amount: number;
+  method: PaymentMethod;
+  createdAt: string;
+  createdBy?: string;
+  rentalId: string;
+  rentalNumber: string;
+  rentalTotal: number;
+  rentalPaid: number;
+  clientId?: string;
+  clientName?: string;
+  clientPhone?: string;
+}
+
+/** Строка «кто не заплатил»: аренда с остатком, попавшая в период */
+export interface DebtLedgerRow {
+  rentalId: string;
+  rentalNumber: string;
+  status: RentalStatus;
+  total: number;
+  paid: number;
+  debt: number;
+  createdAt: string;
+  endAt: string;
+  clientId?: string;
+  clientName?: string;
+  clientPhone?: string;
+}
+
+/**
+ * Кто за период заплатил, а кто остался должен.
+ *
+ * Сводка «поступило столько-то» не отвечает на главный утренний вопрос: с кем
+ * сегодня рассчитались, а кому звонить. Поэтому рядом с суммой отдаём поимённый
+ * список — с телефоном, номером аренды и тем, кто принял деньги.
+ *
+ * Должники ищутся и по дате оформления, и по дате окончания аренды: за сутки
+ * попадают и те, кто взял инструмент сегодня, и те, кто сегодня должен вернуть.
+ */
+export function paymentsLedger(fromIso: string | null, toIso: string | null) {
+  const range = { from: fromIso, to: toIso };
+
+  const paidRows = db
+    .prepare(
+      `SELECT p.id, p.amount, p.method, p.created_at, p.created_by,
+              r.id AS rental_id, r.number AS rental_number, r.total AS rental_total, r.paid AS rental_paid,
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+       FROM rental_payments p
+       JOIN rentals r ON r.id = p.rental_id
+       LEFT JOIN clients c ON c.id = r.client_id
+       WHERE (@from IS NULL OR p.created_at >= @from) AND (@to IS NULL OR p.created_at <= @to)
+       ORDER BY p.created_at DESC`
+    )
+    .all(range) as {
+      id: string; amount: number; method: string; created_at: string; created_by: string | null;
+      rental_id: string; rental_number: string; rental_total: number; rental_paid: number;
+      client_id: string | null; client_name: string | null; client_phone: string | null;
+    }[];
+
+  const debtRows = db
+    .prepare(
+      `SELECT r.id, r.number, r.status, r.total, r.paid, r.created_at, r.end_at,
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+       FROM rentals r
+       LEFT JOIN clients c ON c.id = r.client_id
+       WHERE r.status NOT IN ('cancelled', 'request') AND r.total - r.paid > 0
+         AND (
+           ((@from IS NULL OR r.created_at >= @from) AND (@to IS NULL OR r.created_at <= @to))
+           OR ((@from IS NULL OR r.end_at >= @from) AND (@to IS NULL OR r.end_at <= @to))
+         )
+       ORDER BY r.total - r.paid DESC`
+    )
+    .all(range) as {
+      id: string; number: string; status: string; total: number; paid: number;
+      created_at: string; end_at: string;
+      client_id: string | null; client_name: string | null; client_phone: string | null;
+    }[];
+
+  const paid: PaymentLedgerRow[] = paidRows.map((r) => ({
+    id: r.id,
+    amount: r.amount,
+    method: r.method as PaymentMethod,
+    createdAt: r.created_at,
+    createdBy: r.created_by ?? undefined,
+    rentalId: r.rental_id,
+    rentalNumber: r.rental_number,
+    rentalTotal: r.rental_total,
+    rentalPaid: r.rental_paid,
+    clientId: r.client_id ?? undefined,
+    clientName: r.client_name ?? undefined,
+    clientPhone: r.client_phone ?? undefined,
+  }));
+
+  const unpaid: DebtLedgerRow[] = debtRows.map((r) => ({
+    rentalId: r.id,
+    rentalNumber: r.number,
+    status: r.status as RentalStatus,
+    total: r.total,
+    paid: r.paid,
+    debt: Math.round(r.total - r.paid),
+    createdAt: r.created_at,
+    endAt: r.end_at,
+    clientId: r.client_id ?? undefined,
+    clientName: r.client_name ?? undefined,
+    clientPhone: r.client_phone ?? undefined,
+  }));
+
+  return {
+    paid,
+    unpaid,
+    totals: {
+      paidTotal: Math.round(paid.reduce((sum, p) => sum + p.amount, 0)),
+      debtTotal: unpaid.reduce((sum, d) => sum + d.debt, 0),
+      payers: new Set(paid.map((p) => p.clientId ?? p.rentalId)).size,
+      debtors: new Set(unpaid.map((d) => d.clientId ?? d.rentalId)).size,
+    },
+  };
 }
 
 /**
@@ -3063,12 +3196,27 @@ interface LeadRow {
   source: string | null;
   needed_at: string | null;
   unavailable: number;
+  other_city: number | null;
+  client_type: string | null;
+  concerns: string | null;
+  mood: number | null;
   status: string;
   notes: string | null;
   closed_at: string | null;
   created_at: string;
   updated_at: string;
   manager_name?: string | null;
+}
+
+/** Возражения лежат в одной колонке списком — в фильтрах они не участвуют */
+function parseConcerns(raw: string | null): LeadConcern[] | undefined {
+  if (!raw) return undefined;
+  try {
+    const list = JSON.parse(raw);
+    return Array.isArray(list) && list.length ? (list as LeadConcern[]) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function leadRowToDomain(row: LeadRow): Lead {
@@ -3084,6 +3232,10 @@ function leadRowToDomain(row: LeadRow): Lead {
     source: row.source ?? undefined,
     neededAt: row.needed_at ?? undefined,
     unavailable: !!row.unavailable,
+    otherCity: !!row.other_city,
+    clientType: (row.client_type as Lead["clientType"]) ?? undefined,
+    concerns: parseConcerns(row.concerns),
+    mood: row.mood ?? undefined,
     status: row.status as Lead["status"],
     notes: row.notes ?? undefined,
     closedAt: row.closed_at ?? undefined,
@@ -3163,8 +3315,10 @@ export function createLead(input: Partial<Lead>): Lead {
   const id = newId("lead");
   const now = new Date().toISOString();
   db.prepare(
-    `INSERT INTO leads (id, number, title, client_name, phone, amount, manager_id, source, needed_at, unavailable, status, notes, closed_at, created_at, updated_at)
-     VALUES (@id, @number, @title, @clientName, @phone, @amount, @managerId, @source, @neededAt, @unavailable, @status, @notes, NULL, @createdAt, @updatedAt)`
+    `INSERT INTO leads (id, number, title, client_name, phone, amount, manager_id, source, needed_at, unavailable,
+                        other_city, client_type, concerns, mood, status, notes, closed_at, created_at, updated_at)
+     VALUES (@id, @number, @title, @clientName, @phone, @amount, @managerId, @source, @neededAt, @unavailable,
+             @otherCity, @clientType, @concerns, @mood, @status, @notes, NULL, @createdAt, @updatedAt)`
   ).run({
     id,
     number: nextLeadNumber(),
@@ -3176,6 +3330,10 @@ export function createLead(input: Partial<Lead>): Lead {
     source: input.source ?? null,
     neededAt: input.neededAt ?? null,
     unavailable: input.unavailable ? 1 : 0,
+    otherCity: input.otherCity ? 1 : 0,
+    clientType: input.clientType ?? null,
+    concerns: input.concerns?.length ? JSON.stringify(input.concerns) : null,
+    mood: input.mood ?? null,
     status: input.status ?? "open",
     notes: input.notes ?? null,
     createdAt: now,
@@ -3193,7 +3351,8 @@ export function updateLead(id: string, patch: Partial<Lead>): Lead | null {
 
   db.prepare(
     `UPDATE leads SET title=@title, client_name=@clientName, phone=@phone, amount=@amount, manager_id=@managerId,
-     source=@source, needed_at=@neededAt, unavailable=@unavailable, status=@status, notes=@notes,
+     source=@source, needed_at=@neededAt, unavailable=@unavailable, other_city=@otherCity,
+     client_type=@clientType, concerns=@concerns, mood=@mood, status=@status, notes=@notes,
      closed_at=@closedAt, updated_at=@updatedAt WHERE id=@id`
   ).run({
     id,
@@ -3205,6 +3364,13 @@ export function updateLead(id: string, patch: Partial<Lead>): Lead | null {
     source: patch.source !== undefined ? patch.source || null : existing.source ?? null,
     neededAt: patch.neededAt !== undefined ? patch.neededAt || null : existing.neededAt ?? null,
     unavailable: (patch.unavailable ?? existing.unavailable) ? 1 : 0,
+    otherCity: (patch.otherCity ?? existing.otherCity) ? 1 : 0,
+    clientType: patch.clientType !== undefined ? patch.clientType || null : existing.clientType ?? null,
+    concerns: (() => {
+      const list = patch.concerns !== undefined ? patch.concerns : existing.concerns;
+      return list?.length ? JSON.stringify(list) : null;
+    })(),
+    mood: patch.mood !== undefined ? patch.mood || null : existing.mood ?? null,
     status,
     notes: patch.notes !== undefined ? patch.notes || null : existing.notes ?? null,
     // Момент закрытия ставится один раз, при возврате на доску сбрасывается

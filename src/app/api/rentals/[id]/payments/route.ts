@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 /** Приём оплаты: сумма и способ. Способ нужен аналитике — по нему считается касса */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth("rentals.edit");
+    const me = await requireAuth("rentals.edit");
     const { id } = await params;
     const { amount, method } = await req.json();
 
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!Number.isFinite(value) || value <= 0) throw new ApiError(400, "Сумма оплаты должна быть больше нуля");
     if (!METHODS.includes(method)) throw new ApiError(400, "Выберите способ оплаты");
 
-    return NextResponse.json(addRentalPayment(id, value, method));
+    return NextResponse.json(addRentalPayment(id, value, method, me.name));
   } catch (e) {
     return apiError(e);
   }

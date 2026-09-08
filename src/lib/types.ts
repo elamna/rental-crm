@@ -130,6 +130,8 @@ export interface RentalPayment {
   amount: number;
   method: PaymentMethod;
   createdAt: string;
+  /** Кто принял деньги — в чеке это главный вопрос после суммы */
+  createdBy?: string;
 }
 
 /**
@@ -493,6 +495,18 @@ export interface TaskKpiRow {
 /** Заявка живёт на доске, пока открыта; закрытая уходит в выигранные или проигранные */
 export type LeadStatus = "open" | "won" | "lost";
 
+/** Возражения клиента — то, что менеджер отмечает галочкой прямо в разговоре */
+export type LeadConcern = "expensive" | "far" | "delivery";
+
+export const LEAD_CONCERN_LABELS: Record<LeadConcern, string> = {
+  expensive: "Дорого",
+  far: "Далеко",
+  delivery: "Дорогая доставка",
+};
+
+/** Настроение клиента: пять лиц вместо шкалы — менеджеру так быстрее */
+export const LEAD_MOODS = ["😡", "😏", "😌", "🤗", "😍"];
+
 export interface Lead {
   id: string;
   /** Порядковый номер для менеджеров: №4171 */
@@ -511,6 +525,13 @@ export interface Lead {
   neededAt?: string;
   /** Инструмента нет в наличии — карточка стоит в отдельной колонке независимо от даты */
   unavailable: boolean;
+  /** Клиент не из города: дату «когда нужен инструмент» с него не требуем */
+  otherCity?: boolean;
+  clientType?: ClientType;
+  /** Что смущает клиента: дорого, далеко, дорогая доставка */
+  concerns?: LeadConcern[];
+  /** Настроение клиента после разговора, 1 (злой) – 5 (в восторге) */
+  mood?: number;
   status: LeadStatus;
   notes?: string;
   closedAt?: string;
