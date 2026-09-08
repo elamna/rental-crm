@@ -3198,6 +3198,7 @@ interface LeadRow {
   source: string | null;
   needed_at: string | null;
   unavailable: number;
+  future: number | null;
   other_city: number | null;
   client_type: string | null;
   concerns: string | null;
@@ -3234,6 +3235,7 @@ function leadRowToDomain(row: LeadRow): Lead {
     source: row.source ?? undefined,
     neededAt: row.needed_at ?? undefined,
     unavailable: !!row.unavailable,
+    future: !!row.future,
     otherCity: !!row.other_city,
     clientType: (row.client_type as Lead["clientType"]) ?? undefined,
     concerns: parseConcerns(row.concerns),
@@ -3318,9 +3320,9 @@ export function createLead(input: Partial<Lead>): Lead {
   const now = new Date().toISOString();
   db.prepare(
     `INSERT INTO leads (id, number, title, client_name, phone, amount, manager_id, source, needed_at, unavailable,
-                        other_city, client_type, concerns, mood, status, notes, closed_at, created_at, updated_at)
+                        future, other_city, client_type, concerns, mood, status, notes, closed_at, created_at, updated_at)
      VALUES (@id, @number, @title, @clientName, @phone, @amount, @managerId, @source, @neededAt, @unavailable,
-             @otherCity, @clientType, @concerns, @mood, @status, @notes, NULL, @createdAt, @updatedAt)`
+             @future, @otherCity, @clientType, @concerns, @mood, @status, @notes, NULL, @createdAt, @updatedAt)`
   ).run({
     id,
     number: nextLeadNumber(),
@@ -3332,6 +3334,7 @@ export function createLead(input: Partial<Lead>): Lead {
     source: input.source ?? null,
     neededAt: input.neededAt ?? null,
     unavailable: input.unavailable ? 1 : 0,
+    future: input.future ? 1 : 0,
     otherCity: input.otherCity ? 1 : 0,
     clientType: input.clientType ?? null,
     concerns: input.concerns?.length ? JSON.stringify(input.concerns) : null,
@@ -3353,7 +3356,7 @@ export function updateLead(id: string, patch: Partial<Lead>): Lead | null {
 
   db.prepare(
     `UPDATE leads SET title=@title, client_name=@clientName, phone=@phone, amount=@amount, manager_id=@managerId,
-     source=@source, needed_at=@neededAt, unavailable=@unavailable, other_city=@otherCity,
+     source=@source, needed_at=@neededAt, unavailable=@unavailable, future=@future, other_city=@otherCity,
      client_type=@clientType, concerns=@concerns, mood=@mood, status=@status, notes=@notes,
      closed_at=@closedAt, updated_at=@updatedAt WHERE id=@id`
   ).run({
@@ -3366,6 +3369,7 @@ export function updateLead(id: string, patch: Partial<Lead>): Lead | null {
     source: patch.source !== undefined ? patch.source || null : existing.source ?? null,
     neededAt: patch.neededAt !== undefined ? patch.neededAt || null : existing.neededAt ?? null,
     unavailable: (patch.unavailable ?? existing.unavailable) ? 1 : 0,
+    future: (patch.future ?? existing.future) ? 1 : 0,
     otherCity: (patch.otherCity ?? existing.otherCity) ? 1 : 0,
     clientType: patch.clientType !== undefined ? patch.clientType || null : existing.clientType ?? null,
     concerns: (() => {

@@ -4,9 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Lead } from "@/lib/types";
 import { acquisitionChannels } from "@/lib/mock-data";
-import { FunnelBucket, dateForBucket } from "@/lib/funnel";
+import { FunnelBucket, patchForBucket } from "@/lib/funnel";
 import { cn, formatMoney } from "@/lib/utils";
-import { Plus, Search } from "lucide-react";
+import { CalendarClock, Plus, Search, X } from "lucide-react";
 import { FunnelBoard } from "@/components/funnel/funnel-board";
 import { LeadModal, type StaffMember } from "@/components/funnel/lead-modal";
 
@@ -37,6 +37,8 @@ export default function FunnelPage() {
   // Счётчик на вкладке: сколько заявок ждут поставки
   const [unavailableCount, setUnavailableCount] = useState(0);
   const [creating, setCreating] = useState(false);
+  // Кому назначаем день и час — по кнопке на карточке или переносом в «Дату»
+  const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
 
   // Колонка вычисляется от текущей даты, поэтому вкладку, открытую со вчера,
   // надо пересчитывать. Раз в минуту — достаточно и почти бесплатно.
@@ -101,8 +103,16 @@ export default function FunnelPage() {
   const waitingLeads = leads.filter((l) => l.unavailable);
 
   function moveBucket(lead: Lead, bucket: FunnelBucket) {
-    if (bucket === "unavailable") return patchLead(lead, { unavailable: true });
-    patchLead(lead, { unavailable: false, neededAt: dateForBucket(bucket, now) });
+    const patch = patchForBucket(bucket, new Date());
+    // Для «Даты» нужны конкретные день и час — их спрашиваем, а не выдумываем
+    if (!patch) return setSchedulingLead(lead);
+    patchLead(lead, patch);
+  }
+
+  /** Дата назначена: клиент уходит из «Новых» и «Будущих» в «Дату» */
+  function schedule(lead: Lead, iso: string) {
+    setSchedulingLead(null);
+    patchLead(lead, { unavailable: false, future: false, neededAt: iso });
   }
 
   if (!can("leads.view")) {
@@ -213,11 +223,15 @@ export default function FunnelPage() {
             canEdit={canEdit}
             onOpen={(l) => canEdit && setEditing(l)}
             onMoveBucket={moveBucket}
+            onSetDate={setSchedulingLead}
             onClose={(l, status) => patchLead(l, { status })}
           />
         )}
       </div>
 
+      {schedulingLead && (
+        <ScheduleModal lead={schedulingLead} onClose={() => setSchedulingLead(null)} onSave={schedule} />
+      )}
       {creating && <LeadModal staff={staff} onClose={() => setCreating(false)} onSaved={load} />}
       {editing && <LeadModal lead={editing} staff={staff} onClose={() => setEditing(null)} onSaved={load} />}
     </div>
@@ -270,6 +284,87 @@ function ClosedList({
           </div>
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * «Когда нужен инструмент» — короткий диалог на два поля.
+ *
+ * Колонка называется «Дата» именно потому, что без дня и часа она пустая:
+ * подставлять их за менеджера нельзя — он для того клиенту и звонит.
+ * Отсюда карточка уходит в «Дату» и сама вернётся в «Новые», когда время придёт.
+ */
+function ScheduleModal({
+  lead,
+  onClose,
+  onSave,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onSave: (lead: Lead, iso: string) => void;
+}) {
+  const existing = lead.neededAt ? new Date(lead.neededAt) : null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const [date, setDate] = useState(
+    existing && !isNaN(existing.getTime())
+      ? `${existing.getFullYear()}-${pad(existing.getMonth() + 1)}-${pad(existing.getDate())}`
+      : ""
+  );
+  const [time, setTime] = useState(
+    existing && !isNaN(existing.getTime()) ? `${pad(existing.getHours())}:${pad(existing.getMinutes())}` : ""
+  );
+
+  const ready = !!date && !!time;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm rounded-t-[20px] bg-[var(--color-surface)] p-5 pb-8 shadow-xl safe-bottom sm:rounded-[var(--radius-card)] sm:pb-5"
+      >
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h3 className="flex items-center gap-2 text-[16px] font-semibold">
+              <CalendarClock className="h-4 w-4 text-[var(--color-primary)]" /> Когда нужен инструмент
+            </h3>
+            <p className="text-[13px] text-[var(--color-text-muted)]">
+              №{lead.number} · {lead.title}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-[var(--color-text-muted)] transition hover:text-[#C0272D]">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="mb-1.5 block text-[13.5px] font-semibold">Дата</span>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="crm-input" />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[13.5px] font-semibold">Время</span>
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="crm-input" />
+          </label>
+        </div>
+
+        <p className="mt-3 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13px] text-[var(--color-text-muted)]">
+          Карточка встанет в «Дату» и сама вернётся в «Новые», когда наступит это время.
+        </p>
+
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)]">
+            Отмена
+          </button>
+          <button
+            disabled={!ready}
+            onClick={() => onSave(lead, new Date(`${date}T${time}:00`).toISOString())}
+            className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Сохранить
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

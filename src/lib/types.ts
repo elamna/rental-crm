@@ -560,6 +560,8 @@ export interface Lead {
   unavailable: boolean;
   /** Клиент не из города: дату «когда нужен инструмент» с него не требуем */
   otherCity?: boolean;
+  /** Будущий клиент: инструмент нужен когда-нибудь потом, точной даты нет */
+  future?: boolean;
   clientType?: ClientType;
   /** Что смущает клиента: дорого, далеко, дорогая доставка */
   concerns?: LeadConcern[];

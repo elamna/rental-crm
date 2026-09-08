@@ -6,7 +6,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useAppStore } from "@/lib/store";
 import { ClientType, Lead, LeadConcern, LEAD_CONCERN_LABELS, LEAD_MOODS } from "@/lib/types";
 import { acquisitionChannels } from "@/lib/mock-data";
-import { FUNNEL_COLUMNS, FunnelBucket, dateForBucket, leadBucket } from "@/lib/funnel";
+import { FUNNEL_COLUMNS, FunnelBucket, leadBucket } from "@/lib/funnel";
 import { cn } from "@/lib/utils";
 import { Calendar, Clock, FileSignature, Link2, Trash2, User, Users, Wrench, X } from "lucide-react";
 
@@ -128,7 +128,7 @@ export function LeadModal({
   // Колонка не выбирается вручную — она следует из даты. Показываем, куда попадёт карточка
   const previewBucket: FunnelBucket = unavailable
     ? "unavailable"
-    : leadBucket({ ...(lead ?? ({} as Lead)), unavailable: false, neededAt }, new Date());
+    : leadBucket({ ...(lead ?? ({} as Lead)), unavailable: false, future: !neededAt && (lead?.future ?? false), neededAt }, new Date());
   const previewColumn = FUNNEL_COLUMNS.find((c) => c.key === previewBucket);
 
   function toggleConcern(key: LeadConcern) {
@@ -150,6 +150,8 @@ export function LeadModal({
       notes: notes.trim() || undefined,
       unavailable,
       otherCity,
+      // Дата появилась — клиент перестаёт быть «будущим» и встаёт в «Дату»
+      future: neededAt ? false : lead?.future ?? false,
       concerns,
       mood,
       neededAt,
@@ -501,4 +503,3 @@ export function LeadModal({
   );
 }
 
-export { dateForBucket };

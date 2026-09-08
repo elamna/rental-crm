@@ -5,7 +5,7 @@ import { Lead, LEAD_CONCERN_LABELS, LEAD_MOODS } from "@/lib/types";
 import { BOARD_COLUMNS, FUNNEL_COLUMNS, FunnelBucket, groupLeads } from "@/lib/funnel";
 import { cn, formatMoney } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
-import { CheckCircle2, Phone, User, XCircle } from "lucide-react";
+import { CalendarPlus, CheckCircle2, Phone, User, XCircle } from "lucide-react";
 
 export function FunnelBoard({
   leads,
@@ -13,6 +13,7 @@ export function FunnelBoard({
   canEdit,
   onOpen,
   onMoveBucket,
+  onSetDate,
   onClose,
 }: {
   leads: Lead[];
@@ -22,6 +23,8 @@ export function FunnelBoard({
   canEdit: boolean;
   onOpen: (lead: Lead) => void;
   onMoveBucket: (lead: Lead, bucket: FunnelBucket) => void;
+  /** Спросить у менеджера день и час — без них колонка «Дата» бессмысленна */
+  onSetDate: (lead: Lead) => void;
   onClose: (lead: Lead, status: "won" | "lost") => void;
 }) {
   const isMobile = useIsMobile();
@@ -56,6 +59,7 @@ export function FunnelBoard({
                 <div className="text-[12.5px] text-[var(--color-text-muted)]">
                   {items.length} сделки: {formatMoney(sum)}
                 </div>
+                <div className="mt-0.5 text-[12px] leading-snug text-[var(--color-text-muted)]">{col.hint}</div>
               </div>
 
               <div className="space-y-2">
@@ -71,6 +75,7 @@ export function FunnelBoard({
                     onOpen={() => onOpen(lead)}
                     onDragStart={() => setDragging(lead)}
                     onMoveBucket={(b) => onMoveBucket(lead, b)}
+                    onSetDate={() => onSetDate(lead)}
                   />
                 ))}
                 {items.length === 0 && (
@@ -133,6 +138,7 @@ function LeadCard({
   onOpen,
   onDragStart,
   onMoveBucket,
+  onSetDate,
 }: {
   lead: Lead;
   now: Date;
@@ -143,9 +149,13 @@ function LeadCard({
   onOpen: () => void;
   onDragStart: () => void;
   onMoveBucket: (b: FunnelBucket) => void;
+  onSetDate: () => void;
 }) {
+  // Время пришло вчера и раньше, а клиент всё ещё висит в «Новых» — это уже горит
   const overdue =
-    lead.neededAt && !lead.unavailable && new Date(lead.neededAt).getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    !!lead.neededAt &&
+    !lead.unavailable &&
+    new Date(lead.neededAt).getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
   return (
     <div
@@ -198,10 +208,20 @@ function LeadCard({
             ))}
           </div>
           <span className={cn("text-[12.5px] text-[var(--color-text-muted)]", overdue && "font-semibold text-[#C0272D]")}>
-            {lead.neededAt ? formatShortDate(lead.neededAt) : "без даты"}
+            {lead.neededAt ? formatShortDate(lead.neededAt) : "дата не назначена"}
           </span>
         </div>
       </button>
+
+      {/* В «Новом» и «Будущем» вся работа менеджера — узнать дату, поэтому кнопка прямо на карточке */}
+      {canEdit && currentBucket !== "date" && (
+        <button
+          onClick={onSetDate}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[8px] border border-[var(--color-primary)] py-1.5 text-[13px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
+        >
+          <CalendarPlus className="h-3.5 w-3.5" /> Поставить дату
+        </button>
+      )}
 
       {/* На телефоне карточку не потащишь — колонка выбирается списком */}
       {canEdit && isMobile && (

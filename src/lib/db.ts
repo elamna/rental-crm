@@ -368,6 +368,16 @@ db.exec(
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_source ON tasks(source_kind, source_id) WHERE source_kind IS NOT NULL`
 );
 
+// «Будущий клиент» — решение менеджера, а не отсутствие даты: заявки без даты,
+// заведённые до появления колонки, разом переносим туда же
+{
+  const has = (db.prepare(`PRAGMA table_info(leads)`).all() as { name: string }[]).some((c) => c.name === "future");
+  if (!has) {
+    db.exec(`ALTER TABLE leads ADD COLUMN future INTEGER NOT NULL DEFAULT 0`);
+    db.exec(`UPDATE leads SET future = 1 WHERE needed_at IS NULL AND unavailable = 0`);
+  }
+}
+
 ensureColumns("leads", {
   // Физлицо или компания — от этого зависит, как оформлять аренду
   client_type: "TEXT",
