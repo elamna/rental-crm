@@ -71,7 +71,7 @@ export function AddCatalogItemModal({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по названию или артикулу…"
-              className="crm-input pl-9"
+              className="crm-input with-icon"
             />
           </div>
         </div>

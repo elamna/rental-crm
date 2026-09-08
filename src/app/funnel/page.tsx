@@ -10,12 +10,13 @@ import { Plus, Search } from "lucide-react";
 import { FunnelBoard } from "@/components/funnel/funnel-board";
 import { LeadModal, type StaffMember } from "@/components/funnel/lead-modal";
 
-type View = "open" | "won" | "lost";
+type View = "open" | "won" | "lost" | "unavailable";
 
 const VIEWS: { key: View; label: string }[] = [
   { key: "open", label: "Доска" },
   { key: "won", label: "Успешные" },
   { key: "lost", label: "Не реализованы" },
+  { key: "unavailable", label: "Нет в наличии" },
 ];
 
 export default function FunnelPage() {
@@ -33,6 +34,8 @@ export default function FunnelPage() {
   const [source, setSource] = useState("");
 
   const [editing, setEditing] = useState<Lead | null>(null);
+  // Счётчик на вкладке: сколько заявок ждут поставки
+  const [unavailableCount, setUnavailableCount] = useState(0);
   const [creating, setCreating] = useState(false);
 
   // Колонка вычисляется от текущей даты, поэтому вкладку, открытую со вчера,
@@ -44,7 +47,9 @@ export default function FunnelPage() {
   }, []);
 
   const load = useCallback(async () => {
-    const params = new URLSearchParams({ status: view });
+    // «Нет в наличии» — те же открытые заявки, просто с флагом: отдельного
+    // статуса у них нет, иначе заявка теряла бы историю при возврате на доску
+    const params = new URLSearchParams({ status: view === "unavailable" ? "open" : view });
     if (search.trim()) params.set("q", search.trim());
     if (manager) params.set("manager", manager);
     if (source) params.set("source", source);
@@ -54,6 +59,9 @@ export default function FunnelPage() {
       const data = await res.json();
       setLeads(data.leads);
       setTotals(data.totals);
+      if (view === "open" || view === "unavailable") {
+        setUnavailableCount((data.leads as Lead[]).filter((l) => l.unavailable).length);
+      }
     }
     setLoading(false);
   }, [view, search, manager, source]);
@@ -87,6 +95,10 @@ export default function FunnelPage() {
     }
     load();
   }
+
+  // Доска показывает только заявки с датой, вкладка — те, что ждут поставки
+  const boardLeads = leads.filter((l) => !l.unavailable);
+  const waitingLeads = leads.filter((l) => l.unavailable);
 
   function moveBucket(lead: Lead, bucket: FunnelBucket) {
     if (bucket === "unavailable") return patchLead(lead, { unavailable: true });
@@ -136,6 +148,11 @@ export default function FunnelPage() {
                 )}
               >
                 {v.label}
+                {v.key === "unavailable" && unavailableCount > 0 && (
+                  <span className="ml-1.5 rounded-full bg-[#F1F2F6] px-1.5 py-0.5 text-[12px] text-[var(--color-text-muted)]">
+                    {unavailableCount}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -179,9 +196,11 @@ export default function FunnelPage() {
 
         {loading ? (
           <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
+        ) : view === "unavailable" ? (
+          <ClosedList leads={waitingLeads} onOpen={setEditing} canEdit={canEdit} empty="Все заявки с инструментом — на доске" />
         ) : view !== "open" ? (
           <ClosedList leads={leads} onOpen={setEditing} canEdit={canEdit} />
-        ) : leads.length === 0 ? (
+        ) : boardLeads.length === 0 ? (
           <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center card-shadow">
             <p className="text-[14.5px] text-[var(--color-text-muted)]">
               {canEdit ? "Заявок пока нет — создайте первую" : "Заявок пока нет"}
@@ -189,7 +208,7 @@ export default function FunnelPage() {
           </div>
         ) : (
           <FunnelBoard
-            leads={leads}
+            leads={boardLeads}
             now={now}
             canEdit={canEdit}
             onOpen={(l) => canEdit && setEditing(l)}
@@ -205,11 +224,21 @@ export default function FunnelPage() {
   );
 }
 
-function ClosedList({ leads, onOpen, canEdit }: { leads: Lead[]; onOpen: (l: Lead) => void; canEdit: boolean }) {
+function ClosedList({
+  leads,
+  onOpen,
+  canEdit,
+  empty = "Пока пусто",
+}: {
+  leads: Lead[];
+  onOpen: (l: Lead) => void;
+  canEdit: boolean;
+  empty?: string;
+}) {
   if (leads.length === 0) {
     return (
       <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center card-shadow">
-        <p className="text-[14.5px] text-[var(--color-text-muted)]">Пока пусто</p>
+        <p className="text-[14.5px] text-[var(--color-text-muted)]">{empty}</p>
       </div>
     );
   }
@@ -228,7 +257,17 @@ function ClosedList({ leads, onOpen, canEdit }: { leads: Lead[]; onOpen: (l: Lea
           <div className="mt-1 text-[13px] text-[var(--color-text-muted)]">
             {l.clientName ?? "—"} · {l.phone ?? "—"}
           </div>
-          <div className="mt-1.5 text-[13.5px] font-semibold">{formatMoney(l.amount)}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span className="text-[13.5px] font-semibold">{formatMoney(l.amount)}</span>
+            {l.managerName && (
+              <span className="rounded-[6px] bg-[var(--color-bg)] px-1.5 py-0.5 text-[11.5px] text-[var(--color-text-muted)]">
+                {l.managerName}
+              </span>
+            )}
+            {l.unavailable && (
+              <span className="rounded-[6px] bg-[#F1F2F6] px-1.5 py-0.5 text-[11.5px] font-medium text-[#6E6C63]">Ждём поставки</span>
+            )}
+          </div>
         </button>
       ))}
     </div>

@@ -237,7 +237,7 @@ export function LeadModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               list="lead-tool-names"
-              className="crm-input pl-9"
+              className="crm-input with-icon"
               placeholder="Перфоратор, бетономешалка, виброплита…"
             />
           </span>
@@ -253,7 +253,7 @@ export function LeadModal({
             <FieldLabel required>Имя клиента</FieldLabel>
             <span className="relative block">
               <User className={fieldIcon} />
-              <input value={clientName} onChange={(e) => setClientName(e.target.value)} className="crm-input pl-9" placeholder="Иванов Иван" />
+              <input value={clientName} onChange={(e) => setClientName(e.target.value)} className="crm-input with-icon" placeholder="Иванов Иван" />
             </span>
           </label>
 
@@ -296,7 +296,7 @@ export function LeadModal({
             <FieldLabel required>Откуда пришёл</FieldLabel>
             <span className="relative block">
               <Link2 className={fieldIcon} />
-              <select value={source} onChange={(e) => setSource(e.target.value)} className="crm-input pl-9">
+              <select value={source} onChange={(e) => setSource(e.target.value)} className="crm-input with-icon">
                 <option value="">Выбрать источник</option>
                 {acquisitionChannels.map((c) => (
                   <option key={c} value={c}>
@@ -311,7 +311,7 @@ export function LeadModal({
             <FieldLabel required>Тип клиента</FieldLabel>
             <span className="relative block">
               <Users className={fieldIcon} />
-              <select value={clientType} onChange={(e) => setClientType(e.target.value as ClientType)} className="crm-input pl-9">
+              <select value={clientType} onChange={(e) => setClientType(e.target.value as ClientType)} className="crm-input with-icon">
                 <option value="individual">Физ. лицо</option>
                 <option value="company">Компания</option>
               </select>
@@ -327,7 +327,7 @@ export function LeadModal({
                 value={neededDate}
                 onChange={(e) => setNeededDate(e.target.value)}
                 disabled={unavailable}
-                className={cn("crm-input pl-9", dateRequired && !neededDate && "border-[#C0272D] bg-[#FDECEC]")}
+                className={cn("crm-input with-icon", dateRequired && !neededDate && "border-[#C0272D] bg-[#FDECEC]")}
               />
             </span>
           </label>
@@ -341,7 +341,7 @@ export function LeadModal({
                 value={neededTime}
                 onChange={(e) => setNeededTime(e.target.value)}
                 disabled={unavailable}
-                className={cn("crm-input pl-9", dateRequired && !neededTime && "border-[#C0272D] bg-[#FDECEC]")}
+                className={cn("crm-input with-icon", dateRequired && !neededTime && "border-[#C0272D] bg-[#FDECEC]")}
               />
             </span>
           </label>
@@ -428,7 +428,8 @@ export function LeadModal({
 
         {previewColumn && (
           <p className="mt-4 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px] text-[var(--color-text-muted)]">
-            Карточка встанет в колонку <span className="font-semibold text-[var(--color-text)]">«{previewColumn.label}»</span>
+            {unavailable ? "Заявка уйдёт на вкладку " : "Карточка встанет в колонку "}
+            <span className="font-semibold text-[var(--color-text)]">«{previewColumn.label}»</span>
             {!unavailable && neededAt && " и сама переедет, когда дата приблизится."}
           </p>
         )}

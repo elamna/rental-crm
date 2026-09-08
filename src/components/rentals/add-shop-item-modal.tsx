@@ -112,7 +112,7 @@ export function AddShopItemModal({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Название, инвентарный или серийный номер…"
-              className="crm-input pl-9"
+              className="crm-input with-icon"
             />
           </div>
         </div>

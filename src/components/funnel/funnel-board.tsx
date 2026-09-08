@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Lead, LEAD_CONCERN_LABELS, LEAD_MOODS } from "@/lib/types";
-import { FUNNEL_COLUMNS, FunnelBucket, groupLeads } from "@/lib/funnel";
+import { BOARD_COLUMNS, FUNNEL_COLUMNS, FunnelBucket, groupLeads } from "@/lib/funnel";
 import { cn, formatMoney } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { CheckCircle2, Phone, User, XCircle } from "lucide-react";
@@ -33,7 +33,7 @@ export function FunnelBoard({
   return (
     <div className="relative">
       <div className="flex gap-3 overflow-x-auto pb-2">
-        {FUNNEL_COLUMNS.map((col) => {
+        {BOARD_COLUMNS.map((col) => {
           const items = grouped.get(col.key) ?? [];
           const sum = items.reduce((s, l) => s + l.amount, 0);
           return (

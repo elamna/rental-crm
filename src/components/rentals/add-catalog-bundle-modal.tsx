@@ -117,7 +117,7 @@ export function AddCatalogBundleModal({
         <div className="shrink-0 px-5 pb-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск по названию…" className="crm-input pl-9" />
+            <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск по названию…" className="crm-input with-icon" />
           </div>
         </div>
 

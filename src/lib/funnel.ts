@@ -16,6 +16,13 @@ export const FUNNEL_COLUMNS: { key: FunnelBucket; label: string; accent: string;
   { key: "unavailable", label: "Нет в наличии", accent: "#6E6C63", bg: "bg-[#F1F2F6]" },
 ];
 
+/**
+ * Колонки самой доски. «Нет в наличии» среди них нет: эти заявки ждут не даты,
+ * а поставки, и на доске они только уводили её вправо за край экрана. Живут
+ * отдельной вкладкой рядом с «Не реализованы».
+ */
+export const BOARD_COLUMNS = FUNNEL_COLUMNS.filter((c) => c.key !== "unavailable");
+
 const DAY = 86400000;
 
 function startOfDay(d: Date) {
