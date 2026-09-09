@@ -6,17 +6,19 @@ import { Lead } from "@/lib/types";
 import { acquisitionChannels } from "@/lib/mock-data";
 import { FunnelBucket, patchForBucket } from "@/lib/funnel";
 import { cn, formatMoney } from "@/lib/utils";
-import { CalendarClock, Plus, Search, X } from "lucide-react";
+import { BarChart3, CalendarClock, Plus, Search, X } from "lucide-react";
 import { FunnelBoard } from "@/components/funnel/funnel-board";
 import { LeadModal, type StaffMember } from "@/components/funnel/lead-modal";
+import { DaySummary } from "@/components/funnel/day-summary";
 
-type View = "open" | "won" | "lost" | "unavailable";
+type View = "open" | "won" | "lost" | "unavailable" | "otherCity";
 
 const VIEWS: { key: View; label: string }[] = [
   { key: "open", label: "Доска" },
   { key: "won", label: "Успешные" },
   { key: "lost", label: "Не реализованы" },
   { key: "unavailable", label: "Нет в наличии" },
+  { key: "otherCity", label: "Другой город" },
 ];
 
 export default function FunnelPage() {
@@ -34,11 +36,14 @@ export default function FunnelPage() {
   const [source, setSource] = useState("");
 
   const [editing, setEditing] = useState<Lead | null>(null);
-  // Счётчик на вкладке: сколько заявок ждут поставки
+  // Счётчики на вкладках: сколько заявок ждут поставки и сколько не из города
   const [unavailableCount, setUnavailableCount] = useState(0);
+  const [otherCityCount, setOtherCityCount] = useState(0);
   const [creating, setCreating] = useState(false);
   // Кому назначаем день и час — по кнопке на карточке или переносом в «Дату»
   const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
+  // Сводка за день — то, что вечером отправляют владельцу в переписку
+  const [showSummary, setShowSummary] = useState(false);
 
   // Колонка вычисляется от текущей даты, поэтому вкладку, открытую со вчера,
   // надо пересчитывать. Раз в минуту — достаточно и почти бесплатно.
@@ -51,7 +56,7 @@ export default function FunnelPage() {
   const load = useCallback(async () => {
     // «Нет в наличии» — те же открытые заявки, просто с флагом: отдельного
     // статуса у них нет, иначе заявка теряла бы историю при возврате на доску
-    const params = new URLSearchParams({ status: view === "unavailable" ? "open" : view });
+    const params = new URLSearchParams({ status: view === "unavailable" || view === "otherCity" ? "open" : view });
     if (search.trim()) params.set("q", search.trim());
     if (manager) params.set("manager", manager);
     if (source) params.set("source", source);
@@ -61,8 +66,10 @@ export default function FunnelPage() {
       const data = await res.json();
       setLeads(data.leads);
       setTotals(data.totals);
-      if (view === "open" || view === "unavailable") {
-        setUnavailableCount((data.leads as Lead[]).filter((l) => l.unavailable).length);
+      if (view === "open" || view === "unavailable" || view === "otherCity") {
+        const open = data.leads as Lead[];
+        setUnavailableCount(open.filter((l) => l.unavailable).length);
+        setOtherCityCount(open.filter((l) => !l.unavailable && l.otherCity).length);
       }
     }
     setLoading(false);
@@ -98,9 +105,11 @@ export default function FunnelPage() {
     load();
   }
 
-  // Доска показывает только заявки с датой, вкладка — те, что ждут поставки
-  const boardLeads = leads.filter((l) => !l.unavailable);
+  // Доска показывает только заявки с датой; ждущие поставки и иногородние —
+  // на своих вкладках: им нужна не дата, а поставка или расчёт доставки
+  const boardLeads = leads.filter((l) => !l.unavailable && !l.otherCity);
   const waitingLeads = leads.filter((l) => l.unavailable);
+  const otherCityLeads = leads.filter((l) => !l.unavailable && l.otherCity);
 
   function moveBucket(lead: Lead, bucket: FunnelBucket) {
     const patch = patchForBucket(bucket, new Date());
@@ -112,7 +121,7 @@ export default function FunnelPage() {
   /** Дата назначена: клиент уходит из «Новых» и «Будущих» в «Дату» */
   function schedule(lead: Lead, iso: string) {
     setSchedulingLead(null);
-    patchLead(lead, { unavailable: false, future: false, neededAt: iso });
+    patchLead(lead, { unavailable: false, otherCity: false, future: false, neededAt: iso });
   }
 
   if (!can("leads.view")) {
@@ -132,6 +141,13 @@ export default function FunnelPage() {
             {totals.count} сделки — {formatMoney(totals.amount)}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowSummary(true)}
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+          >
+            <BarChart3 className="h-3.5 w-3.5" /> Сводка за день
+          </button>
         {canEdit && (
           <button
             onClick={() => setCreating(true)}
@@ -140,6 +156,7 @@ export default function FunnelPage() {
             <Plus className="h-3.5 w-3.5" /> Новая заявка
           </button>
         )}
+        </div>
       </header>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
@@ -162,6 +179,9 @@ export default function FunnelPage() {
                   <span className="ml-1.5 rounded-full bg-[#F1F2F6] px-1.5 py-0.5 text-[12px] text-[var(--color-text-muted)]">
                     {unavailableCount}
                   </span>
+                )}
+                {v.key === "otherCity" && otherCityCount > 0 && (
+                  <span className="ml-1.5 rounded-full bg-[#E9F0FE] px-1.5 py-0.5 text-[12px] text-[#2B5FD9]">{otherCityCount}</span>
                 )}
               </button>
             ))}
@@ -208,6 +228,8 @@ export default function FunnelPage() {
           <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : view === "unavailable" ? (
           <ClosedList leads={waitingLeads} onOpen={setEditing} canEdit={canEdit} empty="Все заявки с инструментом — на доске" />
+        ) : view === "otherCity" ? (
+          <ClosedList leads={otherCityLeads} onOpen={setEditing} canEdit={canEdit} empty="Иногородних заявок нет" />
         ) : view !== "open" ? (
           <ClosedList leads={leads} onOpen={setEditing} canEdit={canEdit} />
         ) : boardLeads.length === 0 ? (
@@ -240,6 +262,7 @@ export default function FunnelPage() {
       {schedulingLead && (
         <ScheduleModal lead={schedulingLead} onClose={() => setSchedulingLead(null)} onSave={schedule} />
       )}
+      {showSummary && <DaySummary onClose={() => setShowSummary(false)} />}
       {creating && <LeadModal staff={staff} onClose={() => setCreating(false)} onSaved={load} />}
       {editing && <LeadModal lead={editing} staff={staff} onClose={() => setEditing(null)} onSaved={load} />}
     </div>
@@ -285,6 +308,9 @@ function ClosedList({
               <span className="rounded-[6px] bg-[var(--color-bg)] px-1.5 py-0.5 text-[11.5px] text-[var(--color-text-muted)]">
                 {l.managerName}
               </span>
+            )}
+            {!l.unavailable && l.otherCity && (
+              <span className="rounded-[6px] bg-[#E9F0FE] px-1.5 py-0.5 text-[11.5px] font-medium text-[#2B5FD9]">Другой город</span>
             )}
             {l.unavailable && (
               <span className="rounded-[6px] bg-[#F1F2F6] px-1.5 py-0.5 text-[11.5px] font-medium text-[#6E6C63]">Ждём поставки</span>

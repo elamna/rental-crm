@@ -1,7 +1,7 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
-import { Client, ClientRatingBreakdown, DebtCase, DebtCheck, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, DebtCase, DebtCheck, FunnelDaySummary, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -3378,6 +3378,84 @@ export function listLeads(filter: LeadFilter = {}): Lead[] {
     .all(params) as LeadRow[];
 
   return rows.map(leadRowToDomain);
+}
+
+/**
+ * Сводка воронки за день.
+ *
+ * Вечером владельцу нужен не список карточек, а пять цифр: сколько людей
+ * обратилось, сколько дошло до аренды, сколько отказалось, кого ждём завтра
+ * и чего не хватило на складе. Считается в SQL по границам суток, которые
+ * присылает браузер: только он знает часовой пояс пользователя.
+ */
+export function funnelDaySummary(fromIso: string, toIso: string): FunnelDaySummary {
+  const range = { from: fromIso, to: toIso };
+
+  const calls = (
+    db.prepare(`SELECT COUNT(*) AS c FROM leads WHERE created_at >= @from AND created_at <= @to`).get(range) as { c: number }
+  ).c;
+
+  const closed = db
+    .prepare(
+      `SELECT status, COUNT(*) AS c FROM leads
+       WHERE closed_at IS NOT NULL AND closed_at >= @from AND closed_at <= @to
+       GROUP BY status`
+    )
+    .all(range) as { status: string; c: number }[];
+  const wonRow = closed.find((r) => r.status === "won");
+  const lostRow = closed.find((r) => r.status === "lost");
+
+  // Кого ждём дальше: считаем по той же логике, что раскладывает карточки по доске
+  const open = db
+    .prepare(`SELECT title, needed_at, unavailable, future, other_city FROM leads WHERE status = 'open'`)
+    .all() as { title: string; needed_at: string | null; unavailable: number; future: number; other_city: number }[];
+
+  const dayEnd = new Date(toIso).getTime();
+  const tomorrowEnd = dayEnd + 86400000;
+  // Конец недели считаем от даты сводки: воскресенье включительно
+  const weekDay = (new Date(toIso).getDay() + 6) % 7;
+  const weekEnd = dayEnd + (6 - weekDay) * 86400000;
+
+  let tomorrow = 0;
+  let thisWeek = 0;
+  let later = 0;
+  let unavailable = 0;
+  let otherCity = 0;
+  const unavailableItems: string[] = [];
+
+  for (const lead of open) {
+    if (lead.unavailable) {
+      unavailable++;
+      if (lead.title?.trim()) unavailableItems.push(lead.title.trim());
+      continue;
+    }
+    if (lead.other_city) {
+      otherCity++;
+      continue;
+    }
+    if (lead.future || !lead.needed_at) {
+      later++;
+      continue;
+    }
+    const at = new Date(lead.needed_at).getTime();
+    if (isNaN(at) || at <= dayEnd) continue; // сегодняшних ждать уже не нужно — они в работе
+    if (at <= tomorrowEnd) tomorrow++;
+    else if (at <= weekEnd) thisWeek++;
+    else later++;
+  }
+
+  return {
+    date: toIso,
+    calls,
+    won: wonRow?.c ?? 0,
+    lost: lostRow?.c ?? 0,
+    tomorrow,
+    thisWeek,
+    later,
+    unavailable,
+    otherCity,
+    unavailableItems: [...new Set(unavailableItems)].slice(0, 20),
+  };
 }
 
 export function getLead(id: string): Lead | null {
