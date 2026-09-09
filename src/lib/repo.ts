@@ -1,7 +1,7 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
-import { Client, ClientRatingBreakdown, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, DebtCheck, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -3653,6 +3653,95 @@ export function taskWorkload(): { rows: TaskWorkloadRow[]; free: number } {
     })),
     free,
   };
+}
+
+// ---------- Проверка в реестре должников ----------
+
+interface DebtCheckRow {
+  id: string;
+  client_id: string | null;
+  identifier: string;
+  kind: string;
+  status: string;
+  cases: number;
+  amount: number;
+  travel_ban: number;
+  checked_at: string;
+  checked_by: string | null;
+}
+
+function debtRowToDomain(row: DebtCheckRow): DebtCheck {
+  return {
+    id: row.id,
+    clientId: row.client_id ?? undefined,
+    identifier: row.identifier,
+    kind: row.kind as DebtCheck["kind"],
+    status: row.status as DebtCheck["status"],
+    cases: row.cases,
+    amount: row.amount,
+    travelBan: !!row.travel_ban,
+    checkedAt: row.checked_at,
+    checkedBy: row.checked_by ?? undefined,
+  };
+}
+
+const DEBT_SELECT = `SELECT id, client_id, identifier, kind, status, cases, amount, travel_ban, checked_at, checked_by FROM debt_checks`;
+
+/**
+ * Последняя проверка по номеру.
+ *
+ * Ответ портала кешируется: у госсервиса свои лимиты и своё настроение, а
+ * реестр меняется не по часам. Повторно дёргаем его, только если проверка
+ * старше `maxAgeDays` или менеджер нажал «проверить сейчас».
+ */
+export function latestDebtCheck(identifier: string): DebtCheck | null {
+  const row = db
+    .prepare(`${DEBT_SELECT} WHERE identifier = ? ORDER BY checked_at DESC LIMIT 1`)
+    .get(identifier) as DebtCheckRow | undefined;
+  return row ? debtRowToDomain(row) : null;
+}
+
+export function debtCheckHistory(clientId: string, limit = 10): DebtCheck[] {
+  const rows = db
+    .prepare(`${DEBT_SELECT} WHERE client_id = ? ORDER BY checked_at DESC LIMIT ?`)
+    .all(clientId, limit) as DebtCheckRow[];
+  return rows.map(debtRowToDomain);
+}
+
+export function saveDebtCheck(input: {
+  clientId?: string;
+  identifier: string;
+  kind: DebtCheck["kind"];
+  status: DebtCheck["status"];
+  cases: number;
+  amount: number;
+  travelBan: boolean;
+  raw?: string;
+  actorName?: string;
+}): DebtCheck {
+  const id = newId("dbt");
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO debt_checks (id, client_id, identifier, kind, status, cases, amount, travel_ban, raw, checked_at, checked_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    id,
+    input.clientId ?? null,
+    input.identifier,
+    input.kind,
+    input.status,
+    input.cases,
+    input.amount,
+    input.travelBan ? 1 : 0,
+    // Сырой ответ храним обрезанным: разбирать спорный случай он поможет,
+    // а раздувать базу гигабайтами чужого JSON незачем
+    input.raw ? input.raw.slice(0, 20000) : null,
+    now,
+    input.actorName ?? null
+  );
+
+  const row = db.prepare(`${DEBT_SELECT} WHERE id = ?`).get(id) as DebtCheckRow;
+  return debtRowToDomain(row);
 }
 
 // ---------- Напоминания клиентам ----------

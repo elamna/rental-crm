@@ -10,6 +10,7 @@ import { formatMoney } from "@/lib/utils";
 import { RatingStars, RatingBreakdown } from "@/components/clients/rating-stars";
 import { RentalCard } from "@/components/rentals/rental-card";
 import { ArrowLeft, Phone, Mail, Calendar, Percent, ClipboardList, Trash2, Ban } from "lucide-react";
+import { DebtCheckBlock } from "@/components/clients/debt-check";
 
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -88,6 +89,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               <Stat value={client.overdueCount} label="просрочек" highlight={client.overdueCount > 0} />
             </div>
           </section>
+
+          {/* Что о клиенте знает государство: исполнительные производства и запрет на выезд */}
+          <DebtCheckBlock clientId={client.id} iin={client.iin} bin={client.bin} />
 
           {client.type === "company"
             ? (client.bin || client.legalAddress || client.bankAccount || client.bank) && (

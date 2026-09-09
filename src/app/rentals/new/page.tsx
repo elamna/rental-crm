@@ -13,6 +13,7 @@ import { QuickClientModal } from "@/components/clients/quick-client-modal";
 import { AddCatalogBundleModal } from "@/components/rentals/add-catalog-bundle-modal";
 import { AddCatalogItemModal } from "@/components/rentals/add-catalog-item-modal";
 import { AddShopItemModal } from "@/components/rentals/add-shop-item-modal";
+import { DebtCheckBlock } from "@/components/clients/debt-check";
 import {
   ArrowLeft,
   Search,
@@ -351,6 +352,12 @@ export default function NewRentalPage() {
                 <button onClick={() => setSelectedClient(null)} className="shrink-0 text-[13.5px] font-medium text-[var(--color-primary)] hover:underline">
                   Изменить
                 </button>
+              </div>
+
+              {/* Реестр должников: не запрещаем выдачу, но менеджер должен знать до того,
+                  как инструмент уехал — залог можно взять и побольше */}
+              <div className="mt-3">
+                <DebtCheckBlock clientId={selectedClient.id} iin={selectedClient.iin} bin={selectedClient.bin} compact />
               </div>
 
               {/* Предупреждение о чёрном списке */}

@@ -360,6 +360,27 @@ ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0" });
 // Чек оплаты показывает, кто принял деньги — раньше в платеже этого не было
 ensureColumns("rental_payments", { created_by: "TEXT" });
 
+// Проверки клиентов в реестре должников Минюста. Храним и результат, и сырой
+// ответ портала: формат сервиса нигде не описан, а спорные случаи разбирать
+// придётся по факту
+db.exec(`
+  CREATE TABLE IF NOT EXISTS debt_checks (
+    id TEXT PRIMARY KEY,
+    client_id TEXT,
+    identifier TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL,
+    cases INTEGER NOT NULL DEFAULT 0,
+    amount REAL NOT NULL DEFAULT 0,
+    travel_ban INTEGER NOT NULL DEFAULT 0,
+    raw TEXT,
+    checked_at TEXT NOT NULL,
+    checked_by TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_debt_checks_identifier ON debt_checks(identifier, checked_at);
+  CREATE INDEX IF NOT EXISTS idx_debt_checks_client ON debt_checks(client_id, checked_at);
+`);
+
 // Журнал напоминаний: кому, о чём и когда уже написали. Без него один и тот же
 // клиент получал бы одно и то же напоминание каждый день
 db.exec(`
