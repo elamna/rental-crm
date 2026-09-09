@@ -5,6 +5,7 @@ import { useAppStore } from "@/lib/store";
 import { InventoryItem } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { X, Search, Boxes, Check } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 
 interface SelectedItem {
   item: InventoryItem;
@@ -19,6 +20,9 @@ export function AddCatalogItemModal({
   onAdd: (item: { name: string; pricePerDay: number; qty: number; inventoryItemId?: string }) => void;
 }) {
   const inventory = useAppStore((s) => s.inventory);
+  // Цену держит каталог: менеджер добавляет позицию, но не назначает её стоимость
+  const { user } = useAuth();
+  const canEditPrice = !!user?.isAdmin;
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Map<string, SelectedItem>>(new Map());
 
@@ -108,21 +112,27 @@ export function AddCatalogItemModal({
                   {/* Поле цены при выборе */}
                   {isSelected && sel && (
                     <div className="flex items-center gap-2 border-t border-[var(--color-primary)]/20 px-3 pb-2.5 pt-2" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-[13px] text-[var(--color-text-muted)]">Цена за сутки, ₸</span>
-                      <input
-                        type="number"
-                        value={sel.price}
-                        onChange={(e) => {
-                          setSelected((prev) => {
-                            const next = new Map(prev);
-                            const cur = next.get(item.id);
-                            if (cur) next.set(item.id, { ...cur, price: e.target.value });
-                            return next;
-                          });
-                        }}
-                        className="crm-input ml-auto w-28 text-right text-[14px] font-semibold"
-                        min={0}
-                      />
+                      <span className="text-[13px] text-[var(--color-text-muted)]">
+                        {canEditPrice ? "Цена за сутки, ₸" : "Цена по каталогу"}
+                      </span>
+                      {canEditPrice ? (
+                        <input
+                          type="number"
+                          value={sel.price}
+                          onChange={(e) => {
+                            setSelected((prev) => {
+                              const next = new Map(prev);
+                              const cur = next.get(item.id);
+                              if (cur) next.set(item.id, { ...cur, price: e.target.value });
+                              return next;
+                            });
+                          }}
+                          className="crm-input ml-auto w-28 text-right text-[14px] font-semibold"
+                          min={0}
+                        />
+                      ) : (
+                        <span className="ml-auto text-[14px] font-semibold">{formatMoney(Number(sel.price))}</span>
+                      )}
                     </div>
                   )}
                 </div>

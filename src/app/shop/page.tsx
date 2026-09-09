@@ -201,6 +201,9 @@ function ShopModal({
   const [sku, setSku] = useState(product?.sku ?? "");
   const [serialNumber, setSerialNumber] = useState(product?.serialNumber ?? "");
   const [category, setCategory] = useState(product?.category ?? "");
+  // Цену продажи и себестоимость правит только администратор
+  const { user } = useAuth();
+  const canEditPrice = !!user?.isAdmin;
   const [price, setPrice] = useState(product ? String(product.price) : "");
   const [purchaseCost, setPurchaseCost] = useState(product?.purchaseCost ? String(product.purchaseCost) : "");
   const [qty, setQty] = useState(product ? String(product.qty) : "");
@@ -273,10 +276,10 @@ function ShopModal({
           </Field>
 
           <Field label="Цена продажи, ₸" required>
-            <input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="crm-input" placeholder="0" />
+            <input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="crm-input" placeholder="0" disabled={!canEditPrice} />
           </Field>
           <Field label="Себестоимость, ₸" hint="для наценки в финансах">
-            <input type="number" min={0} value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} className="crm-input" placeholder="0" />
+            <input type="number" min={0} value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} className="crm-input" placeholder="0" disabled={!canEditPrice} />
           </Field>
         </div>
 

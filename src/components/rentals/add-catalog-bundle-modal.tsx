@@ -6,6 +6,7 @@ import { useAppStore } from "@/lib/store";
 import { formatTariffs, groupProducts, kitAvailability, kitPrice, servicePrice } from "@/lib/catalog-utils";
 import { formatMoney } from "@/lib/utils";
 import { Boxes, Check, Search, X } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 
 interface Row {
   id: string;
@@ -67,6 +68,10 @@ export function AddCatalogBundleModal({
     const q = search.trim().toLowerCase();
     return rows.filter((r) => r.name.toLowerCase().includes(q));
   }, [rows, search]);
+
+  // Прейскурант — в каталоге, здесь его только применяют
+  const { user } = useAuth();
+  const canEditPrice = !!user?.isAdmin;
 
   function toggle(row: Row) {
     if (row.disabled) return;
@@ -162,14 +167,20 @@ export function AddCatalogBundleModal({
 
                   {isSelected && sel && (
                     <div className="flex items-center gap-2 border-t border-[var(--color-primary)]/20 px-3 pb-2.5 pt-2">
-                      <span className="text-[13px] text-[var(--color-text-muted)]">{priceLabel}</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={sel.price}
-                        onChange={(e) => patch(row.id, { price: e.target.value })}
-                        className="crm-input ml-auto w-24 text-right text-[14px] font-semibold"
-                      />
+                      <span className="text-[13px] text-[var(--color-text-muted)]">
+                        {canEditPrice ? priceLabel : "Цена по каталогу"}
+                      </span>
+                      {canEditPrice ? (
+                        <input
+                          type="number"
+                          min={0}
+                          value={sel.price}
+                          onChange={(e) => patch(row.id, { price: e.target.value })}
+                          className="crm-input ml-auto w-24 text-right text-[14px] font-semibold"
+                        />
+                      ) : (
+                        <span className="ml-auto text-[14px] font-semibold">{formatMoney(Number(sel.price))}</span>
+                      )}
                       <span className="text-[13px] text-[var(--color-text-muted)]">×</span>
                       <input
                         type="number"

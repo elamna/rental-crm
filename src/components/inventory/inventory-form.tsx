@@ -6,6 +6,7 @@ import { InventoryItem, InventoryStatus } from "@/lib/types";
 import { branches, inventoryCategories, inventoryStatusLabels } from "@/lib/mock-data";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { ChevronLeft } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 
 export interface InventoryFormValues {
   name: string;
@@ -52,6 +53,9 @@ export function InventoryForm({
   error?: string | null;
 }) {
   const router = useRouter();
+  // Прейскурант правит только администратор — по этим цифрам считается выручка
+  const { user } = useAuth();
+  const canEditPrice = !!user?.isAdmin;
   const [values, setValues] = useState<InventoryFormValues>({
     ...emptyValues,
     ...(initial
@@ -127,11 +131,30 @@ export function InventoryForm({
           <Field label="Подкатегория">
             <input value={values.subcategory} onChange={(e) => set("subcategory", e.target.value)} className="crm-input" />
           </Field>
+          {/* Прейскурант — зона ответственности администратора: по этим цифрам
+              считается выручка, и менять их походя нельзя */}
           <Field label="Стоимость покупки, ₸">
-            <input type="number" min={0} value={values.purchasePrice} onChange={(e) => set("purchasePrice", e.target.value)} className="crm-input" />
+            <input
+              type="number"
+              min={0}
+              value={values.purchasePrice}
+              onChange={(e) => set("purchasePrice", e.target.value)}
+              className="crm-input"
+              disabled={!canEditPrice}
+            />
           </Field>
           <Field label="Стоимость аренды за сутки, ₸" required>
-            <input type="number" min={0} value={values.rentalPricePerDay} onChange={(e) => set("rentalPricePerDay", e.target.value)} className="crm-input" />
+            <input
+              type="number"
+              min={0}
+              value={values.rentalPricePerDay}
+              onChange={(e) => set("rentalPricePerDay", e.target.value)}
+              className="crm-input"
+              disabled={!canEditPrice}
+            />
+            {!canEditPrice && (
+              <span className="mt-1 block text-[12.5px] text-[var(--color-text-muted)]">Цену меняет администратор</span>
+            )}
           </Field>
           <Field label="Филиал" required>
             <select value={values.branch} onChange={(e) => set("branch", e.target.value)} className="crm-input">

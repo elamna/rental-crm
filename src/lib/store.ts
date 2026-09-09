@@ -94,16 +94,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   hydrate: async () => {
     if (get().hydrated || get().hydrating) return;
     set({ hydrating: true });
+    // Раздел, закрытый правами, отвечает 401 — и раньше это роняло всю загрузку:
+    // менеджер без доступа к мастерской видел пустой каталог, пустых клиентов
+    // и пустые аренды. Каждый источник теперь падает сам за себя
+    const load = async <T>(url: string): Promise<T[]> => {
+      try {
+        return await api<T[]>(url);
+      } catch {
+        return [];
+      }
+    };
+
     try {
       const [clients, rentals, inventory, kits, services, inventoryChecks, workshopTickets, activity] = await Promise.all([
-        api<Client[]>("/api/clients"),
-        api<Rental[]>("/api/rentals"),
-        api<InventoryItem[]>("/api/inventory"),
-        api<Kit[]>("/api/kits"),
-        api<Service[]>("/api/services"),
-        api<InventoryCheck[]>("/api/inventory-checks"),
-        api<WorkshopTicket[]>("/api/workshop"),
-        api<ActivityEntry[]>("/api/activity"),
+        load<Client>("/api/clients"),
+        load<Rental>("/api/rentals"),
+        load<InventoryItem>("/api/inventory"),
+        load<Kit>("/api/kits"),
+        load<Service>("/api/services"),
+        load<InventoryCheck>("/api/inventory-checks"),
+        load<WorkshopTicket>("/api/workshop"),
+        load<ActivityEntry>("/api/activity"),
       ]);
       set({ clients, rentals, inventory, kits, services, inventoryChecks, workshopTickets, activity, hydrated: true, hydrating: false });
     } catch (err) {

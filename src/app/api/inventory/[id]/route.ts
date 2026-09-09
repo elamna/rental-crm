@@ -16,9 +16,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth("catalog.edit");
+    const me = await requireAuth("catalog.edit");
     const { id } = await params;
     const patch = await req.json();
+    // Прейскурант меняет только администратор: цены — общая для всей системы
+    // величина, по ним считается выручка, скидки и рентабельность.
+    // Проверка серверная, поэтому обойти её запросом мимо интерфейса нельзя
+    if (!me.isAdmin) {
+      delete patch.rentalPricePerDay;
+      delete patch.purchasePrice;
+    }
     if (patch.name !== undefined) patch.name = required(patch.name, "название инструмента");
     assertNonNegativeFields(patch, { rentalPricePerDay: "Стоимость аренды", purchasePrice: "Стоимость покупки" });
     const item = updateInventoryItem(id, patch);

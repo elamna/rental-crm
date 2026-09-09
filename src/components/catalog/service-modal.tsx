@@ -6,6 +6,7 @@ import { Service, ServiceTariff, ServiceTariffType } from "@/lib/types";
 import { serviceTariffLabels } from "@/lib/catalog-utils";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 
 const TARIFF_TYPES: ServiceTariffType[] = ["day", "once", "period"];
 
@@ -15,6 +16,9 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
 
   const [name, setName] = useState(service?.name ?? "");
   const [notes, setNotes] = useState(service?.notes ?? "");
+  const { user } = useAuth();
+  // Тарифы услуг — часть прейскуранта
+  const canEditPrice = !!user?.isAdmin;
   const [tariffs, setTariffs] = useState<ServiceTariff[]>(service?.tariffs ?? [{ type: "day", price: 0 }]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +91,7 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
                   <input
                     type="number"
                     min={0}
-                    disabled={!active}
+                    disabled={!active || !canEditPrice}
                     value={active?.price ?? ""}
                     onChange={(e) => setPrice(type, Number(e.target.value) || 0)}
                     placeholder="0"

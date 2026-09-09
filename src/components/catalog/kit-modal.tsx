@@ -8,6 +8,7 @@ import { groupProducts } from "@/lib/catalog-utils";
 import { formatMoney } from "@/lib/utils";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { Plus, Trash2, X } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 
 export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
   const inventory = useAppStore((s) => s.inventory);
@@ -20,6 +21,9 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
   const [name, setName] = useState(kit?.name ?? "");
   const [category, setCategory] = useState(kit?.category ?? "");
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(kit?.photoUrl);
+  const { user } = useAuth();
+  // Прейскурант правит администратор
+  const canEditPrice = !!user?.isAdmin;
   const [price, setPrice] = useState(kit?.price ? String(kit.price) : "");
   const [notes, setNotes] = useState(kit?.notes ?? "");
   const [lines, setLines] = useState<KitLine[]>(kit?.lines ?? []);
@@ -111,6 +115,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
                   min={0}
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
+                  disabled={!canEditPrice}
                   className="crm-input"
                   placeholder={linesTotal ? String(linesTotal) : "0"}
                 />

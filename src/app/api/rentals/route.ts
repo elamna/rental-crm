@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError, ApiError, assertNonNegativeFields } from "@/lib/auth";
-import { listRentals, createRental } from "@/lib/repo";
+import { listRentals, createRental, enforceCatalogPrices } from "@/lib/repo";
 import { PaymentMethod, Rental } from "@/lib/types";
 import { jsonCompressed } from "@/lib/api-response";
 
@@ -21,6 +21,10 @@ export async function POST(req: NextRequest) {
     if (!body?.client?.id) throw new ApiError(400, "Выберите клиента");
     if (!body.startAt || !body.endAt) throw new ApiError(400, "Укажите даты аренды");
     assertNonNegativeFields(body as unknown as Record<string, unknown>, { total: "Сумма", paid: "Оплачено" });
+    // Цену назначает каталог: менеджер без прав администратора не может
+    // отдать инструмент дешевле или дороже прейскуранта
+    if (!me.isAdmin) body.items = enforceCatalogPrices(body.items ?? []);
+
     const methods: PaymentMethod[] = ["cash", "kaspi", "company"];
     const payments = (body.payments ?? []).filter((p) => Number(p?.amount) > 0 && methods.includes(p?.method));
 

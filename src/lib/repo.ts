@@ -1237,6 +1237,48 @@ function syncShopStock(rentalId: string, nextStatus: string, items: InventoryLin
  * в разрезе Kaspi/наличных. Теперь каждый платёж записывается строкой — теми же
  * чеками, что и оплата внутри уже существующей аренды.
  */
+/**
+ * Приводит цены позиций к каталожным.
+ *
+ * Цену назначает каталог, а не тот, кто оформляет аренду: иначе один менеджер
+ * отдаёт виброплиту за 3000, другой за 8000, и понять, сколько прокат должен
+ * зарабатывать, невозможно. Скидку по-прежнему можно дать явно — она видна
+ * отдельной строкой и в отчётах, в отличие от тихо заниженной цены.
+ *
+ * Проверка серверная: подменить цену запросом в обход интерфейса не выйдет.
+ */
+export function enforceCatalogPrices(items: InventoryLine[]): InventoryLine[] {
+  if (!items?.length) return items ?? [];
+
+  const byId = new Map(
+    (db.prepare(`SELECT id, rental_price FROM inventory_items`).all() as { id: string; rental_price: number }[]).map(
+      (r) => [r.id, r.rental_price]
+    )
+  );
+  const shopById = new Map(
+    (db.prepare(`SELECT id, price FROM shop_products`).all() as { id: string; price: number }[]).map((r) => [r.id, r.price])
+  );
+  // Услуги и комплекты попадают в аренду по названию — по нему и сверяем
+  const kitByName = new Map(
+    (db.prepare(`SELECT name, price FROM kits`).all() as { name: string; price: number }[]).map((r) => [
+      r.name.trim().toLowerCase(),
+      r.price,
+    ])
+  );
+
+  return items.map((line) => {
+    const catalogPrice =
+      (line.inventoryItemId ? (line.category === "shop" ? shopById.get(line.inventoryItemId) : byId.get(line.inventoryItemId)) : undefined) ??
+      (line.category === "kit" ? kitByName.get((line.name ?? "").trim().toLowerCase()) : undefined);
+
+    // Позиции без пары в каталоге (разовые услуги, доставка) оставляем как есть:
+    // сверять их не с чем, а запрещать — значит ломать реальные сценарии
+    if (catalogPrice === undefined || !(catalogPrice >= 0)) return line;
+    if (line.pricePerDay === catalogPrice) return line;
+    return { ...line, pricePerDay: catalogPrice };
+  });
+}
+
 export function createRental(
   input: Rental,
   payments: { amount: number; method: PaymentMethod }[] = [],

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShopProduct } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
 import { Check, Search, Store, X } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 
 interface Selection {
   product: ShopProduct;
@@ -57,6 +58,10 @@ export function AddShopItemModal({
       return next;
     });
   }
+
+  // Цена продажи задаётся в магазине, а не при оформлении аренды
+  const { user } = useAuth();
+  const canEditPrice = !!user?.isAdmin;
 
   function patch(id: string, p: Partial<Selection>) {
     setSelected((prev) => {
@@ -161,14 +166,20 @@ export function AddShopItemModal({
 
                   {isSelected && sel && (
                     <div className="flex items-center gap-2 border-t border-[var(--color-primary)]/20 px-3 pb-2.5 pt-2">
-                      <span className="text-[13px] text-[var(--color-text-muted)]">Цена, ₸</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={sel.price}
-                        onChange={(e) => patch(product.id, { price: e.target.value })}
-                        className="crm-input ml-auto w-24 text-right text-[14px] font-semibold"
-                      />
+                      <span className="text-[13px] text-[var(--color-text-muted)]">
+                        {canEditPrice ? "Цена, ₸" : "Цена по каталогу"}
+                      </span>
+                      {canEditPrice ? (
+                        <input
+                          type="number"
+                          min={0}
+                          value={sel.price}
+                          onChange={(e) => patch(product.id, { price: e.target.value })}
+                          className="crm-input ml-auto w-24 text-right text-[14px] font-semibold"
+                        />
+                      ) : (
+                        <span className="ml-auto text-[14px] font-semibold">{formatMoney(Number(sel.price))}</span>
+                      )}
                       <span className="text-[13px] text-[var(--color-text-muted)]">×</span>
                       <input
                         type="number"

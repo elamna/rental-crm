@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRental, updateRental, deleteRental } from "@/lib/repo";
+import { getRental, updateRental, deleteRental, enforceCatalogPrices } from "@/lib/repo";
 import { db } from "@/lib/db";
 import { isOneTimeLine } from "@/lib/utils";
 import { requireAuth, apiError, assertNonNegativeFields } from "@/lib/auth";
@@ -63,6 +63,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const patch = await req.json();
     assertNonNegativeFields(patch, { total: "Сумма", paid: "Оплачено" });
+    // Цену держит каталог: без прав администратора состав аренды можно менять,
+    // а прейскурант — нет. Иначе правило обходится одним запросом мимо интерфейса
+    if (!me.isAdmin && patch.items) patch.items = enforceCatalogPrices(patch.items);
     // Автор изменения попадёт в историю аренды
     const rental = updateRental(id, patch, { actorName: me.name });
     if (!rental) return NextResponse.json({ error: "Аренда не найдена" }, { status: 404 });
