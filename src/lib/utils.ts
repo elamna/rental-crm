@@ -130,13 +130,25 @@ export function waLink(phone: string | undefined, text: string) {
  * иначе набранное «707…» превращалось в «07…» — первую цифру принимали за код.
  */
 export function formatPhoneInput(raw: string) {
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return "";
+  const trimmed = raw.trimStart();
+  let rest: string;
 
-  let rest = digits;
-  if (rest.length === 11 && (rest[0] === "7" || rest[0] === "8")) rest = rest.slice(1);
-  else if (rest.length > 11) rest = rest.slice(-10);
+  if (trimmed.startsWith("+7")) {
+    // Поле само рисует «+7», поэтому семёрку из префикса в номер не берём.
+    // Иначе при удалении она вставала в начало национального номера, цифр
+    // не убавлялось — со стороны выглядело, будто стирание не работает
+    rest = trimmed.slice(2).replace(/\D/g, "");
+  } else {
+    const digits = trimmed.replace(/\D/g, "");
+    if (digits.length >= 11) rest = digits.slice(-10);
+    // «8» первой цифрой — это выход на межгород, а не часть номера
+    else if (digits.startsWith("8")) rest = digits.slice(1);
+    else rest = digits;
+  }
+
   rest = rest.slice(0, 10);
+  // Стёрли всё до последней цифры — поле должно опустеть, а не залипнуть на «+7»
+  if (!rest) return "";
 
   const parts = [rest.slice(0, 3), rest.slice(3, 6), rest.slice(6, 8), rest.slice(8, 10)];
   let out = "+7";
