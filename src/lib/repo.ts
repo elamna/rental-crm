@@ -1,7 +1,7 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
-import { Client, ClientRatingBreakdown, ImportReport, LeadConcern, PaymentMethod, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -3624,6 +3624,359 @@ export function taskWorkload(): { rows: TaskWorkloadRow[]; free: number } {
     })),
     free,
   };
+}
+
+// ---------- Напоминания клиентам ----------
+
+/**
+ * Тексты по умолчанию. Меняются в интерфейсе и лежат в настройках компании:
+ * менеджеры правят их под свою манеру разговора, не трогая код.
+ */
+export const DEFAULT_REMINDER_TEMPLATES: ReminderTemplates = {
+  return_tomorrow:
+    "Здравствуйте, {client}! Напоминаем: аренда №{rental} ({item}) заканчивается завтра, {date} в {time}. Продлить или примете возврат?",
+  return_soon:
+    "Здравствуйте, {client}! Аренда №{rental} ({item}) заканчивается сегодня в {time}. Подскажите, привезёте инструмент или продлеваем?",
+  overdue:
+    "Здравствуйте, {client}! Срок аренды №{rental} ({item}) истёк {date}, идёт {days}-й день просрочки. Когда сможете вернуть инструмент?",
+  debt:
+    "Здравствуйте, {client}! По аренде №{rental} остался долг {debt} ₸. Подскажите, когда сможете оплатить?",
+  lead_silent:
+    "Здравствуйте, {client}! Вы обращались к нам по поводу: {title}. Подскажите, актуально ещё? Инструмент можем подготовить.",
+  shortage:
+    "Здравствуйте, {client}! По аренде №{rental} не вернули: {shortage}. Подскажите, когда сможете привезти или компенсировать?",
+};
+
+const REMINDER_KINDS: ReminderKind[] = [
+  "return_soon",
+  "return_tomorrow",
+  "overdue",
+  "debt",
+  "lead_silent",
+  "shortage",
+];
+
+/**
+ * Через сколько дней можно напомнить о том же ещё раз.
+ * У возврата повтора нет вовсе: срок наступает один раз, а дальше повод
+ * меняется на «просрочку» — иначе клиент получил бы два одинаковых сообщения.
+ */
+const REMINDER_COOLDOWN_DAYS: Record<ReminderKind, number> = {
+  return_tomorrow: Infinity,
+  return_soon: Infinity,
+  overdue: 1,
+  debt: 3,
+  lead_silent: 3,
+  shortage: 3,
+};
+
+export function getReminderTemplates(): ReminderTemplates {
+  const rows = db.prepare(`SELECT key, value FROM company_settings WHERE key LIKE 'reminder_tpl_%'`).all() as {
+    key: string;
+    value: string;
+  }[];
+  const saved = new Map(rows.map((r) => [r.key.replace("reminder_tpl_", ""), r.value]));
+  const result = { ...DEFAULT_REMINDER_TEMPLATES };
+  for (const kind of REMINDER_KINDS) {
+    const value = saved.get(kind);
+    if (value && value.trim()) result[kind] = value;
+  }
+  return result;
+}
+
+export function saveReminderTemplates(patch: Partial<ReminderTemplates>): ReminderTemplates {
+  const stmt = db.prepare(
+    `INSERT INTO company_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`
+  );
+  for (const kind of REMINDER_KINDS) {
+    const value = patch[kind];
+    if (value !== undefined) stmt.run(`reminder_tpl_${kind}`, value);
+  }
+  return getReminderTemplates();
+}
+
+function fillTemplate(template: string, vars: Record<string, string | number | undefined>) {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
+    const value = vars[key];
+    return value === undefined || value === null || value === "" ? match : String(value);
+  });
+}
+
+/** Первая позиция состава — в сообщении она понятнее номера аренды */
+function firstItemName(itemsJson: string): string {
+  try {
+    const items = JSON.parse(itemsJson || "[]") as InventoryLine[];
+    const product = items.find((i) => !isOneTimeLine(i)) ?? items[0];
+    return product?.name ?? "инструмент";
+  } catch {
+    return "инструмент";
+  }
+}
+
+function ruDate(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
+}
+
+function ruTime(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Кому сегодня стоит написать.
+ *
+ * Отправляет сообщение человек — руками, из WhatsApp. Система берёт на себя то,
+ * что человек делает плохо: помнит, у кого завтра заканчивается аренда, кто должен
+ * денег и кто звонил на прошлой неделе и пропал. Текст готовится заранее, чтобы
+ * менеджеру оставалось нажать «отправить».
+ *
+ * Повторы гасит журнал `reminder_log`: по каждому поводу у каждого объекта есть
+ * свой интервал молчания, иначе должник получал бы одно и то же сообщение каждый день.
+ */
+export function listReminders(now: Date = new Date()): ReminderItem[] {
+  const templates = getReminderTemplates();
+  const nowMs = now.getTime();
+  const HOUR = 3600000;
+
+  const logRows = db
+    .prepare(`SELECT kind, target_id, MAX(sent_at) AS last_sent FROM reminder_log GROUP BY kind, target_id`)
+    .all() as { kind: string; target_id: string; last_sent: string }[];
+  const lastSent = new Map(logRows.map((r) => [`${r.kind}:${r.target_id}`, r.last_sent]));
+
+  const items: ReminderItem[] = [];
+
+  /** Добавляет повод, если по нему ещё не писали или интервал молчания прошёл */
+  const push = (item: Omit<ReminderItem, "lastSentAt">) => {
+    const last = lastSent.get(`${item.kind}:${item.targetId}`);
+    if (last) {
+      const days = REMINDER_COOLDOWN_DAYS[item.kind];
+      if (!isFinite(days)) return;
+      if (nowMs - new Date(last).getTime() < days * 86400000) return;
+    }
+    items.push({ ...item, lastSentAt: last });
+  };
+
+  const company = getCompanySettings().company_name ?? "";
+
+  // 1–2. Возврат завтра и возврат в ближайшие три часа
+  const running = db
+    .prepare(
+      `SELECT r.id, r.number, r.end_at, r.total, r.paid, r.items_json,
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+       FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
+       WHERE r.status IN ('active','booked') AND r.paused_at IS NULL`
+    )
+    .all() as {
+      id: string; number: string; end_at: string; total: number; paid: number; items_json: string;
+      client_id: string | null; client_name: string | null; client_phone: string | null;
+    }[];
+
+  for (const r of running) {
+    const end = new Date(r.end_at).getTime();
+    if (isNaN(end) || end <= nowMs) continue;
+    const hoursLeft = (end - nowMs) / HOUR;
+    // Ровно один повод на аренду: либо «через три часа», либо «завтра»
+    const kind: ReminderKind | null = hoursLeft <= 3 ? "return_soon" : hoursLeft <= 27 ? "return_tomorrow" : null;
+    if (!kind) continue;
+
+    const item = firstItemName(r.items_json);
+    push({
+      kind,
+      targetId: r.id,
+      url: `/rentals/${r.id}`,
+      clientId: r.client_id ?? undefined,
+      clientName: r.client_name ?? "Клиент",
+      phone: r.client_phone ?? undefined,
+      subtitle: `Аренда №${r.number} · ${item}`,
+      dueAt: r.end_at,
+      message: fillTemplate(templates[kind], {
+        client: r.client_name ?? "",
+        rental: r.number,
+        item,
+        date: ruDate(r.end_at),
+        time: ruTime(r.end_at),
+        debt: Math.max(0, Math.round(r.total - r.paid)),
+        total: Math.round(r.total),
+        company,
+      }),
+    });
+  }
+
+  // 3. Просрочка
+  const overdue = db
+    .prepare(
+      `SELECT r.id, r.number, r.end_at, r.total, r.paid, r.items_json,
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+       FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
+       WHERE r.status = 'overdue'`
+    )
+    .all() as typeof running;
+
+  for (const r of overdue) {
+    const end = new Date(r.end_at).getTime();
+    const days = Math.max(1, Math.ceil((nowMs - end) / 86400000));
+    const item = firstItemName(r.items_json);
+    push({
+      kind: "overdue",
+      targetId: r.id,
+      url: `/rentals/${r.id}`,
+      clientId: r.client_id ?? undefined,
+      clientName: r.client_name ?? "Клиент",
+      phone: r.client_phone ?? undefined,
+      subtitle: `Аренда №${r.number} · ${item} · ${days} дн. просрочки`,
+      dueAt: r.end_at,
+      message: fillTemplate(templates.overdue, {
+        client: r.client_name ?? "",
+        rental: r.number,
+        item,
+        date: ruDate(r.end_at),
+        time: ruTime(r.end_at),
+        days,
+        debt: Math.max(0, Math.round(r.total - r.paid)),
+        company,
+      }),
+    });
+  }
+
+  // 4. Долг по закрытой аренде
+  const debts = db
+    .prepare(
+      `SELECT r.id, r.number, r.end_at, r.total, r.paid, r.items_json,
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+       FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
+       WHERE r.status IN ('completed','stolen') AND r.total - r.paid > 0.5`
+    )
+    .all() as typeof running;
+
+  for (const r of debts) {
+    const debt = Math.round(r.total - r.paid);
+    push({
+      kind: "debt",
+      targetId: r.id,
+      url: `/rentals/${r.id}`,
+      clientId: r.client_id ?? undefined,
+      clientName: r.client_name ?? "Клиент",
+      phone: r.client_phone ?? undefined,
+      subtitle: `Аренда №${r.number} · долг ${debt} ₸`,
+      dueAt: r.end_at,
+      message: fillTemplate(templates.debt, {
+        client: r.client_name ?? "",
+        rental: r.number,
+        item: firstItemName(r.items_json),
+        debt,
+        total: Math.round(r.total),
+        date: ruDate(r.end_at),
+        company,
+      }),
+    });
+  }
+
+  // 5. Звонил и пропал: заявка висит в «Новом клиенте» дольше двух суток
+  const silentAfter = new Date(nowMs - 2 * 86400000).toISOString();
+  const leads = db
+    .prepare(
+      `SELECT id, number, title, client_name, phone, needed_at, updated_at
+       FROM leads
+       WHERE status = 'open' AND unavailable = 0 AND future = 0
+         AND (needed_at IS NULL OR needed_at <= @now)
+         AND updated_at <= @silentAfter`
+    )
+    .all({ now: now.toISOString(), silentAfter }) as {
+      id: string; number: number; title: string; client_name: string | null; phone: string | null;
+      needed_at: string | null; updated_at: string;
+    }[];
+
+  for (const lead of leads) {
+    push({
+      kind: "lead_silent",
+      targetId: lead.id,
+      url: "/funnel",
+      clientName: lead.client_name ?? "Клиент",
+      phone: lead.phone ?? undefined,
+      subtitle: `Заявка №${lead.number} · ${lead.title}`,
+      dueAt: lead.needed_at ?? undefined,
+      message: fillTemplate(templates.lead_silent, {
+        client: lead.client_name ?? "",
+        title: lead.title,
+        item: lead.title,
+        company,
+      }),
+    });
+  }
+
+  // 6. Некомплект
+  const shortages = db
+    .prepare(
+      `SELECT s.id, s.item_name, s.note, r.id AS rental_id, r.number AS rental_number,
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+       FROM return_shortages s
+       JOIN rentals r ON r.id = s.rental_id
+       LEFT JOIN clients c ON c.id = r.client_id
+       WHERE s.resolved = 0`
+    )
+    .all() as {
+      id: string; item_name: string; note: string | null; rental_id: string; rental_number: string;
+      client_id: string | null; client_name: string | null; client_phone: string | null;
+    }[];
+
+  for (const sh of shortages) {
+    const missing = sh.note?.trim() ? sh.note : sh.item_name;
+    push({
+      kind: "shortage",
+      targetId: sh.id,
+      url: "/shortages",
+      clientId: sh.client_id ?? undefined,
+      clientName: sh.client_name ?? "Клиент",
+      phone: sh.client_phone ?? undefined,
+      subtitle: `Аренда №${sh.rental_number} · ${sh.item_name}`,
+      message: fillTemplate(templates.shortage, {
+        client: sh.client_name ?? "",
+        rental: sh.rental_number,
+        item: sh.item_name,
+        shortage: missing,
+        company,
+      }),
+    });
+  }
+
+  // Сначала то, что горит по времени, потом всё остальное
+  const order = new Map(REMINDER_KINDS.map((k, i) => [k, i]));
+  return items.sort((a, b) => {
+    const byKind = (order.get(a.kind) ?? 0) - (order.get(b.kind) ?? 0);
+    if (byKind !== 0) return byKind;
+    return (a.dueAt ?? "").localeCompare(b.dueAt ?? "");
+  });
+}
+
+/** Отметка «написал»: гасит повод на срок молчания и остаётся в истории */
+export function markReminderSent(input: {
+  kind: ReminderKind;
+  targetId: string;
+  phone?: string;
+  message?: string;
+  actorName?: string;
+}) {
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO reminder_log (id, kind, target_id, phone, message, sent_at, sent_by) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(newId("rem"), input.kind, input.targetId, input.phone ?? null, input.message ?? null, now, input.actorName ?? null);
+  return { ok: true, sentAt: now };
+}
+
+/** История напоминаний по объекту — показывается в карточке аренды */
+export function reminderHistory(targetId: string) {
+  return db
+    .prepare(
+      `SELECT kind, phone, message, sent_at, sent_by FROM reminder_log WHERE target_id = ? ORDER BY sent_at DESC LIMIT 20`
+    )
+    .all(targetId) as { kind: string; phone: string | null; message: string | null; sent_at: string; sent_by: string | null }[];
 }
 
 // ---------- Автоматические задачи ----------

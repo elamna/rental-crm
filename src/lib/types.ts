@@ -493,6 +493,48 @@ export interface Task {
   updatedAt: string;
 }
 
+// ---------- Напоминания клиентам ----------
+
+/** Повод написать клиенту. Список закрытый: по нему же настраиваются шаблоны */
+export type ReminderKind =
+  | "return_tomorrow"
+  | "return_soon"
+  | "overdue"
+  | "debt"
+  | "lead_silent"
+  | "shortage";
+
+export const REMINDER_KIND_LABELS: Record<ReminderKind, string> = {
+  return_tomorrow: "Возврат завтра",
+  return_soon: "Возврат через 3 часа",
+  overdue: "Просрочка",
+  debt: "Долг",
+  lead_silent: "Звонил, не дошёл",
+  shortage: "Некомплект",
+};
+
+/** Готовая строка «кому и что написать» */
+export interface ReminderItem {
+  kind: ReminderKind;
+  /** Аренда, заявка или запись о некомплекте, из-за которой напоминание появилось */
+  targetId: string;
+  /** Куда вести по клику */
+  url: string;
+  clientId?: string;
+  clientName: string;
+  phone?: string;
+  /** Короткое пояснение: «аренда №9001 · виброплита» */
+  subtitle: string;
+  /** Срок, к которому привязан повод */
+  dueAt?: string;
+  /** Готовый текст сообщения — остаётся только отправить */
+  message: string;
+  /** Когда по этому же поводу писали в прошлый раз */
+  lastSentAt?: string;
+}
+
+export type ReminderTemplates = Record<ReminderKind, string>;
+
 /** Строка сводки «Люди»: чем человек занят прямо сейчас */
 export interface TaskWorkloadRow {
   userId: string;

@@ -5,9 +5,9 @@ import { useAppStore } from "@/lib/store";
 import type { Rental } from "@/lib/types";
 import { notFound, useRouter } from "next/navigation";
 import { RentalSidePanel } from "@/components/rentals/rental-side-panel";
-import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, isOneTimeLine, lineTotal, durationDays } from "@/lib/utils";
+import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, isOneTimeLine, lineTotal, durationDays, waLink } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
-import { ArrowLeft, Search, Star, Phone, Mail, Plus, AlertTriangle, Pencil, MoreHorizontal, Pause, Play, History, Ban, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Star, Phone, Mail, Plus, AlertTriangle, Pencil, MoreHorizontal, Pause, Play, History, Ban, Trash2, MessageCircle } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { RentalHistoryModal, RentalPausesModal } from "@/components/rentals/rental-history";
 import { AddCatalogItemModal } from "@/components/rentals/add-catalog-item-modal";
@@ -331,8 +331,22 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                 </div>
                 <div>
                   <div className="text-[13px] text-[var(--color-text-muted)]">Телефон</div>
-                  <div className="flex items-center gap-1 text-[14.5px] font-medium">
-                    <Phone className="h-3.5 w-3.5 text-[var(--color-text-muted)]" /> {rental.client.phone}
+                  <div className="flex items-center gap-2 text-[14.5px] font-medium">
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3.5 w-3.5 text-[var(--color-text-muted)]" /> {rental.client.phone}
+                    </span>
+                    {/* Написать клиенту — самое частое действие после звонка, пусть будет под рукой */}
+                    {waLink(rental.client.phone, `Здравствуйте, ${rental.client.name}! Пишем по аренде №${rental.number}.`) && (
+                      <a
+                        href={waLink(rental.client.phone, `Здравствуйте, ${rental.client.name}! Пишем по аренде №${rental.number}.`)!}
+                        target="_blank"
+                        rel="noopener"
+                        title="Написать в WhatsApp"
+                        className="flex items-center gap-1 rounded-[8px] bg-[#25D366] px-2 py-1 text-[12.5px] font-semibold text-white transition hover:brightness-95"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                      </a>
+                    )}
                   </div>
                 </div>
                 <div>

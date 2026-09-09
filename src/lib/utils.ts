@@ -107,3 +107,18 @@ export function isDebtorRental(r: { status: string; total: number; paid: number 
   const closed = r.status === "completed" || r.status === "stolen";
   return closed && r.total - r.paid > 0;
 }
+
+/**
+ * Ссылка на переписку в WhatsApp с готовым текстом.
+ *
+ * wa.me открывает чат в приложении или в вебе и подставляет сообщение —
+ * менеджеру остаётся нажать «отправить». Никаких токенов и интеграций для этого
+ * не нужно: отправляет живой человек со своего номера.
+ */
+export function waLink(phone: string | undefined, text: string) {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  // Казахстанские номера в базе лежат по-разному: +7…, 8…, 707… — берём последние 10
+  const national = digits.slice(-10);
+  return `https://wa.me/7${national}?text=${encodeURIComponent(text)}`;
+}

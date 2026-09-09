@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Boxes, Users, BarChart3,
   Ban, FileText, Wallet, Wrench, Settings, Plus, Gauge, Filter, Truck, Store,
-  ChevronsLeft, LogOut, UserCog, X,
-} from "lucide-react";
+  ChevronsLeft, LogOut, UserCog, X, BellRing } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -30,6 +29,7 @@ const mainNav: NavItem[] = [
 const secondaryNav: NavItem[] = [
   { href: "/workshop", label: "Мастерская", icon: Wrench, permission: "workshop.view" },
   { href: "/funnel", label: "Воронка", icon: Filter, permission: "leads.view" },
+  { href: "/reminders", label: "Напоминания", icon: BellRing, permission: "rentals.view" },
   { href: "/analytics", label: "Аналитика", icon: BarChart3, permission: "analytics.view" },
   { href: "/delivery", label: "Доставка", icon: Truck, permission: "delivery.view" },
   { href: "/finance", label: "Финансы", icon: Wallet, permission: "finance.view" },
