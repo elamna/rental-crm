@@ -31,12 +31,18 @@ export async function GET(req: NextRequest) {
       // Прокси реестра падает на стороне портала, поэтому проверяем ещё и обычное
       // API наборов: возможно, те же данные лежат набором, а не сервисом
       if (req.nextUrl.searchParams.get("mode") === "v4") {
-        const targets = [
-          ["/api/v4/mapping/reestr_dolzh_po_isp_pr", {}],
-          ["/api/v4/reestr_dolzh_po_isp_pr", { source: '{"size":1}' }],
-          ["/api/v4/mapping/darmensiz_boryshkerlerdin_tizi3", {}],
-          ["/api/v4/darmensiz_boryshkerlerdin_tizi3", { source: '{"size":1}' }],
-        ] as [string, Record<string, string>][];
+        // Какие наборы щупать: по умолчанию список банкротов, он точно отвечает
+        const indexes = (req.nextUrl.searchParams.get("index") ?? "darmensiz_boryshkerlerdin_tizi3")
+          .split(",")
+          .map((i) => i.trim())
+          .filter(Boolean)
+          .slice(0, 6);
+
+        const targets: [string, Record<string, string>][] = [];
+        for (const index of indexes) {
+          targets.push([`/api/v4/mapping/${index}`, {}]);
+          targets.push([`/api/v4/${index}`, { source: '{"size":1}' }]);
+        }
 
         const probes = [];
         for (const [path, params] of targets) {
