@@ -17,9 +17,33 @@ const MAX_AGE_DAYS = 30;
  */
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth("clients.view");
+    const me = await requireAuth("clients.view");
     const value = (req.nextUrl.searchParams.get("value") ?? "").replace(/\D/g, "");
     if (!isValidIdentifier(value)) throw new ApiError(400, "ИИН или БИН должен состоять из 12 цифр");
+
+    // Диагностика для владельца: открыть ссылку в браузере и увидеть, что именно
+    // ответил портал. Формат сервиса нигде не описан, и пока он не подтверждён
+    // живым ответом, разбирать его вслепую бессмысленно. Ключ в ответ не попадает
+    if (me.isOwner && req.nextUrl.searchParams.get("debug") === "1") {
+      if (!isEgovConfigured()) {
+        return NextResponse.json({ configured: false, hint: "EGOV_API_KEY на сервере не задан" });
+      }
+      const param = req.nextUrl.searchParams.get("param") ?? "iin";
+      try {
+        const probe = await callRegistry({ [param]: value });
+        return NextResponse.json({
+          configured: true,
+          param,
+          httpStatus: probe.status,
+          contentType: probe.contentType,
+          url: probe.safeUrl,
+          parsed: parseDebtResponse(probe),
+          body: probe.body.slice(0, 4000),
+        });
+      } catch (err) {
+        return NextResponse.json({ configured: true, param, error: String(err).slice(0, 300) });
+      }
+    }
 
     return NextResponse.json({
       configured: isEgovConfigured(),
