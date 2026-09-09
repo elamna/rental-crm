@@ -28,21 +28,27 @@ export async function GET(req: NextRequest) {
       if (!isEgovConfigured()) {
         return NextResponse.json({ configured: false, hint: "EGOV_API_KEY на сервере не задан" });
       }
-      const param = req.nextUrl.searchParams.get("param") ?? "iin";
-      try {
-        const probe = await callRegistry({ [param]: value });
-        return NextResponse.json({
-          configured: true,
-          param,
-          httpStatus: probe.status,
-          contentType: probe.contentType,
-          url: probe.safeUrl,
-          parsed: parseDebtResponse(probe),
-          body: probe.body.slice(0, 4000),
-        });
-      } catch (err) {
-        return NextResponse.json({ configured: true, param, error: String(err).slice(0, 300) });
+      // Имя входного параметра в паспорте набора не описано, поэтому пробуем
+      // все привычные написания разом: по одному ответу видно, какое подходит
+      const single = req.nextUrl.searchParams.get("param");
+      const candidates = single ? [single] : ["iin", "bin", "iinbin", "IIN", "BIN"];
+
+      const attempts = [];
+      for (const param of candidates) {
+        try {
+          const probe = await callRegistry({ [param]: value });
+          attempts.push({
+            param,
+            httpStatus: probe.status,
+            contentType: probe.contentType.split(";")[0],
+            parsed: parseDebtResponse(probe).status,
+            body: probe.body.replace(/\s+/g, " ").slice(0, 500),
+          });
+        } catch (err) {
+          attempts.push({ param, error: String(err).slice(0, 200) });
+        }
       }
+      return NextResponse.json({ configured: true, attempts });
     }
 
     return NextResponse.json({

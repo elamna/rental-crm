@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/components/auth/auth-provider";
 import { DebtCheck } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
-import { AlertTriangle, ExternalLink, HelpCircle, RotateCw, ShieldCheck, ShieldQuestion } from "lucide-react";
+import { AlertTriangle, Bug, ExternalLink, HelpCircle, RotateCw, ShieldCheck, ShieldQuestion, X } from "lucide-react";
 
 const REGISTRY_URL = "https://aisoip.adilet.gov.kz/debtors";
 
@@ -47,6 +48,25 @@ export function DebtCheckBlock({
   const [maxAgeDays, setMaxAgeDays] = useState(30);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Пока формат сервиса Минюста не подтверждён живым ответом, владельцу нужен
+  // способ увидеть, что именно вернул портал: иначе «ответил непонятно» — тупик
+  const { user } = useAuth();
+  const [probe, setProbe] = useState<string | null>(null);
+  const [probing, setProbing] = useState(false);
+
+  async function runProbe() {
+    setProbing(true);
+    setProbe(null);
+    try {
+      const res = await fetch(`/api/debt-check?value=${value}&debug=1`);
+      setProbe(JSON.stringify(await res.json(), null, 2));
+    } catch (err) {
+      setProbe(String(err));
+    } finally {
+      setProbing(false);
+    }
+  }
 
   const load = useCallback(async () => {
     if (value.length !== 12) return;
@@ -183,7 +203,31 @@ export function DebtCheckBlock({
         >
           <ExternalLink className="h-3.5 w-3.5" /> Открыть реестр
         </a>
+        {user?.isOwner && configured && (
+          <button
+            onClick={runProbe}
+            disabled={probing}
+            title="Показать, что именно ответил портал"
+            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] disabled:opacity-50"
+          >
+            <Bug className="h-3.5 w-3.5" /> {probing ? "Спрашиваем портал…" : "Ответ портала"}
+          </button>
+        )}
       </div>
+
+      {probe && (
+        <div className="mt-3 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[13px] font-semibold">Ответ портала</span>
+            <button onClick={() => setProbe(null)} className="text-[var(--color-text-muted)] hover:text-[#C0272D]">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all text-[11.5px] leading-snug text-[var(--color-text-muted)]">
+            {probe}
+          </pre>
+        </div>
+      )}
     </Card>
   );
 }
