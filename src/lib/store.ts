@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { Client, ImportReport, InventoryCheck, InventoryItem, Kit, Rental, Service, WorkshopTicket } from "./types";
+import { Client, ImportReport, InventoryCheck, InventoryItem, Kit, Rental, Service, WorkshopTicket, PaymentMethod } from "./types";
 
 
 interface ActivityEntry {
@@ -57,7 +57,7 @@ interface AppState {
 
   addInventoryCheck: (input: Partial<InventoryCheck>) => Promise<void>;
 
-  addRental: (rental: Rental) => Promise<Rental>;
+  addRental: (rental: Rental, payments?: { amount: number; method: PaymentMethod }[]) => Promise<Rental>;
   updateRental: (id: string, patch: Partial<Rental>) => Promise<void>;
   /** Массовое удаление аренд: чистка тестовых записей одной операцией */
   deleteRentals: (ids: string[]) => Promise<{ deleted: number }>;
@@ -258,8 +258,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ inventoryChecks: [check, ...s.inventoryChecks], inventory }));
   },
 
-  addRental: async (rental) => {
-    const created = await api<Rental>("/api/rentals", { method: "POST", body: JSON.stringify(rental) });
+  addRental: async (rental, payments = []) => {
+    // Платежи идут тем же запросом: чек должен появиться вместе с арендой,
+    // а не отдельным вызовом, который может не дойти
+    const created = await api<Rental>("/api/rentals", { method: "POST", body: JSON.stringify({ ...rental, payments }) });
     set((s) => ({ rentals: [created, ...s.rentals] }));
     // Позиции с привязкой к каталогу переходят в статус "в аренде" — обновим локальный кэш каталога.
     const inventory = await api<InventoryItem[]>("/api/inventory");

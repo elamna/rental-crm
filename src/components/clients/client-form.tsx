@@ -6,6 +6,7 @@ import { Client, ClientType } from "@/lib/types";
 import { acquisitionChannels } from "@/lib/mock-data";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { ChevronLeft } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 export interface ClientFormValues {
   name: string;
@@ -126,7 +127,7 @@ export function ClientForm({
                 </select>
               </Field>
               <Field label="Номер телефона" required>
-                <input value={values.phone} onChange={(e) => set("phone", e.target.value)} className="crm-input" placeholder="+7 7XX XXX XX XX" />
+                <PhoneInput value={values.phone} onChange={(v) => set("phone", v)} />
               </Field>
             </div>
           </div>

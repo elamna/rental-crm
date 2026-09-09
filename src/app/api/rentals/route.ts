@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError, ApiError, assertNonNegativeFields } from "@/lib/auth";
 import { listRentals, createRental } from "@/lib/repo";
-import { Rental } from "@/lib/types";
+import { PaymentMethod, Rental } from "@/lib/types";
 import { jsonCompressed } from "@/lib/api-response";
 
 export async function GET(req: NextRequest) {
@@ -16,12 +16,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth("rentals.edit");
-    const body = (await req.json()) as Rental;
+    const me = await requireAuth("rentals.edit");
+    const body = (await req.json()) as Rental & { payments?: { amount: number; method: PaymentMethod }[] };
     if (!body?.client?.id) throw new ApiError(400, "Выберите клиента");
     if (!body.startAt || !body.endAt) throw new ApiError(400, "Укажите даты аренды");
     assertNonNegativeFields(body as unknown as Record<string, unknown>, { total: "Сумма", paid: "Оплачено" });
-    return NextResponse.json(createRental(body), { status: 201 });
+    const methods: PaymentMethod[] = ["cash", "kaspi", "company"];
+    const payments = (body.payments ?? []).filter((p) => Number(p?.amount) > 0 && methods.includes(p?.method));
+
+    return NextResponse.json(createRental(body, payments, me.name), { status: 201 });
   } catch (e) {
     return apiError(e);
   }

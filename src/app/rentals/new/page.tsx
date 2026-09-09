@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
 import { branches, rentalPeriods, depositTypeLabels } from "@/lib/mock-data";
-import { Client, InventoryLine, LineCategory, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
+import { Client, InventoryLine, LineCategory, PaymentMethod, PAYMENT_METHOD_LABELS, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
 import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, durationDays, lineTotal, isOneTimeLine } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { QuickClientModal } from "@/components/clients/quick-client-modal";
@@ -122,7 +122,9 @@ export default function NewRentalPage() {
   const [addModalCategory, setAddModalCategory] = useState<LineCategory | null>(null);
 
   const [discountPct, setDiscountPct] = useState(0);
-  const [paid, setPaid] = useState(0);
+  // Не одна цифра «оплачено», а список платежей: из него собирается чек, и он же
+  // уходит на сервер — иначе способ оплаты терялся ещё до сохранения аренды
+  const [payments, setPayments] = useState<{ amount: number; method: PaymentMethod; at: string }[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const [docsOpen, setDocsOpen] = useState(true);
@@ -158,6 +160,7 @@ export default function NewRentalPage() {
   const discountValue = Math.round(itemsTotal * (discountPct / 100));
   const penaltiesSum = penalties.reduce((s, p) => s + p.amount, 0);
   const total = Math.max(0, itemsTotal - discountValue + penaltiesSum);
+  const paid = Math.min(total, payments.reduce((sum, p) => sum + p.amount, 0));
   const remaining = Math.max(0, total - paid);
 
   function paymentStatusFor(t: number, p: number): PaymentStatus {
@@ -221,7 +224,7 @@ export default function NewRentalPage() {
     try {
       const rental = buildRental(status);
       if (!persisted) {
-        const created = await addRental(rental);
+        const created = await addRental(rental, payments.map((p) => ({ amount: p.amount, method: p.method })));
         setNumber(created.number);
         setPersisted(true);
       } else {
@@ -609,14 +612,47 @@ export default function NewRentalPage() {
                 <Tag className="h-3.5 w-3.5" /> Скидка
               </button>
             </div>
+
+            {/* Чек виден сразу, ещё до сохранения аренды: клиент отдал деньги — он вправе
+                увидеть, за что и каким способом они приняты */}
+            {payments.length > 0 && (
+              <div className="mt-3 border-t border-[var(--color-border)] pt-3">
+                <p className="mb-2 text-[12.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  {payments.length > 1 ? "Чеки оплаты" : "Чек оплаты"}
+                </p>
+                <div className="space-y-1.5">
+                  {payments.map((p, i) => (
+                    <div key={p.at + i} className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[13.5px] font-medium">{PAYMENT_METHOD_LABELS[p.method]}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-[14px] font-bold text-[#1C8A46]">{formatMoney(p.amount)}</span>
+                          <button
+                            onClick={() => setPayments((list) => list.filter((_, idx) => idx !== i))}
+                            title="Убрать платёж"
+                            className="grid h-5 w-5 place-items-center rounded text-[var(--color-text-muted)] transition hover:bg-[#FDECEC] hover:text-[#C0272D]"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-[12.5px] text-[var(--color-text-muted)]">
+                        {formatDateTimeDisplay(p.at)}
+                        {sessionUser ? ` · принял ${sessionUser.name}` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Модалка оплаты */}
           {showPaymentModal && (
             <NewRentalPaymentModal
               remaining={remaining}
-              onPay={(amount) => {
-                setPaid((p) => Math.min(total, p + amount));
+              onPay={(amount, method) => {
+                setPayments((list) => [...list, { amount, method, at: new Date().toISOString() }]);
                 setShowPaymentModal(false);
               }}
               onClose={() => setShowPaymentModal(false)}
@@ -1011,16 +1047,16 @@ function BlacklistWarningModal({
 
 // ─── Модалка оплаты для формы новой аренды ───────────────────────────────────
 
-type PaymentMethodNew = "cash" | "kaspi_qr" | "company";
-
-const PM_LABELS: Record<PaymentMethodNew, string> = {
+// Способы те же, что в готовой аренде и в аналитике: раньше здесь был свой набор
+// с «kaspi_qr», и оплата из формы создания не попадала в разрез по способам
+const PM_LABELS: Record<PaymentMethod, string> = {
   cash: "Наличные",
-  kaspi_qr: "Kaspi QR",
+  kaspi: "Kaspi QR",
   company: "Оплата компаний",
 };
-const PM_ICONS: Record<PaymentMethodNew, React.ElementType> = {
+const PM_ICONS: Record<PaymentMethod, React.ElementType> = {
   cash: Banknote,
-  kaspi_qr: QrCode,
+  kaspi: QrCode,
   company: Building2,
 };
 
@@ -1028,10 +1064,10 @@ function NewRentalPaymentModal({
   remaining, onPay, onClose,
 }: {
   remaining: number;
-  onPay: (amount: number, method: PaymentMethodNew) => void;
+  onPay: (amount: number, method: PaymentMethod) => void;
   onClose: () => void;
 }) {
-  const [method, setMethod] = useState<PaymentMethodNew>("cash");
+  const [method, setMethod] = useState<PaymentMethod>("cash");
   const [amountStr, setAmountStr] = useState(String(remaining));
   const amount = parseFloat(amountStr.replace(/\s/g, "").replace(",", ".")) || 0;
 
@@ -1053,7 +1089,7 @@ function NewRentalPaymentModal({
               Тип оплаты <span className="text-[#C0272D]">*</span>
             </p>
             <div className="flex flex-wrap gap-2">
-              {(["company", "cash", "kaspi_qr"] as PaymentMethodNew[]).map((m) => {
+              {(["company", "cash", "kaspi"] as PaymentMethod[]).map((m) => {
                 const Icon = PM_ICONS[m];
                 return (
                   <button

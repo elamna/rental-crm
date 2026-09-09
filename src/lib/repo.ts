@@ -1229,7 +1229,19 @@ function syncShopStock(rentalId: string, nextStatus: string, items: InventoryLin
   }
 }
 
-export function createRental(input: Rental): Rental {
+/**
+ * Оформление аренды.
+ *
+ * Платежи принимаются прямо в форме создания, и раньше от них оставалась одна
+ * цифра «оплачено»: способ терялся, чека не было, в аналитику деньги не попадали
+ * в разрезе Kaspi/наличных. Теперь каждый платёж записывается строкой — теми же
+ * чеками, что и оплата внутри уже существующей аренды.
+ */
+export function createRental(
+  input: Rental,
+  payments: { amount: number; method: PaymentMethod }[] = [],
+  actorName?: string
+): Rental {
   const now = new Date().toISOString();
   // Номер присваивает сервер: на клиенте два менеджера могли бы получить одинаковый
   input = { ...input, number: nextRentalNumber() };
@@ -1251,6 +1263,23 @@ export function createRental(input: Rental): Rental {
     details: input.items.map((i) => i.name).join(", ") || undefined,
     actorName: input.bookedBy?.name,
   });
+  // Сумма «оплачено» уже посчитана формой, поэтому здесь только строки чеков:
+  // пересчитывать paid ещё раз — верный способ удвоить его
+  const insertPayment = db.prepare(
+    `INSERT INTO rental_payments (id, rental_id, amount, method, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)`
+  );
+  for (const p of payments) {
+    if (!(p.amount > 0)) continue;
+    insertPayment.run(newId("pay"), input.id, p.amount, p.method, now, actorName ?? input.bookedBy?.name ?? null);
+    logRentalEvent({
+      rentalId: input.id,
+      type: "payment",
+      title: "Принял оплату",
+      details: `${Math.round(p.amount)} ₸ · ${p.method === "cash" ? "наличные" : p.method === "kaspi" ? "Kaspi" : "от компании"}`,
+      actorName,
+    });
+  }
+
   logActivity(`Оформлена аренда №${input.number}`);
   return getRental(input.id)!;
 }

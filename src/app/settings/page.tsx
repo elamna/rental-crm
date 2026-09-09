@@ -6,6 +6,7 @@ import type { CompanySettings } from "@/lib/repo";
 import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme, type ThemeChoice } from "@/components/layout/theme-provider";
 import { cn } from "@/lib/utils";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 const EMPTY: CompanySettings = {
   company_name: "", company_bin: "", company_address: "",
@@ -189,7 +190,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="field-label">Телефон</span>
-                <input value={settings.company_phone} onChange={(e) => set("company_phone", e.target.value)} className="crm-input" placeholder="+7 700 000 00 00" disabled={!isAdmin} />
+                <PhoneInput value={settings.company_phone} onChange={(v) => set("company_phone", v)} disabled={!isAdmin} />
               </label>
               <label className="block">
                 <span className="field-label">Email</span>

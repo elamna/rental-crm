@@ -6,8 +6,9 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useAppStore } from "@/lib/store";
 import { ClientType, Lead, LeadConcern, LEAD_CONCERN_LABELS, LEAD_MOODS } from "@/lib/types";
 import { acquisitionChannels } from "@/lib/mock-data";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { FUNNEL_COLUMNS, FunnelBucket, leadBucket } from "@/lib/funnel";
-import { cn } from "@/lib/utils";
+import { cn, formatPhoneInput, phoneDigits } from "@/lib/utils";
 import { Calendar, Clock, FileSignature, Link2, Trash2, User, Users, Wrench, X } from "lucide-react";
 
 export interface StaffMember {
@@ -32,32 +33,7 @@ function toTimeInput(iso?: string) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/**
- * Телефон приводится к одному виду прямо при вводе: менеджеры набирают его
- * как придётся, а потом по этому номеру ищут клиента и не находят.
- */
-function formatPhone(raw: string) {
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return "";
-  // Код страны отрезаем только у полного номера: иначе набранное «707…»
-  // превращалось в «07…» — первую цифру принимали за код
-  let rest = digits;
-  if (rest.length === 11 && (rest[0] === "7" || rest[0] === "8")) rest = rest.slice(1);
-  else if (rest.length > 11) rest = rest.slice(-10);
-  rest = rest.slice(0, 10);
-  const parts = [rest.slice(0, 3), rest.slice(3, 6), rest.slice(6, 8), rest.slice(8, 10)];
-  let out = "+7";
-  if (parts[0]) out += ` (${parts[0]}`;
-  if (parts[0].length === 3) out += ")";
-  if (parts[1]) out += ` ${parts[1]}`;
-  if (parts[2]) out += `-${parts[2]}`;
-  if (parts[3]) out += `-${parts[3]}`;
-  return out;
-}
 
-function digitsOf(phone: string) {
-  return phone.replace(/\D/g, "");
-}
 
 /** Подпись поля: одинаковая во всей форме, со звёздочкой у обязательных */
 function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
@@ -81,7 +57,7 @@ export function LeadModal({
 }) {
   const [title, setTitle] = useState(lead?.title ?? "");
   const [clientName, setClientName] = useState(lead?.clientName ?? "");
-  const [phone, setPhone] = useState(lead?.phone ? formatPhone(lead.phone) : "");
+  const [phone, setPhone] = useState(lead?.phone ? formatPhoneInput(lead.phone) : "");
   const [amount, setAmount] = useState(lead?.amount ? String(lead.amount) : "");
   const [managerId, setManagerId] = useState(lead?.managerId ?? "");
   const [source, setSource] = useState(lead?.source ?? "");
@@ -114,7 +90,7 @@ export function LeadModal({
   const filled =
     title.trim() &&
     clientName.trim() &&
-    digitsOf(phone).length >= 11 &&
+    phoneDigits(phone).length >= 11 &&
     Number(amount) > 0 &&
     managerId &&
     source &&
@@ -261,13 +237,7 @@ export function LeadModal({
 
           <label className="block">
             <FieldLabel required>Номер телефона</FieldLabel>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(formatPhone(e.target.value))}
-              inputMode="tel"
-              className="crm-input"
-              placeholder="+7 (___) ___-__-__"
-            />
+            <PhoneInput value={phone} onChange={setPhone} />
           </label>
 
           <label className="block">

@@ -122,3 +122,33 @@ export function waLink(phone: string | undefined, text: string) {
   const national = digits.slice(-10);
   return `https://wa.me/7${national}?text=${encodeURIComponent(text)}`;
 }
+
+/**
+ * Телефон в едином виде: +7 (707) 123-45-67.
+ *
+ * Форматируется прямо при вводе. Код страны отрезается только у полного номера:
+ * иначе набранное «707…» превращалось в «07…» — первую цифру принимали за код.
+ */
+export function formatPhoneInput(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+
+  let rest = digits;
+  if (rest.length === 11 && (rest[0] === "7" || rest[0] === "8")) rest = rest.slice(1);
+  else if (rest.length > 11) rest = rest.slice(-10);
+  rest = rest.slice(0, 10);
+
+  const parts = [rest.slice(0, 3), rest.slice(3, 6), rest.slice(6, 8), rest.slice(8, 10)];
+  let out = "+7";
+  if (parts[0]) out += ` (${parts[0]}`;
+  if (parts[0].length === 3) out += ")";
+  if (parts[1]) out += ` ${parts[1]}`;
+  if (parts[2]) out += `-${parts[2]}`;
+  if (parts[3]) out += `-${parts[3]}`;
+  return out;
+}
+
+/** Только цифры номера — по ним сравнивают клиентов и собирают ссылки */
+export function phoneDigits(phone: string | undefined) {
+  return (phone ?? "").replace(/\D/g, "");
+}

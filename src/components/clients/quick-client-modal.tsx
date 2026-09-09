@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Client, ClientType } from "@/lib/types";
 import { X, Upload } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: (client: Client) => void }) {
   const addClient = useAppStore((s) => s.addClient);
@@ -121,7 +122,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
                     <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">
                       Номер телефона <span className="text-[var(--color-primary)]">*</span>
                     </span>
-                    <input value={phone} onChange={(e) => setPhone(e.target.value)} className="crm-input" placeholder="+7 7XX XXX XX XX" />
+                    <PhoneInput value={phone} onChange={setPhone} />
                   </label>
                 </div>
               </div>
