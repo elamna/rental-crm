@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Lead, LEAD_CONCERN_LABELS, LEAD_MOODS } from "@/lib/types";
 import { BOARD_COLUMNS, FUNNEL_COLUMNS, FunnelBucket, groupLeads } from "@/lib/funnel";
 import { cn, formatMoney } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
-import { CalendarPlus, CheckCircle2, Phone, User, XCircle } from "lucide-react";
+import { CalendarPlus, CheckCircle2, Phone, Timer, Truck, User, XCircle } from "lucide-react";
 
 export function FunnelBoard({
   leads,
@@ -14,6 +14,7 @@ export function FunnelBoard({
   onOpen,
   onMoveBucket,
   onSetDate,
+  onToggleOnTheWay,
   onClose,
 }: {
   leads: Lead[];
@@ -25,6 +26,8 @@ export function FunnelBoard({
   onMoveBucket: (lead: Lead, bucket: FunnelBucket) => void;
   /** Спросить у менеджера день и час — без них колонка «Дата» бессмысленна */
   onSetDate: (lead: Lead) => void;
+  /** Клиент выехал (или передумал) — от этой отметки идёт таймер на карточке */
+  onToggleOnTheWay: (lead: Lead, onTheWay: boolean) => void;
   onClose: (lead: Lead, status: "won" | "lost") => void;
 }) {
   const isMobile = useIsMobile();
@@ -76,6 +79,7 @@ export function FunnelBoard({
                     onDragStart={() => setDragging(lead)}
                     onMoveBucket={(b) => onMoveBucket(lead, b)}
                     onSetDate={() => onSetDate(lead)}
+                    onToggleOnTheWay={(v) => onToggleOnTheWay(lead, v)}
                   />
                 ))}
                 {items.length === 0 && (
@@ -139,6 +143,7 @@ function LeadCard({
   onDragStart,
   onMoveBucket,
   onSetDate,
+  onToggleOnTheWay,
 }: {
   lead: Lead;
   now: Date;
@@ -150,6 +155,7 @@ function LeadCard({
   onDragStart: () => void;
   onMoveBucket: (b: FunnelBucket) => void;
   onSetDate: () => void;
+  onToggleOnTheWay: (onTheWay: boolean) => void;
 }) {
   // Время пришло вчера и раньше, а клиент всё ещё висит в «Новых» — это уже горит
   const overdue =
@@ -213,6 +219,20 @@ function LeadCard({
         </div>
       </button>
 
+      {/* Клиент выехал — на карточке идёт таймер, и видно, сколько его ждут */}
+      {lead.onTheWayAt ? (
+        <OnTheWayBadge since={lead.onTheWayAt} canEdit={canEdit} onCancel={() => onToggleOnTheWay(false)} />
+      ) : (
+        canEdit && (
+          <button
+            onClick={() => onToggleOnTheWay(true)}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[8px] border border-[#2B5FD9] py-1.5 text-[13px] font-semibold text-[#2B5FD9] transition hover:bg-[#E9F0FE]"
+          >
+            <Truck className="h-3.5 w-3.5" /> В пути
+          </button>
+        )
+      )}
+
       {/* В «Новом» и «Будущем» вся работа менеджера — узнать дату, поэтому кнопка прямо на карточке */}
       {canEdit && currentBucket !== "date" && (
         <button
@@ -249,4 +269,62 @@ function formatShortDate(iso: string) {
   // Полдень ставится по умолчанию при переносе карточки мышью — это не время встречи
   const noon = d.getHours() === 12 && d.getMinutes() === 0;
   return noon ? date : `${date}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Сколько минут клиенту дают на дорогу, прежде чем ожидание считается затянувшимся */
+const WAY_MINUTES = 30;
+
+/**
+ * «Уже в пути» с живым таймером.
+ *
+ * Клиент сказал «выезжаю» — менеджер отмечает это одним нажатием, и дальше
+ * карточка сама показывает, сколько его ждут. Полчаса идёт обратный отсчёт,
+ * дальше время горит красным: столько человек уже опаздывает. Без такой отметки
+ * «сейчас подъеду» живёт в голове менеджера и к вечеру теряется.
+ */
+function OnTheWayBadge({ since, canEdit, onCancel }: { since: string; canEdit: boolean; onCancel: () => void }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    // Таймер идёт в реальном времени, поэтому тикаем ежесекундно
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const started = new Date(since).getTime();
+  if (isNaN(started)) return null;
+
+  const passed = Math.max(0, Math.floor((now - started) / 1000));
+  const left = WAY_MINUTES * 60 - passed;
+  const late = left < 0;
+  const shown = Math.abs(late ? left : left);
+  const mm = String(Math.floor(shown / 60)).padStart(2, "0");
+  const ss = String(shown % 60).padStart(2, "0");
+
+  return (
+    <div
+      className={cn(
+        "mt-2 flex items-center justify-between gap-2 rounded-[8px] px-2.5 py-1.5",
+        late ? "bg-[#FDECEC]" : "bg-[#E9F0FE]"
+      )}
+    >
+      <span className={cn("flex items-center gap-1.5 text-[13px] font-semibold", late ? "text-[#C0272D]" : "text-[#2B5FD9]")}>
+        <Truck className="h-3.5 w-3.5" /> Уже в пути
+      </span>
+      <span className={cn("flex items-center gap-1 text-[13px] font-bold tabular-nums", late ? "text-[#C0272D]" : "text-[#2B5FD9]")}>
+        <Timer className="h-3.5 w-3.5" />
+        {late ? "+" : ""}
+        {mm}:{ss}
+      </span>
+      {canEdit && (
+        <button
+          onClick={onCancel}
+          title="Отменить отметку"
+          className="grid h-5 w-5 shrink-0 place-items-center rounded text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface)]"
+        >
+          <XCircle className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
 }

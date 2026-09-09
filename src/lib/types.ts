@@ -657,6 +657,8 @@ export interface Lead {
   concerns?: LeadConcern[];
   /** Настроение клиента после разговора, 1 (злой) – 5 (в восторге) */
   mood?: number;
+  /** Когда клиент выехал: от этого времени на карточке тикает таймер */
+  onTheWayAt?: string;
   status: LeadStatus;
   notes?: string;
   closedAt?: string;

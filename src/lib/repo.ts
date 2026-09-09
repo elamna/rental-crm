@@ -3274,6 +3274,7 @@ interface LeadRow {
   client_type: string | null;
   concerns: string | null;
   mood: number | null;
+  on_the_way_at: string | null;
   status: string;
   notes: string | null;
   closed_at: string | null;
@@ -3311,6 +3312,7 @@ function leadRowToDomain(row: LeadRow): Lead {
     clientType: (row.client_type as Lead["clientType"]) ?? undefined,
     concerns: parseConcerns(row.concerns),
     mood: row.mood ?? undefined,
+    onTheWayAt: row.on_the_way_at ?? undefined,
     status: row.status as Lead["status"],
     notes: row.notes ?? undefined,
     closedAt: row.closed_at ?? undefined,
@@ -3391,9 +3393,9 @@ export function createLead(input: Partial<Lead>): Lead {
   const now = new Date().toISOString();
   db.prepare(
     `INSERT INTO leads (id, number, title, client_name, phone, amount, manager_id, source, needed_at, unavailable,
-                        future, other_city, client_type, concerns, mood, status, notes, closed_at, created_at, updated_at)
+                        future, other_city, client_type, concerns, mood, on_the_way_at, status, notes, closed_at, created_at, updated_at)
      VALUES (@id, @number, @title, @clientName, @phone, @amount, @managerId, @source, @neededAt, @unavailable,
-             @future, @otherCity, @clientType, @concerns, @mood, @status, @notes, NULL, @createdAt, @updatedAt)`
+             @future, @otherCity, @clientType, @concerns, @mood, @onTheWayAt, @status, @notes, NULL, @createdAt, @updatedAt)`
   ).run({
     id,
     number: nextLeadNumber(),
@@ -3410,6 +3412,7 @@ export function createLead(input: Partial<Lead>): Lead {
     clientType: input.clientType ?? null,
     concerns: input.concerns?.length ? JSON.stringify(input.concerns) : null,
     mood: input.mood ?? null,
+    onTheWayAt: input.onTheWayAt ?? null,
     status: input.status ?? "open",
     notes: input.notes ?? null,
     createdAt: now,
@@ -3428,7 +3431,8 @@ export function updateLead(id: string, patch: Partial<Lead>): Lead | null {
   db.prepare(
     `UPDATE leads SET title=@title, client_name=@clientName, phone=@phone, amount=@amount, manager_id=@managerId,
      source=@source, needed_at=@neededAt, unavailable=@unavailable, future=@future, other_city=@otherCity,
-     client_type=@clientType, concerns=@concerns, mood=@mood, status=@status, notes=@notes,
+     client_type=@clientType, concerns=@concerns, mood=@mood, on_the_way_at=@onTheWayAt,
+     status=@status, notes=@notes,
      closed_at=@closedAt, updated_at=@updatedAt WHERE id=@id`
   ).run({
     id,
@@ -3448,6 +3452,7 @@ export function updateLead(id: string, patch: Partial<Lead>): Lead | null {
       return list?.length ? JSON.stringify(list) : null;
     })(),
     mood: patch.mood !== undefined ? patch.mood || null : existing.mood ?? null,
+    onTheWayAt: patch.onTheWayAt !== undefined ? patch.onTheWayAt || null : existing.onTheWayAt ?? null,
     status,
     notes: patch.notes !== undefined ? patch.notes || null : existing.notes ?? null,
     // Момент закрытия ставится один раз, при возврате на доску сбрасывается

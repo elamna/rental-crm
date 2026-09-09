@@ -224,6 +224,10 @@ export default function FunnelPage() {
             onOpen={(l) => canEdit && setEditing(l)}
             onMoveBucket={moveBucket}
             onSetDate={setSchedulingLead}
+            onToggleOnTheWay={(lead, onTheWay) =>
+              // Пустая строка, а не undefined: undefined выпадает из JSON и отметка не снимется
+              patchLead(lead, { onTheWayAt: onTheWay ? new Date().toISOString() : "" })
+            }
             onClose={(l, status) => patchLead(l, { status })}
           />
         )}
