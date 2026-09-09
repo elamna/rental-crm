@@ -659,6 +659,8 @@ export interface Lead {
   mood?: number;
   /** Когда клиент выехал: от этого времени на карточке тикает таймер */
   onTheWayAt?: string;
+  /** Сколько минут дали на дорогу: 30 или 60 — менеджер выбирает при отметке */
+  onTheWayMinutes?: number;
   status: LeadStatus;
   notes?: string;
   closedAt?: string;

@@ -26,8 +26,8 @@ export function FunnelBoard({
   onMoveBucket: (lead: Lead, bucket: FunnelBucket) => void;
   /** Спросить у менеджера день и час — без них колонка «Дата» бессмысленна */
   onSetDate: (lead: Lead) => void;
-  /** Клиент выехал (или передумал) — от этой отметки идёт таймер на карточке */
-  onToggleOnTheWay: (lead: Lead, onTheWay: boolean) => void;
+  /** Клиент выехал: сколько минут ему дали на дорогу. null — снять отметку */
+  onToggleOnTheWay: (lead: Lead, minutes: number | null) => void;
   onClose: (lead: Lead, status: "won" | "lost") => void;
 }) {
   const isMobile = useIsMobile();
@@ -79,7 +79,7 @@ export function FunnelBoard({
                     onDragStart={() => setDragging(lead)}
                     onMoveBucket={(b) => onMoveBucket(lead, b)}
                     onSetDate={() => onSetDate(lead)}
-                    onToggleOnTheWay={(v) => onToggleOnTheWay(lead, v)}
+                    onToggleOnTheWay={(minutes) => onToggleOnTheWay(lead, minutes)}
                   />
                 ))}
                 {items.length === 0 && (
@@ -155,9 +155,12 @@ function LeadCard({
   onDragStart: () => void;
   onMoveBucket: (b: FunnelBucket) => void;
   onSetDate: () => void;
-  onToggleOnTheWay: (onTheWay: boolean) => void;
+  onToggleOnTheWay: (minutes: number | null) => void;
 }) {
   // Время пришло вчера и раньше, а клиент всё ещё висит в «Новых» — это уже горит
+  // Показать выбор «30 мин / 1 час» вместо кнопки
+  const [picking, setPicking] = useState(false);
+
   const overdue =
     !!lead.neededAt &&
     !lead.unavailable &&
@@ -219,18 +222,48 @@ function LeadCard({
         </div>
       </button>
 
-      {/* Клиент выехал — на карточке идёт таймер, и видно, сколько его ждут */}
+      {/* Клиент выехал — на карточке идёт обратный отсчёт, и видно, сколько его ждут */}
       {lead.onTheWayAt ? (
-        <OnTheWayBadge since={lead.onTheWayAt} canEdit={canEdit} onCancel={() => onToggleOnTheWay(false)} />
+        <OnTheWayBadge
+          since={lead.onTheWayAt}
+          minutes={lead.onTheWayMinutes ?? 30}
+          canEdit={canEdit}
+          onCancel={() => onToggleOnTheWay(null)}
+        />
       ) : (
-        canEdit && (
+        canEdit &&
+        (picking ? (
+          // Сколько ждать — решает менеджер: из соседнего двора едут полчаса,
+          // с другого конца города — час
+          <div className="mt-2 flex items-center gap-1.5">
+            {[30, 60].map((m) => (
+              <button
+                key={m}
+                onClick={() => {
+                  setPicking(false);
+                  onToggleOnTheWay(m);
+                }}
+                className="flex-1 rounded-[8px] border border-[#2B5FD9] py-1.5 text-[13px] font-semibold text-[#2B5FD9] transition hover:bg-[#E9F0FE]"
+              >
+                {m === 60 ? "1 час" : "30 мин"}
+              </button>
+            ))}
+            <button
+              onClick={() => setPicking(false)}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
+              title="Отмена"
+            >
+              <XCircle className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
           <button
-            onClick={() => onToggleOnTheWay(true)}
+            onClick={() => setPicking(true)}
             className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[8px] border border-[#2B5FD9] py-1.5 text-[13px] font-semibold text-[#2B5FD9] transition hover:bg-[#E9F0FE]"
           >
             <Truck className="h-3.5 w-3.5" /> В пути
           </button>
-        )
+        ))
       )}
 
       {/* В «Новом» и «Будущем» вся работа менеджера — узнать дату, поэтому кнопка прямо на карточке */}
@@ -271,8 +304,6 @@ function formatShortDate(iso: string) {
   return noon ? date : `${date}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Сколько минут клиенту дают на дорогу, прежде чем ожидание считается затянувшимся */
-const WAY_MINUTES = 30;
 
 /**
  * «Уже в пути» с живым таймером.
@@ -282,7 +313,17 @@ const WAY_MINUTES = 30;
  * дальше время горит красным: столько человек уже опаздывает. Без такой отметки
  * «сейчас подъеду» живёт в голове менеджера и к вечеру теряется.
  */
-function OnTheWayBadge({ since, canEdit, onCancel }: { since: string; canEdit: boolean; onCancel: () => void }) {
+function OnTheWayBadge({
+  since,
+  minutes,
+  canEdit,
+  onCancel,
+}: {
+  since: string;
+  minutes: number;
+  canEdit: boolean;
+  onCancel: () => void;
+}) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -295,7 +336,7 @@ function OnTheWayBadge({ since, canEdit, onCancel }: { since: string; canEdit: b
   if (isNaN(started)) return null;
 
   const passed = Math.max(0, Math.floor((now - started) / 1000));
-  const left = WAY_MINUTES * 60 - passed;
+  const left = minutes * 60 - passed;
   const late = left < 0;
   const shown = Math.abs(late ? left : left);
   const mm = String(Math.floor(shown / 60)).padStart(2, "0");
