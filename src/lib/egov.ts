@@ -29,6 +29,41 @@ export function isValidIdentifier(value: string) {
   return /^\d{12}$/.test(value.replace(/\D/g, ""));
 }
 
+/**
+ * Произвольная точка портала с ключом. Нужна, чтобы проверять не только прокси
+ * реестра (он сломан на стороне портала), но и обычное API наборов данных:
+ * возможно, тот же реестр доступен как набор, а не как сервис.
+ */
+export async function callEgov(path: string, params: Record<string, string> = {}, timeoutMs = 15_000): Promise<RegistryResponse> {
+  const apiKey = process.env.EGOV_API_KEY;
+  if (!apiKey) throw new Error("EGOV_API_KEY не задан");
+
+  const url = new URL(path, "https://data.egov.kz");
+  url.searchParams.set("apiKey", apiKey);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+
+  const safe = new URL(url.toString());
+  safe.searchParams.set("apiKey", "***");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    return {
+      status: res.status,
+      contentType: res.headers.get("content-type") ?? "",
+      body: await res.text(),
+      safeUrl: safe.toString(),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function callRegistry(params: Record<string, string>, timeoutMs = 12_000): Promise<RegistryResponse> {
   const apiKey = process.env.EGOV_API_KEY;
   if (!apiKey) throw new Error("EGOV_API_KEY не задан");

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError, ApiError } from "@/lib/auth";
 import { latestDebtCheck, saveDebtCheck } from "@/lib/repo";
-import { callRegistry, isEgovConfigured, isValidIdentifier, parseDebtResponse } from "@/lib/egov";
+import { callEgov, callRegistry, isEgovConfigured, isValidIdentifier, parseDebtResponse } from "@/lib/egov";
 
 /** Через сколько дней проверку стоит повторить */
 const MAX_AGE_DAYS = 30;
@@ -28,6 +28,33 @@ export async function GET(req: NextRequest) {
       if (!isEgovConfigured()) {
         return NextResponse.json({ configured: false, hint: "EGOV_API_KEY на сервере не задан" });
       }
+      // Прокси реестра падает на стороне портала, поэтому проверяем ещё и обычное
+      // API наборов: возможно, те же данные лежат набором, а не сервисом
+      if (req.nextUrl.searchParams.get("mode") === "v4") {
+        const targets = [
+          ["/api/v4/mapping/reestr_dolzh_po_isp_pr", {}],
+          ["/api/v4/reestr_dolzh_po_isp_pr", { source: '{"size":1}' }],
+          ["/api/v4/mapping/darmensiz_boryshkerlerdin_tizi3", {}],
+          ["/api/v4/darmensiz_boryshkerlerdin_tizi3", { source: '{"size":1}' }],
+        ] as [string, Record<string, string>][];
+
+        const probes = [];
+        for (const [path, params] of targets) {
+          try {
+            const probe = await callEgov(path, params);
+            probes.push({
+              path,
+              httpStatus: probe.status,
+              contentType: probe.contentType.split(";")[0],
+              body: probe.body.replace(/\s+/g, " ").slice(0, 600),
+            });
+          } catch (err) {
+            probes.push({ path, error: String(err).slice(0, 200) });
+          }
+        }
+        return NextResponse.json({ configured: true, probes });
+      }
+
       // Имя входного параметра в паспорте набора не описано, поэтому пробуем
       // все привычные написания разом: по одному ответу видно, какое подходит
       const single = req.nextUrl.searchParams.get("param");
