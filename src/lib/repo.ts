@@ -1,7 +1,7 @@
 import { db, logActivity } from "./db";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
-import { Client, ClientRatingBreakdown, DebtCheck, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, DebtCase, DebtCheck, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -3666,8 +3666,21 @@ interface DebtCheckRow {
   cases: number;
   amount: number;
   travel_ban: number;
+  cases_json: string | null;
+  manual: number | null;
   checked_at: string;
   checked_by: string | null;
+}
+
+/** Битый список производств не должен ронять карточку клиента */
+function parseCases(raw: string | null): DebtCase[] | undefined {
+  if (!raw) return undefined;
+  try {
+    const list = JSON.parse(raw);
+    return Array.isArray(list) && list.length ? (list as DebtCase[]) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function debtRowToDomain(row: DebtCheckRow): DebtCheck {
@@ -3680,12 +3693,14 @@ function debtRowToDomain(row: DebtCheckRow): DebtCheck {
     cases: row.cases,
     amount: row.amount,
     travelBan: !!row.travel_ban,
+    records: parseCases(row.cases_json),
+    manual: !!row.manual,
     checkedAt: row.checked_at,
     checkedBy: row.checked_by ?? undefined,
   };
 }
 
-const DEBT_SELECT = `SELECT id, client_id, identifier, kind, status, cases, amount, travel_ban, checked_at, checked_by FROM debt_checks`;
+const DEBT_SELECT = `SELECT id, client_id, identifier, kind, status, cases, amount, travel_ban, cases_json, manual, checked_at, checked_by FROM debt_checks`;
 
 /**
  * Последняя проверка по номеру.
@@ -3716,14 +3731,16 @@ export function saveDebtCheck(input: {
   cases: number;
   amount: number;
   travelBan: boolean;
+  records?: DebtCase[];
+  manual?: boolean;
   raw?: string;
   actorName?: string;
 }): DebtCheck {
   const id = newId("dbt");
   const now = new Date().toISOString();
   db.prepare(
-    `INSERT INTO debt_checks (id, client_id, identifier, kind, status, cases, amount, travel_ban, raw, checked_at, checked_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO debt_checks (id, client_id, identifier, kind, status, cases, amount, travel_ban, cases_json, manual, raw, checked_at, checked_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     input.clientId ?? null,
@@ -3733,6 +3750,8 @@ export function saveDebtCheck(input: {
     input.cases,
     input.amount,
     input.travelBan ? 1 : 0,
+    input.records?.length ? JSON.stringify(input.records) : null,
+    input.manual ? 1 : 0,
     // Сырой ответ храним обрезанным: разбирать спорный случай он поможет,
     // а раздувать базу гигабайтами чужого JSON незачем
     input.raw ? input.raw.slice(0, 20000) : null,

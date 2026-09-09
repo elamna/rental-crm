@@ -357,7 +357,7 @@ export default function NewRentalPage() {
               {/* Реестр должников: не запрещаем выдачу, но менеджер должен знать до того,
                   как инструмент уехал — залог можно взять и побольше */}
               <div className="mt-3">
-                <DebtCheckBlock clientId={selectedClient.id} iin={selectedClient.iin} bin={selectedClient.bin} compact />
+                <DebtCheckBlock clientId={selectedClient.id} iin={selectedClient.iin} bin={selectedClient.bin} variant="inline" />
               </div>
 
               {/* Предупреждение о чёрном списке */}

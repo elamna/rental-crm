@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError, ApiError } from "@/lib/auth";
 import { latestDebtCheck, saveDebtCheck } from "@/lib/repo";
+import { DebtCase } from "@/lib/types";
 import { callEgov, callRegistry, isEgovConfigured, isValidIdentifier, parseDebtResponse } from "@/lib/egov";
 
 /** Через сколько дней проверку стоит повторить */
@@ -103,6 +104,27 @@ export async function POST(req: NextRequest) {
     if (!isValidIdentifier(value)) throw new ApiError(400, "ИИН или БИН должен состоять из 12 цифр");
     const kind: "iin" | "bin" = body?.kind === "bin" ? "bin" : "iin";
 
+    // Пока автоматический источник не подключён, менеджер вносит данные реестра
+    // руками: посмотрел на сайте Минюста — перенёс сюда. Хранятся они так же,
+    // как пришедшие из сервиса, и так же показываются
+    if (body?.manual) {
+      const records: DebtCase[] = Array.isArray(body.manual.records) ? body.manual.records.slice(0, 50) : [];
+      const debtor = body.manual.status === "debtor" || records.length > 0;
+      const check = saveDebtCheck({
+        clientId: body?.clientId,
+        identifier: value,
+        kind,
+        status: debtor ? "debtor" : "clean",
+        cases: records.length,
+        amount: records.reduce((sum, c) => sum + (Number(c.amount) || 0), 0),
+        travelBan: records.some((c) => c.travelBan),
+        records,
+        manual: true,
+        actorName: me.name,
+      });
+      return NextResponse.json({ check, fromCache: false });
+    }
+
     if (!isEgovConfigured()) {
       throw new ApiError(503, "Проверка недоступна: не настроен ключ портала открытых данных");
     }
@@ -136,7 +158,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const result = parsed ?? { status: "unknown" as const, cases: 0, amount: 0, travelBan: false, items: [] };
+    const result = parsed ?? { status: "unknown" as const, cases: 0, amount: 0, travelBan: false, items: [], records: [] };
 
     const check = saveDebtCheck({
       clientId: body?.clientId,
@@ -146,6 +168,7 @@ export async function POST(req: NextRequest) {
       cases: result.cases,
       amount: result.amount,
       travelBan: result.travelBan,
+      records: result.records,
       raw: last?.body,
       actorName: me.name,
     });

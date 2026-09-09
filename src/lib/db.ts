@@ -400,6 +400,10 @@ db.exec(`
 // некомплект. Пара «источник + объект» уникальна — иначе на каждую проверку
 // заводился бы дубль той же задачи
 ensureColumns("tasks", { source_kind: "TEXT", source_id: "TEXT", source_url: "TEXT" });
+
+// Сами производства и пометка «внесено руками»: реестр отдаёт список, и менеджеру
+// нужен именно он — кто взыскатель, какая сумма, запрещён ли выезд
+ensureColumns("debt_checks", { cases_json: "TEXT", manual: "INTEGER NOT NULL DEFAULT 0" });
 db.exec(
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_source ON tasks(source_kind, source_id) WHERE source_kind IS NOT NULL`
 );

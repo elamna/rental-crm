@@ -9,6 +9,8 @@
  * не предназначен, поэтому берём данные официальным путём.
  */
 
+import { DebtCase } from "./types";
+
 const SERVICE_URL = "https://data.egov.kz/proxy/reestr_dolzh_po_isp_pr";
 
 /** Ответ портала как есть — по нему разбираем результат и его же храним */
@@ -104,6 +106,38 @@ export interface ParsedDebt {
   /** Ограничение на выезд из РК — отдельная строка того же реестра */
   travelBan: boolean;
   items: Record<string, unknown>[];
+  /** Те же записи, разложенные по понятным полям — их показывает интерфейс */
+  records: DebtCase[];
+}
+
+/** Названия полей у сервиса заранее не известны — ищем по смыслу */
+const FIELD_HINTS: Record<keyof DebtCase, RegExp> = {
+  debtor: /(debtor|dolzh|борыш|должник|fio|name)/i,
+  startedAt: /(date|data|dat_|нача|возбуж|reg)/i,
+  officer: /(ispoln|executor|officer|sudeb|чси|гси)/i,
+  issuedBy: /(organ|issued|vydal|court|sud)/i,
+  claimant: /(vzysk|claimant|creditor|взыск)/i,
+  amount: /(sum|summa|amount|debt|dolg)/i,
+  travelBan: /(vyezd|viezd|travel|restrict|ogranich|выезд|запрет)/i,
+  travelBanFrom: /(ban_?date|zapret_?date|дата_?запрета)/i,
+};
+
+function toDebtCase(item: Record<string, unknown>): DebtCase {
+  const result: DebtCase = {};
+  for (const [field, pattern] of Object.entries(FIELD_HINTS) as [keyof DebtCase, RegExp][]) {
+    const hit = Object.entries(item).find(([key, value]) => pattern.test(key) && value !== null && value !== "");
+    if (!hit) continue;
+    const value = hit[1];
+    if (field === "amount") {
+      const num = typeof value === "number" ? value : parseFloat(String(value).replace(/\s/g, "").replace(",", "."));
+      if (Number.isFinite(num)) result.amount = Math.round(num);
+    } else if (field === "travelBan") {
+      result.travelBan = isTruthy(value);
+    } else {
+      result[field] = String(value) as never;
+    }
+  }
+  return result;
 }
 
 const AMOUNT_KEYS = /(sum|summa|amount|debt|dolg|zadolzh|қарыз|борыш)/i;
@@ -118,7 +152,7 @@ const BAN_KEYS = /(vyezd|viezd|travel|restrict|ogranich|shygu|шығу|выез�
  * не потеряв ни одной проверки.
  */
 export function parseDebtResponse(res: RegistryResponse): ParsedDebt {
-  const empty: ParsedDebt = { status: "unknown", cases: 0, amount: 0, travelBan: false, items: [] };
+  const empty: ParsedDebt = { status: "unknown", cases: 0, amount: 0, travelBan: false, items: [], records: [] };
   if (res.status !== 200) return empty;
 
   let json: unknown;
@@ -130,7 +164,7 @@ export function parseDebtResponse(res: RegistryResponse): ParsedDebt {
 
   const items = extractItems(json);
   if (items === null) return empty;
-  if (items.length === 0) return { status: "clean", cases: 0, amount: 0, travelBan: false, items: [] };
+  if (items.length === 0) return { status: "clean", cases: 0, amount: 0, travelBan: false, items: [], records: [] };
 
   let amount = 0;
   let travelBan = false;
@@ -144,7 +178,7 @@ export function parseDebtResponse(res: RegistryResponse): ParsedDebt {
     }
   }
 
-  return { status: "debtor", cases: items.length, amount: Math.round(amount), travelBan, items };
+  return { status: "debtor", cases: items.length, amount: Math.round(amount), travelBan, items, records: items.map(toDebtCase) };
 }
 
 function isTruthy(value: unknown) {

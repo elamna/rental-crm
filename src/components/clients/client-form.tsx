@@ -7,6 +7,7 @@ import { acquisitionChannels } from "@/lib/mock-data";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { ChevronLeft } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { DebtCheckBlock } from "@/components/clients/debt-check";
 
 export interface ClientFormValues {
   name: string;
@@ -139,6 +140,17 @@ export function ClientForm({
         <div className="my-6 border-t border-[var(--color-border)]" />
 
         <h2 className="mb-4 text-[15px] font-semibold">Документ клиента</h2>
+
+        {/* Реестр должников — сразу, как только введён номер: смотреть на человека
+            надо до того, как инструмент уехал, а не после */}
+        <div className="mb-4">
+          <DebtCheckBlock
+            clientId={initial?.id}
+            iin={values.type === "company" ? undefined : values.iin}
+            bin={values.type === "company" ? values.bin : undefined}
+            variant="inline"
+          />
+        </div>
         {values.type === "company" ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="БИН">
