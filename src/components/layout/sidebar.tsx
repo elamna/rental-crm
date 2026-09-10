@@ -94,21 +94,29 @@ export function Sidebar({
         )}
         style={{ background: "var(--color-sidebar)" }}
       >
-      {/* Фоновое фото внизу панели. Файл кладётся в public/sidebar-bg.jpg —
-          пока его нет, виден только затемняющий градиент, и меню выглядит
-          ровным тёмным, ничего не ломается */}
+      {/* Фон панели: тёмная база с золотыми лучами у правого края.
+          Лучи идут там, где нет текста, поэтому читаемость не страдает */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-cover bg-center opacity-70"
-        style={{ backgroundImage: "url('/sidebar-bg.jpg')" }}
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-cover bg-bottom"
+        style={{ backgroundImage: "url('/sidebar-bg.svg')" }}
       />
-      {/* Затемнение: без него названия разделов теряются на светлых местах фото */}
+      {/* Растворяем верх фона в цвете панели, чтобы стыка не было видно */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%]"
         style={{
           background:
-            "linear-gradient(to bottom, var(--color-sidebar) 0%, color-mix(in srgb, var(--color-sidebar) 88%, transparent) 45%, color-mix(in srgb, var(--color-sidebar) 72%, transparent) 100%)",
+            "linear-gradient(to bottom, var(--color-sidebar) 0%, color-mix(in srgb, var(--color-sidebar) 55%, transparent) 30%, transparent 70%)",
+        }}
+      />
+      {/* И приглушаем левую половину: там идут названия разделов */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%]"
+        style={{
+          background:
+            "linear-gradient(to right, var(--color-sidebar) 0%, color-mix(in srgb, var(--color-sidebar) 78%, transparent) 45%, color-mix(in srgb, var(--color-sidebar) 30%, transparent) 100%)",
         }}
       />
 
