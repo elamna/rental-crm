@@ -41,7 +41,10 @@ interface AppState {
     rows: unknown[]
   ) => Promise<ImportReport & { clientsCreated: number; itemsLinked: number; itemsCreated: number; itemsUnmatched: number }>;
   /** Импорт каталога из выгрузки: строка файла разворачивается в несколько единиц */
-  importInventoryItems: (rows: (Partial<InventoryItem> & { quantity?: number })[]) => Promise<ImportReport & { units: number }>;
+  importInventoryItems: (
+    rows: (Partial<InventoryItem> & { quantity?: number })[],
+    opts?: { allowDuplicateSku?: boolean }
+  ) => Promise<ImportReport & { units: number }>;
 
   addInventoryItem: (input: Partial<InventoryItem> & { quantity?: number }) => Promise<InventoryItem>;
   updateInventoryItem: (id: string, patch: Partial<InventoryItem>) => Promise<void>;
@@ -195,10 +198,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     return result;
   },
 
-  importInventoryItems: async (rows) => {
+  importInventoryItems: async (rows, opts) => {
     const result = await api<ImportReport & { units: number }>("/api/inventory/import", {
       method: "POST",
-      body: JSON.stringify(rows),
+      body: JSON.stringify({ rows, allowDuplicateSku: !!opts?.allowDuplicateSku }),
     });
     const inventory = await api<InventoryItem[]>("/api/inventory");
     set({ inventory });

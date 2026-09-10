@@ -444,7 +444,8 @@ export function importClients(rows: Partial<Client>[]): ImportReport {
  * поштучный, у каждой единицы свой артикул и своя история.
  */
 export function importInventoryItems(
-  rows: (Partial<InventoryItem> & { quantity?: number })[]
+  rows: (Partial<InventoryItem> & { quantity?: number })[],
+  opts: { allowDuplicateSku?: boolean } = {}
 ): ImportReport & { units: number } {
   const existingSkus = new Set(
     (db.prepare(`SELECT sku FROM inventory_items WHERE sku IS NOT NULL`).all() as { sku: string }[]).map((r) =>
@@ -452,6 +453,7 @@ export function importInventoryItems(
     )
   );
   const reasons: Record<string, number> = {};
+  const duplicateSkus: string[] = [];
   let added = 0;
   let skipped = 0;
   let units = 0;
@@ -467,22 +469,27 @@ export function importInventoryItems(
 
       // Артикул уникален: повторный импорт того же файла не должен плодить копии
       const sku = (row.sku ?? "").trim();
-      if (sku && existingSkus.has(sku.toLowerCase())) {
+      const taken = !!sku && existingSkus.has(sku.toLowerCase());
+      if (taken && !opts.allowDuplicateSku) {
         skipped++;
         countReason(reasons, "артикул уже есть в базе");
+        if (!duplicateSkus.includes(sku)) duplicateSkus.push(sku);
         continue;
       }
-      if (sku) existingSkus.add(sku.toLowerCase());
+      if (sku && !taken) existingSkus.add(sku.toLowerCase());
 
       const quantity = Math.max(1, Math.floor(row.quantity ?? 1));
-      units += createInventoryItems({ ...row, name }, quantity).length;
+      // Занятый номер второй раз выдавать нельзя — позиция получит свой,
+      // иначе два разных инструмента отзывались бы на один артикул
+      units += createInventoryItems({ ...row, name, sku: taken ? undefined : row.sku }, quantity).length;
+      if (taken) countReason(reasons, "артикул был занят — выдан новый");
       added++;
     }
   });
   run();
 
   if (units) logActivity(`Импортировано позиций каталога: ${added} (единиц: ${units})`);
-  return { added, skipped, reasons, units };
+  return { added, skipped, reasons, units, duplicateSkus };
 }
 
 // ---------- Inventory ----------

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCan, useAuth } from "@/components/auth/auth-provider";
 import { useAppStore } from "@/lib/store";
 import { parseInventoryFile } from "@/lib/inventory-io";
+import type { InventoryItem } from "@/lib/types";
 import { formatImportReport } from "@/lib/import-utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,8 @@ import { KitsTab } from "@/components/catalog/kits-tab";
 import { ServicesTab } from "@/components/catalog/services-tab";
 import { InventoryCheckTab } from "@/components/catalog/inventory-check-tab";
 import { ScheduleTab } from "@/components/catalog/schedule-tab";
+
+type ImportRow = Partial<InventoryItem> & { quantity?: number };
 
 const tabs = [
   { key: "products", label: "Продукты" },
@@ -35,6 +38,9 @@ export default function CatalogPage() {
   const importInventoryItems = useAppStore((s) => s.importInventoryItems);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  // Строки, не легшие из-за занятого артикула: их держим под рукой, чтобы
+  // владелец мог посмотреть список и добавить их одной кнопкой
+  const [dupes, setDupes] = useState<{ rows: ImportRow[]; skus: string[] } | null>(null);
 
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -47,12 +53,35 @@ export default function CatalogPage() {
       setImportMsg(`Загружаем ${rows.length} позиций (${units} единиц)…`);
       const report = await importInventoryItems(rows);
       setImportMsg(formatImportReport("Каталог", report));
+      const skus = report.duplicateSkus ?? [];
+      if (skus.length) {
+        const taken = new Set(skus.map((s) => s.trim().toLowerCase()));
+        setDupes({ rows: rows.filter((r) => taken.has((r.sku ?? "").trim().toLowerCase())), skus });
+      } else {
+        setDupes(null);
+      }
       setTimeout(() => setImportMsg(null), 12000);
     } catch (err) {
       setImportMsg(err instanceof Error ? err.message : "Не удалось прочитать файл. Поддерживаются .xlsx, .xls, .csv");
       setTimeout(() => setImportMsg(null), 8000);
     }
   }
+  /** Добавить пропущенные позиции: артикул им система выдаст свой */
+  async function importDupesAnyway() {
+    if (!dupes) return;
+    const pending = dupes;
+    setDupes(null);
+    try {
+      setImportMsg(`Добавляем ${pending.rows.length} позиций…`);
+      const report = await importInventoryItems(pending.rows, { allowDuplicateSku: true });
+      setImportMsg(formatImportReport("Каталог", report));
+    } catch (err) {
+      setImportMsg(err instanceof Error ? err.message : "Не удалось добавить позиции");
+      setDupes(pending);
+    }
+    setTimeout(() => setImportMsg(null), 12000);
+  }
+
   const [tab, setTab] = useState<TabKey>("products");
   const [showInactive, setShowInactive] = useState(false);
   const [addKit, setAddKit] = useState(false);
@@ -139,6 +168,33 @@ export default function CatalogPage() {
       {importMsg && (
         <div className="mx-4 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[14px] font-medium text-[var(--color-primary)] sm:mx-6">
           {importMsg}
+        </div>
+      )}
+
+      {dupes && (
+        <div className="mx-4 mt-3 rounded-[10px] border border-[#F0D9A8] bg-[#FDF3E2] px-3 py-2.5 text-[13.5px] text-[#7A5B18] sm:mx-6">
+          <p className="font-semibold">
+            Не легло позиций: {dupes.rows.length} — такой артикул уже есть в базе
+          </p>
+          <p className="mt-1 break-words">
+            {dupes.skus.slice(0, 30).join(", ")}
+            {dupes.skus.length > 30 && ` и ещё ${dupes.skus.length - 30}`}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              onClick={importDupesAnyway}
+              className="rounded-[8px] bg-[var(--color-primary)] px-3 py-1.5 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)]"
+            >
+              Добавить всё равно ({dupes.rows.length})
+            </button>
+            <button
+              onClick={() => setDupes(null)}
+              className="rounded-[8px] border border-[#E2CFA6] px-3 py-1.5 text-[13.5px] font-semibold transition hover:bg-white"
+            >
+              Оставить как есть
+            </button>
+            <span className="text-[12.5px]">Добавленным позициям система выдаст свои артикулы</span>
+          </div>
         </div>
       )}
 

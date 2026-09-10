@@ -8,7 +8,10 @@ export async function POST(req: NextRequest) {
     const me = await requireAuth("catalog.edit");
     if (!me.isOwner) throw new ApiError(403, "Импорт доступен только главному администратору");
 
-    const rows = await req.json();
+    // Старый вызов присылал голый список — он должен работать и дальше
+    const body = await req.json();
+    const rows = Array.isArray(body) ? body : body?.rows;
+    const allowDuplicateSku = !Array.isArray(body) && !!body?.allowDuplicateSku;
     if (!Array.isArray(rows)) throw new ApiError(400, "Ожидается список позиций каталога");
     if (rows.length > 20000) throw new ApiError(400, "За раз можно импортировать не больше 20 000 строк");
 
@@ -16,7 +19,7 @@ export async function POST(req: NextRequest) {
     const units = rows.reduce((sum: number, r: { quantity?: number }) => sum + Math.max(1, Number(r?.quantity) || 1), 0);
     if (units > 50000) throw new ApiError(400, "Слишком много единиц в файле: больше 50 000 за раз не импортируем");
 
-    return NextResponse.json(importInventoryItems(rows));
+    return NextResponse.json(importInventoryItems(rows, { allowDuplicateSku }));
   } catch (e) {
     return apiError(e);
   }
