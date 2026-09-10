@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
 import { branches, rentalPeriods, depositTypeLabels } from "@/lib/mock-data";
-import { Client, InventoryLine, LineCategory, PaymentMethod, PAYMENT_METHOD_LABELS, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
+import { Client, DocumentTemplate, InventoryLine, LineCategory, PaymentMethod, PAYMENT_METHOD_LABELS, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
 import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, durationDays, lineTotal, isOneTimeLine } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { QuickClientModal } from "@/components/clients/quick-client-modal";
@@ -129,7 +129,15 @@ export default function NewRentalPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const [docsOpen, setDocsOpen] = useState(true);
-  const [documents, setDocuments] = useState<string[]>([]);
+  // Документ выбирается из шаблона, как и в открытой аренде: набранное руками
+  // название не превращалось в документ и оставалось просто строкой
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [docTemplates, setDocTemplates] = useState<DocumentTemplate[]>([]);
+  const [showDocPicker, setShowDocPicker] = useState(false);
+  // Какие шаблоны уже превратились в документы: аренду можно сохранить
+  // черновиком, а потом забронировать — второй раз их создавать не нужно
+  const [generatedDocs, setGeneratedDocs] = useState<string[]>([]);
+  const documents = docTemplates.map((t) => t.name);
   const [deposit, setDeposit] = useState<{ type: keyof typeof depositTypeLabels; amount: number } | null>(null);
   const [depositFormOpen, setDepositFormOpen] = useState(false);
   const [depositDraft, setDepositDraft] = useState({ type: "money" as keyof typeof depositTypeLabels, amount: "" });
@@ -211,6 +219,34 @@ export default function NewRentalPage() {
     };
   }
 
+  useEffect(() => {
+    fetch("/api/document-templates")
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setTemplates)
+      .catch(() => setTemplates([]));
+  }, []);
+
+  /**
+   * Документы создаются после сохранения аренды: шаблон подставляет в текст
+   * клиента, инструмент и суммы, а до сохранения этих данных на сервере нет.
+   */
+  async function generateDocuments() {
+    const pending = docTemplates.filter((t) => !generatedDocs.includes(t.id));
+    if (!pending.length) return;
+    for (const t of pending) {
+      try {
+        await fetch("/api/rental-documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rentalId, templateId: t.id }),
+        });
+      } catch {
+        // Документ можно добавить и из карточки аренды — сохранение важнее
+      }
+    }
+    setGeneratedDocs((prev) => [...prev, ...pending.map((t) => t.id)]);
+  }
+
   async function persist(status: Rental["status"]) {
     if (!selectedClient) {
       alert("Сначала выберите или создайте клиента");
@@ -231,6 +267,7 @@ export default function NewRentalPage() {
       } else {
         await updateRental(rentalId, rental);
       }
+      await generateDocuments();
       return true;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Не удалось сохранить аренду");
@@ -675,23 +712,75 @@ export default function NewRentalPage() {
             </button>
             {docsOpen && (
               <div className="mt-3 space-y-1.5">
-                {documents.map((d, i) => (
-                  <div key={i} className="rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">
-                    {d}
+                {docTemplates.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between gap-2 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13.5px]">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--color-primary-ink)]" />
+                      <span className="truncate">{t.name}</span>
+                    </span>
+                    <button
+                      onClick={() => setDocTemplates((list) => list.filter((x) => x.id !== t.id))}
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[#FDECEC] hover:text-[#C0272D]"
+                      title="Убрать документ"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 ))}
                 <button
-                  onClick={() => {
-                    const name = prompt("Название документа");
-                    if (name?.trim()) setDocuments((d) => [...d, name.trim()]);
-                  }}
+                  onClick={() => setShowDocPicker(true)}
                   className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]"
                 >
                   <Plus className="h-3.5 w-3.5" /> Добавить документ
                 </button>
+                {docTemplates.length > 0 && (
+                  <p className="text-[12px] text-[var(--color-text-muted)]">
+                    Документы соберутся после сохранения аренды — в них подставятся клиент, инструмент и суммы.
+                  </p>
+                )}
               </div>
             )}
           </div>
+
+          {showDocPicker && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setShowDocPicker(false)}>
+              <div className="w-full max-w-sm rounded-[16px] bg-[var(--color-surface)] p-5 card-shadow" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-[16px] font-semibold">Выберите шаблон</h3>
+                  <button onClick={() => setShowDocPicker(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {templates.length === 0 ? (
+                  <p className="text-[13.5px] text-[var(--color-text-muted)]">
+                    Нет шаблонов. Создайте их в разделе{" "}
+                    <Link href="/documents" className="text-[var(--color-primary-ink)] underline">Документы</Link>.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {templates.map((t) => {
+                      const picked = docTemplates.some((x) => x.id === t.id);
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            if (!picked) setDocTemplates((list) => [...list, t]);
+                            setShowDocPicker(false);
+                          }}
+                          disabled={picked}
+                          className="flex w-full items-center gap-3 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-left transition hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-soft)] disabled:opacity-50"
+                        >
+                          <FileText className="h-4 w-4 shrink-0 text-[var(--color-primary-ink)]" />
+                          <span className="text-[14px] font-medium">{t.name}</span>
+                          {picked && <span className="ml-auto text-[12.5px] text-[var(--color-text-muted)]">уже выбран</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
