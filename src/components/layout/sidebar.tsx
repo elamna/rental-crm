@@ -84,7 +84,7 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "flex shrink-0 flex-col border-r border-[var(--color-sidebar-border)] transition-all duration-300 ease-out",
+          "relative flex shrink-0 flex-col overflow-hidden border-r border-[var(--color-sidebar-border)] transition-all duration-300 ease-out",
           mobile
             ? cn(
                 "fixed inset-y-0 left-0 z-50 h-[100dvh] w-[272px] max-w-[85vw] shadow-2xl",
@@ -94,20 +94,41 @@ export function Sidebar({
         )}
         style={{ background: "var(--color-sidebar)" }}
       >
+      {/* Фоновое фото внизу панели. Файл кладётся в public/sidebar-bg.jpg —
+          пока его нет, виден только затемняющий градиент, и меню выглядит
+          ровным тёмным, ничего не ломается */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-cover bg-center opacity-70"
+        style={{ backgroundImage: "url('/sidebar-bg.jpg')" }}
+      />
+      {/* Затемнение: без него названия разделов теряются на светлых местах фото */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%]"
+        style={{
+          background:
+            "linear-gradient(to bottom, var(--color-sidebar) 0%, color-mix(in srgb, var(--color-sidebar) 88%, transparent) 45%, color-mix(in srgb, var(--color-sidebar) 72%, transparent) 100%)",
+        }}
+      />
+
       {/* Логотип */}
-      <div className="flex items-center justify-between px-4 pb-4 pt-5 safe-top">
+      <div className="relative z-10 flex items-center justify-between px-4 pb-4 pt-5 safe-top">
         {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-[var(--color-primary)] font-display text-sm font-bold text-[var(--color-on-primary)]">Q</div>
-            <span className="font-display text-[16px] font-bold text-[var(--color-sidebar-text)]">QURAL-SAIMAN</span>
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-9 w-9 place-items-center rounded-[10px] bg-[var(--color-primary)] font-display text-[15px] font-bold text-[var(--color-on-primary)]">Q</div>
+            <div className="min-w-0">
+              <div className="font-display text-[16px] font-bold leading-tight text-[var(--color-sidebar-text)]">QURAL-SAIMAN</div>
+              <div className="text-[11.5px] leading-tight text-[var(--color-sidebar-muted)]">Аренда инструментов</div>
+            </div>
           </div>
         )}
         {mobile ? (
-          <button onClick={onClose} aria-label="Закрыть меню" className="grid h-9 w-9 place-items-center rounded-md text-[var(--color-sidebar-muted)] transition hover:bg-black/[0.05] hover:text-[var(--color-sidebar-text)]">
+          <button onClick={onClose} aria-label="Закрыть меню" className="grid h-9 w-9 place-items-center rounded-md text-[var(--color-sidebar-muted)] transition hover:bg-white/10 hover:text-[var(--color-sidebar-text)]">
             <X className="h-5 w-5" />
           </button>
         ) : (
-          <button onClick={() => setCollapsed((c) => !c)} aria-label="Свернуть меню" className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-sidebar-muted)] transition hover:bg-black/[0.05] hover:text-[var(--color-sidebar-text)]">
+          <button onClick={() => setCollapsed((c) => !c)} aria-label="Свернуть меню" className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-sidebar-muted)] transition hover:bg-white/10 hover:text-[var(--color-sidebar-text)]">
             <ChevronsLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
           </button>
         )}
@@ -115,7 +136,7 @@ export function Sidebar({
 
       {/* Новая аренда */}
       {can("rentals.edit") && (
-        <div className="px-3">
+        <div className="relative z-10 px-3">
           <Link
             href="/rentals/new"
             className={cn(
@@ -130,7 +151,7 @@ export function Sidebar({
       )}
 
       {/* Навигация */}
-      <nav className="mt-5 flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+      <nav className="relative z-10 mt-5 flex-1 space-y-5 overflow-y-auto px-3 pb-4">
         <div className="space-y-0.5">
           {mainNav.filter(visible).map((item) => (
             <SidebarLink key={item.href} {...item} active={item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)} collapsed={isCollapsed} />
@@ -149,14 +170,14 @@ export function Sidebar({
       </nav>
 
       {/* Низ */}
-      <div className="space-y-0.5 border-t border-[var(--color-sidebar-border)] px-3 py-3 safe-bottom">
+      <div className="relative z-10 space-y-0.5 border-t border-[var(--color-sidebar-border)] px-3 py-3 safe-bottom">
         {bottomNav.filter(visible).map((item) => (
           <SidebarLink key={item.href} {...item} active={pathname.startsWith(item.href)} collapsed={isCollapsed} />
         ))}
 
         {/* Профиль + выход */}
-        <div className={cn("mt-2 flex items-center gap-2.5 rounded-[12px] px-2.5 py-2 hover:bg-black/[0.04]", isCollapsed && "justify-center px-0")}>
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-xs font-bold text-[var(--color-primary)]">
+        <div className={cn("mt-2 flex items-center gap-2.5 rounded-[12px] px-2.5 py-2 hover:bg-white/[0.06]", isCollapsed && "justify-center px-0")}>
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-[var(--color-on-primary)]">
             {initials}
           </div>
           {!isCollapsed && (
@@ -166,7 +187,7 @@ export function Sidebar({
             </div>
           )}
           {!isCollapsed && (
-            <button onClick={logout} title="Выйти" className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[var(--color-sidebar-muted)] transition hover:bg-black/[0.06] hover:text-[var(--color-sidebar-text)]">
+            <button onClick={logout} title="Выйти" className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[var(--color-sidebar-muted)] transition hover:bg-white/10 hover:text-[var(--color-sidebar-text)]">
               <LogOut className="h-3.5 w-3.5" />
             </button>
           )}
@@ -184,13 +205,20 @@ function SidebarLink({ href, label, icon: Icon, active, collapsed }: {
     <Link
       href={href}
       className={cn(
-        "group flex items-center gap-3 rounded-[12px] px-3 py-2 text-[14.5px] font-medium transition-colors",
-        active ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "text-[var(--color-sidebar-muted)] hover:bg-black/[0.05] hover:text-[var(--color-sidebar-text)]",
+        "group relative flex items-center gap-3 rounded-[12px] px-3 py-2 text-[14.5px] font-medium transition-colors",
+        active
+          ? "bg-[var(--color-sidebar-hover)] text-[var(--color-sidebar-text)]"
+          : "text-[var(--color-sidebar-muted)] hover:bg-white/[0.06] hover:text-[var(--color-sidebar-text)]",
         collapsed && "justify-center px-0"
       )}
       title={collapsed ? label : undefined}
     >
-      <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-[var(--color-on-primary)]" : "text-[var(--color-sidebar-muted)] group-hover:text-[var(--color-sidebar-text)]")} />
+      {/* Золотая полоса слева — метка активного раздела: заливка целиком
+          спорила бы с золотой кнопкой «Новая аренда» над меню */}
+      {active && (
+        <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full bg-[var(--color-primary)]" />
+      )}
+      <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-[var(--color-primary)]" : "text-[var(--color-sidebar-muted)] group-hover:text-[var(--color-sidebar-text)]")} />
       {!collapsed && <span className="truncate">{label}</span>}
     </Link>
   );

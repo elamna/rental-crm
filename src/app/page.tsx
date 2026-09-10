@@ -86,7 +86,7 @@ export default function DashboardPage() {
         <div className="xl:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-[16px] font-bold">Просроченные аренды</h2>
-            <Link href="/rentals" className="text-[13.5px] font-medium text-[var(--color-primary)]">
+            <Link href="/rentals" className="text-[13.5px] font-medium text-[var(--color-primary-ink)]">
               Смотреть все →
             </Link>
           </div>
@@ -95,7 +95,7 @@ export default function DashboardPage() {
               {rentals.length === 0 ? (
                 <div className="text-center">
                   <p>Аренд пока нет.</p>
-                  <Link href="/rentals/new" className="mt-1 inline-block font-medium text-[var(--color-primary)]">
+                  <Link href="/rentals/new" className="mt-1 inline-block font-medium text-[var(--color-primary-ink)]">
                     Создать первую аренду →
                   </Link>
                 </div>
@@ -115,7 +115,7 @@ export default function DashboardPage() {
         <div className="space-y-5">
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="mb-3 flex items-center gap-2">
-              <Bell className="h-4 w-4 text-[var(--color-primary)]" />
+              <Bell className="h-4 w-4 text-[var(--color-primary-ink)]" />
               <h2 className="text-[15px] font-semibold">Уведомления</h2>
             </div>
             {stats.overdueCount === 0 && stats.expectedReturns === 0 ? (

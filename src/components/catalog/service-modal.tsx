@@ -62,7 +62,7 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
 
         <label className="block">
           <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
-            Название <span className="text-[var(--color-primary)]">*</span>
+            Название <span className="text-[var(--color-primary-ink)]">*</span>
           </span>
           <input value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Сверло 18 (Магнитный дрел)" />
         </label>
@@ -79,7 +79,7 @@ export function ServiceModal({ service, onClose }: { service?: Service; onClose:
                     className={cn(
                       "flex w-[150px] items-center gap-2 rounded-[10px] border px-3 py-2 text-[14px] font-medium transition",
                       active
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
                         : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]"
                     )}
                   >

@@ -182,7 +182,7 @@ export default function FinancePage() {
                           <div className="flex items-center gap-2 text-[12.5px] text-[var(--color-text-muted)]">
                             <span>{tx.clientName}</span>
                             <span>·</span>
-                            <Link href={`/rentals/${tx.rentalId}`} className="hover:text-[var(--color-primary)] hover:underline">
+                            <Link href={`/rentals/${tx.rentalId}`} className="hover:text-[var(--color-primary-ink)] hover:underline">
                               Аренда №{tx.rentalNumber}
                             </Link>
                           </div>

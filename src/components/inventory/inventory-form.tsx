@@ -84,7 +84,7 @@ export function InventoryForm({
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
-      <button onClick={() => router.back()} className="mb-4 flex items-center gap-1.5 text-[15px] font-semibold transition hover:text-[var(--color-primary)]">
+      <button onClick={() => router.back()} className="mb-4 flex items-center gap-1.5 text-[15px] font-semibold transition hover:text-[var(--color-primary-ink)]">
         <ChevronLeft className="h-4 w-4" /> {title}
       </button>
 
@@ -203,7 +203,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   return (
     <label className="block">
       <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
-        {label} {required && <span className="text-[var(--color-primary)]">*</span>}
+        {label} {required && <span className="text-[var(--color-primary-ink)]">*</span>}
       </span>
       {children}
     </label>

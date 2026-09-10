@@ -171,7 +171,7 @@ export default function FunnelPage() {
                 }}
                 className={cn(
                   "flex-1 whitespace-nowrap rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition sm:flex-none",
-                  view === v.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                  view === v.key ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
                 )}
               >
                 {v.label}
@@ -296,7 +296,7 @@ function ClosedList({
           className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-left card-shadow transition hover:border-[var(--color-primary)]"
         >
           <div className="flex items-start justify-between gap-2">
-            <span className="text-[14px] font-semibold uppercase text-[var(--color-primary)]">{l.title}</span>
+            <span className="text-[14px] font-semibold uppercase text-[var(--color-primary-ink)]">{l.title}</span>
             <span className="shrink-0 text-[12.5px] text-[var(--color-text-muted)]">№{l.number}</span>
           </div>
           <div className="mt-1 text-[13px] text-[var(--color-text-muted)]">
@@ -360,7 +360,7 @@ function ScheduleModal({
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h3 className="flex items-center gap-2 text-[16px] font-semibold">
-              <CalendarClock className="h-4 w-4 text-[var(--color-primary)]" /> Когда нужен инструмент
+              <CalendarClock className="h-4 w-4 text-[var(--color-primary-ink)]" /> Когда нужен инструмент
             </h3>
             <p className="text-[13px] text-[var(--color-text-muted)]">
               №{lead.number} · {lead.title}

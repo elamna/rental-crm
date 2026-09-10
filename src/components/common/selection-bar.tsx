@@ -49,7 +49,7 @@ export function SelectionBar({
         {!allSelected && (
           <button
             onClick={onSelectAll}
-            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
           >
             <CheckSquare className="h-3.5 w-3.5" /> Выбрать все ({total})
           </button>

@@ -104,14 +104,14 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
               <div className="flex-1 space-y-3">
                 <label className="block">
                   <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">
-                    ФИО / Название компании <span className="text-[var(--color-primary)]">*</span>
+                    ФИО / Название компании <span className="text-[var(--color-primary-ink)]">*</span>
                   </span>
                   <input autoFocus value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Иванов Иван Иванович" />
                 </label>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">
-                      Тип клиента <span className="text-[var(--color-primary)]">*</span>
+                      Тип клиента <span className="text-[var(--color-primary-ink)]">*</span>
                     </span>
                     <select value={type} onChange={(e) => setType(e.target.value as ClientType)} className="crm-input">
                       <option value="individual">Физ. лицо</option>
@@ -120,7 +120,7 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">
-                      Номер телефона <span className="text-[var(--color-primary)]">*</span>
+                      Номер телефона <span className="text-[var(--color-primary-ink)]">*</span>
                     </span>
                     <PhoneInput value={phone} onChange={setPhone} />
                   </label>
@@ -139,8 +139,8 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
                 >
                   {!photoUrl && (
                     <>
-                      <Upload className="h-5 w-5 text-[var(--color-primary)]" />
-                      <span className="text-[12px] font-medium text-[var(--color-primary)]">
+                      <Upload className="h-5 w-5 text-[var(--color-primary-ink)]" />
+                      <span className="text-[12px] font-medium text-[var(--color-primary-ink)]">
                         {uploading ? "Загрузка…" : "Выберите файл"}
                       </span>
                     </>

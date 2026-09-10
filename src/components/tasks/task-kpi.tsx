@@ -41,7 +41,7 @@ export function TaskKpi() {
             className={cn(
               "shrink-0 whitespace-nowrap rounded-[8px] px-3 py-1.5 text-[13.5px] font-medium transition",
               period === p.key
-                ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm"
+                ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             )}
           >

@@ -150,7 +150,7 @@ export default function ShopPage() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setEditing(p)}
-                            className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
+                            className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]"
                             title="Редактировать"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -322,7 +322,7 @@ function Field({
   return (
     <label className={cn("block", className)}>
       <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
-        {label} {required && <span className="text-[var(--color-primary)]">*</span>}
+        {label} {required && <span className="text-[var(--color-primary-ink)]">*</span>}
         {hint && <span className="ml-1 text-[12.5px] opacity-70">({hint})</span>}
       </span>
       {children}

@@ -2,24 +2,29 @@
 @import "tailwindcss";
 
 :root {
-  /* Тёплый минимал: песочная база, графитовый текст, изумрудный акцент */
+  /* Тёмное меню и золотой акцент: меню должно читаться как отдельная
+     панель, а не сливаться с рабочей областью */
   --color-bg: #FAF9F6;
   --color-surface: #FFFFFF;
-  --color-sidebar: #F2F0EA;
-  --color-sidebar-hover: #E8E5DB;
-  --color-sidebar-text: #1A1A17;
-  --color-sidebar-muted: #6E6C63;
-  --color-sidebar-border: #E2DED2;
-  --color-primary: #0E7C66;
-  --color-primary-hover: #0B6352;
-  --color-primary-soft: #E2F1EC;
-  --color-on-primary: #FFFFFF;
+  --color-sidebar: #10131A;
+  --color-sidebar-hover: #1C222D;
+  --color-sidebar-text: #F2F4F7;
+  --color-sidebar-muted: #9BA3B0;
+  --color-sidebar-border: #232A36;
+  /* Золото живёт в двух тонах. Яркое — только под заливку (кнопка,
+     активный пункт), на нём текст тёмный. Для текста и иконок на светлом
+     фоне яркое золото нечитаемо (контраст 1.9:1), поэтому есть ink. */
+  --color-primary: #E3A72F;
+  --color-primary-hover: #CE9420;
+  --color-primary-soft: #FCF2DC;
+  --color-primary-ink: #8A5A0C;
+  --color-on-primary: #1B1408;
   --color-border: #E6E2D8;
   --color-text: #1A1A17;
   --color-text-muted: #6E6C63;
   --shadow-card: 0 1px 2px rgba(40, 34, 20, 0.04), 0 8px 24px -12px rgba(40, 34, 20, 0.10);
   --shadow-card-hover: 0 4px 10px rgba(40, 34, 20, 0.06), 0 16px 32px -12px rgba(40, 34, 20, 0.16);
-  --shadow-primary: 0 4px 14px -4px rgba(14, 124, 102, 0.45);
+  --shadow-primary: 0 4px 14px -4px rgba(227, 167, 47, 0.45);
   --radius-card: 16px;
   --radius-md: 12px;
   --radius-sm: 8px;
@@ -152,21 +157,23 @@ h1, h2, h3, h4, .font-display {
 :root[data-theme="dark"] {
   --color-bg: #0A0A0B;
   --color-surface: #141417;
-  --color-sidebar: #101012;
-  --color-sidebar-hover: #1C1C20;
+  --color-sidebar: #0C0F14;
+  --color-sidebar-hover: #171C24;
   --color-sidebar-text: #F3F2EF;
-  --color-sidebar-muted: #8E8D87;
-  --color-sidebar-border: #232326;
-  --color-primary: #17B892;
-  --color-primary-hover: #14A180;
-  --color-primary-soft: #14312A;
-  --color-on-primary: #04211B;
+  --color-sidebar-muted: #949BA6;
+  --color-sidebar-border: #1F2630;
+  --color-primary: #F0B94A;
+  --color-primary-hover: #E0A831;
+  --color-primary-soft: #33280F;
+  /* На чёрном фоне читаемо, наоборот, светлое золото */
+  --color-primary-ink: #F3C46B;
+  --color-on-primary: #201704;
   --color-border: #26262B;
   --color-text: #F3F2EF;
   --color-text-muted: #97968F;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
   --shadow-card-hover: 0 4px 10px rgba(0, 0, 0, 0.55), 0 16px 32px -12px rgba(0, 0, 0, 0.8);
-  --shadow-primary: 0 4px 14px -4px rgba(23, 184, 146, 0.5);
+  --shadow-primary: 0 4px 14px -4px rgba(240, 185, 74, 0.5);
   color-scheme: dark;
 }
 

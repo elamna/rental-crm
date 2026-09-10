@@ -123,7 +123,7 @@ export default function ShortagesPage() {
               onClick={() => setTab(t.key)}
               className={cn(
                 "flex items-center gap-2 rounded-[8px] px-3 py-1.5 text-[14px] font-semibold transition",
-                tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
               )}
             >
               {t.label}
@@ -220,7 +220,7 @@ function ShortageRow({
             {s.clientId ? (
               <Link
                 href={`/clients/${s.clientId}`}
-                className="text-[15px] font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline"
+                className="text-[15px] font-semibold text-[var(--color-primary-ink)] underline-offset-2 hover:underline"
               >
                 {name}
               </Link>
@@ -259,7 +259,7 @@ function ShortageRow({
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           <Link
             href={`/rentals/${s.rentalId}`}
-            className="whitespace-nowrap rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[14px] font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-bg)]"
+            className="whitespace-nowrap rounded-[8px] border border-[var(--color-border)] px-3 py-1.5 text-[14px] font-medium text-[var(--color-primary-ink)] transition hover:bg-[var(--color-bg)]"
           >
             Аренда{s.rentalNumber ? ` №${s.rentalNumber}` : ""}
           </Link>

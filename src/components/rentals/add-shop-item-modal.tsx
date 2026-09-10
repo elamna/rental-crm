@@ -131,7 +131,7 @@ export function AddShopItemModal({
               <p className="text-[13.5px] text-[var(--color-text-muted)]">
                 {search ? "Ничего не нашлось." : "В магазине пока нет товаров."}
               </p>
-              <Link href="/shop" className="text-[13.5px] font-semibold text-[var(--color-primary)]">
+              <Link href="/shop" className="text-[13.5px] font-semibold text-[var(--color-primary-ink)]">
                 Перейти в магазин →
               </Link>
             </div>

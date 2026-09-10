@@ -41,7 +41,7 @@ export default function BlacklistPage() {
           <p className="text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : blacklisted.length === 0 ? (
           <div className="mx-auto mt-16 max-w-md rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center card-shadow">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[14px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[14px] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]">
               <Ban className="h-6 w-6" />
             </div>
             <h2 className="font-display text-[17px] font-bold">Чёрный список пуст</h2>

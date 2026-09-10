@@ -142,7 +142,7 @@ export default function TasksPage() {
                 onClick={() => setTab(t.key)}
                 className={cn(
                   "rounded-[8px] px-3.5 py-1.5 text-[13.5px] font-semibold transition",
-                  tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                  tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
                 )}
               >
                 {t.label}
@@ -194,7 +194,7 @@ export default function TasksPage() {
         {tab === "board" && filterName && (
           <button
             onClick={() => setAssigneeFilter("")}
-            className="flex items-center gap-1.5 rounded-full bg-[var(--color-primary-soft)] px-3 py-1 text-[13px] font-semibold text-[var(--color-primary)]"
+            className="flex items-center gap-1.5 rounded-full bg-[var(--color-primary-soft)] px-3 py-1 text-[13px] font-semibold text-[var(--color-primary-ink)]"
           >
             Показаны задачи: {filterName} <X className="h-3.5 w-3.5" />
           </button>

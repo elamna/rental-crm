@@ -234,7 +234,7 @@ export default function SettingsPage() {
                 ["{{city}}", "Город"],
               ].map(([key, label]) => (
                 <div key={key} className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-[11.5px] text-[var(--color-primary)]">{key}</span>
+                  <span className="font-mono text-[11.5px] text-[var(--color-primary-ink)]">{key}</span>
                   <span className="text-[12px] text-[var(--color-text-muted)]">— {label}</span>
                 </div>
               ))}
@@ -256,7 +256,7 @@ function Section({ icon: Icon, title, children }: { icon: React.ElementType; tit
   return (
     <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
       <div className="mb-4 flex items-center gap-2.5">
-        <div className="grid h-8 w-8 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+        <div className="grid h-8 w-8 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]">
           <Icon className="h-4 w-4" />
         </div>
         <h2 className="text-[15px] font-semibold">{title}</h2>

@@ -254,7 +254,7 @@ function TaskRow({
         {task.sourceUrl && (
           <Link
             href={task.sourceUrl}
-            className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-bg)]"
+            className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--color-primary-ink)] transition hover:bg-[var(--color-bg)]"
             title="Открыть объект, из-за которого появилась задача"
           >
             <ExternalLink className="h-3.5 w-3.5" /> Открыть
@@ -263,7 +263,7 @@ function TaskRow({
         {onTake && (
           <button
             onClick={onTake}
-            className="flex items-center gap-1 rounded-[8px] border border-[var(--color-primary)] px-2.5 py-1.5 text-[13px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
+            className="flex items-center gap-1 rounded-[8px] border border-[var(--color-primary)] px-2.5 py-1.5 text-[13px] font-semibold text-[var(--color-primary-ink)] transition hover:bg-[var(--color-primary-soft)]"
           >
             <ArrowRight className="h-3.5 w-3.5" /> Взять себе
           </button>

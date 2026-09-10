@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
                         onClick={() => setIncomeView(o.key)}
                         className={`rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition ${
                           incomeView === o.key
-                            ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm"
+                            ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm"
                             : "text-[var(--color-text-muted)]"
                         }`}
                       >
@@ -260,7 +260,7 @@ export default function AnalyticsPage() {
                     {data.topClients.map((c, i) => (
                       <div key={c.id} className="flex items-center gap-3">
                         <span className="w-5 shrink-0 text-center text-[13px] font-bold text-[var(--color-text-muted)]">{i + 1}</span>
-                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[11px] font-bold text-[var(--color-primary)]">
+                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[11px] font-bold text-[var(--color-primary-ink)]">
                           {c.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -335,7 +335,7 @@ function KpiCard({ icon: Icon, label, value, color, sub }: {
   icon: React.ElementType; label: string; value: string; color: string; sub: string;
 }) {
   const colorMap: Record<string, string> = {
-    primary: "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
+    primary: "bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]",
     danger: "bg-[#FDECEC] text-[#C0272D]",
     success: "bg-[#EAF7EE] text-[#1C8A46]",
     info: "bg-[#EEF2FF] text-[#4F46E5]",
@@ -433,7 +433,7 @@ function PayersSection({
               key={o.key}
               onClick={() => onView(o.key)}
               className={`flex items-center gap-2 rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition ${
-                view === o.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                view === o.key ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
               }`}
             >
               {o.label}
@@ -465,7 +465,7 @@ function PayersSection({
                     <tr key={p.id} className="border-b border-[var(--color-border)] last:border-0">
                       <td className="py-2.5">
                         {p.clientId ? (
-                          <Link href={`/clients/${p.clientId}`} className="font-medium text-[var(--color-primary)] underline-offset-2 hover:underline">
+                          <Link href={`/clients/${p.clientId}`} className="font-medium text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
                             {p.clientName ?? "Клиент"}
                           </Link>
                         ) : (
@@ -474,7 +474,7 @@ function PayersSection({
                         <div className="text-[12.5px] text-[var(--color-text-muted)]">{p.clientPhone ?? "—"}</div>
                       </td>
                       <td className="py-2.5">
-                        <Link href={`/rentals/${p.rentalId}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
+                        <Link href={`/rentals/${p.rentalId}`} className="text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
                           №{p.rentalNumber}
                         </Link>
                       </td>
@@ -490,7 +490,7 @@ function PayersSection({
                     <tr key={d.rentalId} className="border-b border-[var(--color-border)] last:border-0">
                       <td className="py-2.5">
                         {d.clientId ? (
-                          <Link href={`/clients/${d.clientId}`} className="font-medium text-[var(--color-primary)] underline-offset-2 hover:underline">
+                          <Link href={`/clients/${d.clientId}`} className="font-medium text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
                             {d.clientName ?? "Клиент"}
                           </Link>
                         ) : (
@@ -499,7 +499,7 @@ function PayersSection({
                         <div className="text-[12.5px] text-[var(--color-text-muted)]">{d.clientPhone ?? "—"}</div>
                       </td>
                       <td className="py-2.5">
-                        <Link href={`/rentals/${d.rentalId}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
+                        <Link href={`/rentals/${d.rentalId}`} className="text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
                           №{d.rentalNumber}
                         </Link>
                         <div className="text-[12.5px] text-[var(--color-text-muted)]">{STATUS_LABELS[d.status] ?? d.status}</div>

@@ -64,7 +64,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto p-6 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-1">
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-            <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[17px] font-bold text-[var(--color-primary)]">
+            <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[17px] font-bold text-[var(--color-primary-ink)]">
               {client.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
             </div>
             <InfoRow icon={Phone} label="Телефон" value={client.phone} />
@@ -123,7 +123,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
         <div className="xl:col-span-2">
           <div className="mb-3 flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-[var(--color-primary)]" />
+            <ClipboardList className="h-4 w-4 text-[var(--color-primary-ink)]" />
             <h2 className="font-display text-[16px] font-bold">История аренд</h2>
           </div>
           {clientRentals.length === 0 ? (

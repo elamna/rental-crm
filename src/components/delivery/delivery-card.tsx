@@ -78,7 +78,7 @@ export function DeliveryCard({
           {canEdit && delivery.status === "new" && (
             <button
               onClick={() => onAdvance("in_progress")}
-              className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1.5 text-[13px] font-semibold transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              className="flex items-center gap-1.5 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1.5 text-[13px] font-semibold transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
             >
               <Truck className="h-3.5 w-3.5" /> Доставить
             </button>
@@ -132,7 +132,7 @@ export function DeliveryCard({
           )}
           {delivery.price > 0 && <span className="font-semibold text-[var(--color-text)]">{formatMoney(delivery.price)}</span>}
           {delivery.rentalId && (
-            <Link href={`/rentals/${delivery.rentalId}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
+            <Link href={`/rentals/${delivery.rentalId}`} className="text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
               Аренда №{delivery.rentalNumber}
             </Link>
           )}

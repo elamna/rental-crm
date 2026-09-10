@@ -233,7 +233,7 @@ export default function ClientsPage() {
       </header>
 
       {importMsg && (
-        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[14px] font-medium text-[var(--color-primary)]">
+        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[14px] font-medium text-[var(--color-primary-ink)]">
           {importMsg}
         </div>
       )}
@@ -344,7 +344,7 @@ export default function ClientsPage() {
                     )}
                     <td className="px-4 py-3">
                       <Link href={`/clients/${c.id}`} className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[12px] font-bold text-[var(--color-primary)]">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[12px] font-bold text-[var(--color-primary-ink)]">
                           {c.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
                         </div>
                         <div className="min-w-0">
@@ -385,7 +385,7 @@ export default function ClientsPage() {
                 </span>
                 <button
                   onClick={() => setVisibleCount((n) => n + PAGE_SIZE * 2)}
-                  className="rounded-[10px] border border-[var(--color-border)] px-5 py-2 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  className="rounded-[10px] border border-[var(--color-border)] px-5 py-2 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
                 >
                   Показать ещё
                 </button>
@@ -403,7 +403,7 @@ export default function ClientsPage() {
                       {clients.length === 0 ? "Нет данных" : "Ничего не найдено по текущим фильтрам"}
                     </p>
                     {clients.length === 0 && (
-                      <Link href="/clients/new" className="mt-1 text-[14px] font-medium text-[var(--color-primary)]">
+                      <Link href="/clients/new" className="mt-1 text-[14px] font-medium text-[var(--color-primary-ink)]">
                         Добавить первого клиента →
                       </Link>
                     )}
@@ -489,7 +489,7 @@ function Th({
   const active = sort.key === sortKey;
   return (
     <th className="px-4 py-3">
-      <button onClick={() => onSort(sortKey)} className={cn("flex items-center gap-1 transition", active && "text-[var(--color-primary)]")}>
+      <button onClick={() => onSort(sortKey)} className={cn("flex items-center gap-1 transition", active && "text-[var(--color-primary-ink)]")}>
         {label}
         <ArrowUpDown className={cn("h-3 w-3", active ? "opacity-100" : "opacity-40")} />
       </button>

@@ -260,7 +260,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
             <button
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Действия с арендой"
-              className="grid h-9 w-9 place-items-center rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              className="grid h-9 w-9 place-items-center rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
@@ -321,7 +321,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
           <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
             <h2 className="mb-3 text-[15px] font-semibold">Клиент</h2>
             <div className="flex items-start gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[17px] font-bold text-[var(--color-primary)]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[17px] font-bold text-[var(--color-primary-ink)]">
                 {rental.client.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
               </div>
               <div className="grid flex-1 grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
@@ -380,7 +380,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[16px] font-semibold">Аренда</h2>
               {datesChanged && (
-                <span className="text-[13px] font-medium text-[var(--color-primary)]">Срок изменён — не забудьте сохранить</span>
+                <span className="text-[13px] font-medium text-[var(--color-primary-ink)]">Срок изменён — не забудьте сохранить</span>
               )}
             </div>
 
@@ -432,7 +432,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
             {datesChanged && extraDays !== 0 && (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[12px] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-3.5 py-3">
                 <div>
-                  <div className="text-[14px] font-semibold text-[var(--color-primary)]">
+                  <div className="text-[14px] font-semibold text-[var(--color-primary-ink)]">
                     {extraDays > 0
                       ? `Продление на ${extraDays} сут. — доплата ${formatMoney(priceDelta)}`
                       : `Срок сокращён на ${-extraDays} сут. — сумма уменьшится на ${formatMoney(-priceDelta)}`}
@@ -477,7 +477,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                     onClick={() => setActiveTab(t.label)}
                     className={cn(
                       "rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition",
-                      activeTab === t.label ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                      activeTab === t.label ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
                     )}
                   >
                     {t.label}
@@ -540,7 +540,7 @@ export default function RentalDetailPage({ params }: { params: Promise<{ id: str
                     key={o.key}
                     onClick={() => setAddCategory(o.key)}
                     disabled={addingItem}
-                    className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-50"
+                    className="flex items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2 text-[13.5px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)] disabled:opacity-50"
                   >
                     <Plus className="h-3.5 w-3.5" /> {o.label}
                   </button>

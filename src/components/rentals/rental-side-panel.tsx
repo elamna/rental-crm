@@ -34,7 +34,7 @@ function Section({
     <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="grid h-7 w-7 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+          <div className="grid h-7 w-7 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]">
             <Icon className="h-3.5 w-3.5" />
           </div>
           <h3 className="text-[14.5px] font-semibold">{title}</h3>
@@ -520,7 +520,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
         {canReturn && (
           <button
             onClick={() => setShowReturnModal(true)}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-primary-ink)] transition hover:bg-[var(--color-primary-soft)]"
           >
             <Undo2 className="h-3.5 w-3.5" /> Возврат товара
           </button>
@@ -540,10 +540,10 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             </div>
             <div className="space-y-3">
               <div className="flex gap-2">
-                <button onClick={() => setDiscountType("fixed")} className={`flex-1 rounded-[8px] border py-2 text-[13.5px] font-medium transition ${discountType === "fixed" ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"}`}>
+                <button onClick={() => setDiscountType("fixed")} className={`flex-1 rounded-[8px] border py-2 text-[13.5px] font-medium transition ${discountType === "fixed" ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"}`}>
                   Сумма (₸)
                 </button>
-                <button onClick={() => setDiscountType("percent")} className={`flex-1 rounded-[8px] border py-2 text-[13.5px] font-medium transition ${discountType === "percent" ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"}`}>
+                <button onClick={() => setDiscountType("percent")} className={`flex-1 rounded-[8px] border py-2 text-[13.5px] font-medium transition ${discountType === "percent" ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"}`}>
                   Процент (%)
                 </button>
               </div>
@@ -909,7 +909,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
                       className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
                     >
                       <div className={`grid h-5 w-5 shrink-0 place-items-center rounded-[5px] border-2 transition ${state.selected ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-[var(--color-border)]"}`}>
-                        {state.selected && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                        {state.selected && <Check className="h-3 w-3 text-[var(--color-on-primary)]" strokeWidth={3} />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[14px] font-medium">{item.name}</div>
@@ -1146,7 +1146,7 @@ function DocumentsSection({ rental }: { rental: Rental }) {
             {docs.map((doc) => (
               <div key={doc.id} className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[13.5px]">
                 <div className="min-w-0">
-                  <button onClick={() => setPreviewDoc(doc)} className="block max-w-full truncate text-left font-medium hover:text-[var(--color-primary)] hover:underline">{doc.name}</button>
+                  <button onClick={() => setPreviewDoc(doc)} className="block max-w-full truncate text-left font-medium hover:text-[var(--color-primary-ink)] hover:underline">{doc.name}</button>
                   <span
                     className={cn(
                       "text-[12.5px]",
@@ -1214,12 +1214,12 @@ function DocumentsSection({ rental }: { rental: Rental }) {
               <button onClick={() => setShowPicker(false)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"><span className="text-[18px]">×</span></button>
             </div>
             {templates.length === 0 ? (
-              <p className="text-[13.5px] text-[var(--color-text-muted)]">Нет шаблонов. Создайте их в разделе <a href="/documents" className="text-[var(--color-primary)] underline">Документы</a>.</p>
+              <p className="text-[13.5px] text-[var(--color-text-muted)]">Нет шаблонов. Создайте их в разделе <a href="/documents" className="text-[var(--color-primary-ink)] underline">Документы</a>.</p>
             ) : (
               <div className="space-y-2">
                 {templates.map((t) => (
                   <button key={t.id} onClick={() => generate(t.id)} disabled={generating} className="flex w-full items-center gap-3 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-left transition hover:bg-[var(--color-primary-soft)] hover:border-[var(--color-primary)] disabled:opacity-60">
-                    <FileText className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                    <FileText className="h-4 w-4 shrink-0 text-[var(--color-primary-ink)]" />
                     <span className="text-[14px] font-medium">{t.name}</span>
                   </button>
                 ))}
@@ -1293,7 +1293,7 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
                     onClick={() => setMethod(m)}
                     className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition border ${
                       method === m
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
                         : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
                     }`}
                   >

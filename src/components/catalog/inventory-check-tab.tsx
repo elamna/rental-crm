@@ -127,7 +127,7 @@ export function InventoryCheckTab() {
             }}
             className={cn(
               "rounded-[8px] px-3.5 py-1.5 text-[13.5px] font-semibold transition",
-              sub === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+              sub === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
             )}
           >
             {t.label}
@@ -161,11 +161,11 @@ export function InventoryCheckTab() {
               }}
               className={cn(
                 "flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition",
-                condition === t.key ? "bg-[var(--color-bg)] text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+                condition === t.key ? "bg-[var(--color-bg)] text-[var(--color-text)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-primary-ink)]"
               )}
             >
               {t.label}
-              <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-[1px] text-[12px] text-[var(--color-primary)]">{t.count}</span>
+              <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-[1px] text-[12px] text-[var(--color-primary-ink)]">{t.count}</span>
             </button>
           ))}
         </div>
@@ -200,7 +200,7 @@ export function InventoryCheckTab() {
                           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[var(--color-bg)]">
                             <Tag className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
                           </div>
-                          <Link href={`/catalog/${u.id}`} className="text-[14px] font-semibold transition hover:text-[var(--color-primary)]">
+                          <Link href={`/catalog/${u.id}`} className="text-[14px] font-semibold transition hover:text-[var(--color-primary-ink)]">
                             {u.name}
                           </Link>
                         </div>
@@ -230,7 +230,7 @@ export function InventoryCheckTab() {
                       </td>
                       <td className="px-4 py-3 text-[13.5px]">
                         {rental ? (
-                          <Link href={`/rentals/${rental.id}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
+                          <Link href={`/rentals/${rental.id}`} className="text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
                             Аренда №{rental.number}
                           </Link>
                         ) : (
@@ -241,7 +241,7 @@ export function InventoryCheckTab() {
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => setCheckItem(u)}
-                          className="rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                          className="rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
                         >
                           Проверить
                         </button>

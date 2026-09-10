@@ -92,7 +92,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
           <div className="flex-1 space-y-4">
             <label className="block">
               <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
-                Название <span className="text-[var(--color-primary)]">*</span>
+                Название <span className="text-[var(--color-primary-ink)]">*</span>
               </span>
               <input value={name} onChange={(e) => setName(e.target.value)} className="crm-input" placeholder="Алмазное бурение (бур)" />
             </label>
@@ -131,7 +131,7 @@ export function KitModal({ kit, onClose }: { kit?: Kit; onClose: () => void }) {
           <span className="text-[13.5px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Состав комплекта</span>
           <button
             onClick={addLine}
-            className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
           >
             <Plus className="h-3 w-3" /> Позиция
           </button>

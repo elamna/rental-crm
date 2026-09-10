@@ -282,7 +282,7 @@ export default function DocumentsPage() {
               onClick={() => setTab(t.key)}
               className={cn(
                 "relative px-3.5 pb-3 pt-1.5 text-[14.5px] font-semibold transition",
-                tab === t.key ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                tab === t.key ? "text-[var(--color-primary-ink)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               )}
             >
               {t.label}
@@ -298,7 +298,7 @@ export default function DocumentsPage() {
           <p className="text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : templates.length === 0 ? (
           <div className="mx-auto mt-16 max-w-md rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center card-shadow">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[14px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"><FileText className="h-6 w-6" /></div>
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[14px] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"><FileText className="h-6 w-6" /></div>
             <h2 className="font-display text-[17px] font-bold">Нет шаблонов</h2>
             <p className="mt-1.5 text-[14px] text-[var(--color-text-muted)]">Создайте шаблон — он появится в каждой аренде.</p>
             <button onClick={openNew} className="mt-4 mx-auto flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)]"><Plus className="h-4 w-4" /> Создать первый шаблон</button>
@@ -308,7 +308,7 @@ export default function DocumentsPage() {
             {templates.map((t) => (
               <div key={t.id} className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 card-shadow">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"><FileText className="h-4 w-4" /></div>
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"><FileText className="h-4 w-4" /></div>
                   <div>
                     <div className="text-[15px] font-semibold">{t.name}</div>
                     <div className="text-[13px] text-[var(--color-text-muted)]">Обновлён: {new Date(t.updatedAt).toLocaleString("ru-RU")}</div>
@@ -651,7 +651,7 @@ function TemplateEditor({ initial, isNew, onSave, onBack }: {
                   {group.items.map((v) => (
                     <div key={v.key} className="group flex items-center justify-between px-3 py-1.5 hover:bg-[var(--color-primary-soft)]">
                       <div className="min-w-0 pr-2">
-                        <div className="truncate text-[11px] font-mono text-[var(--color-primary)]">{v.key}</div>
+                        <div className="truncate text-[11px] font-mono text-[var(--color-primary-ink)]">{v.key}</div>
                         <div className="truncate text-[11.5px] text-[var(--color-text-muted)]">{v.label}</div>
                       </div>
                       <button

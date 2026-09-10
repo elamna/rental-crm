@@ -168,14 +168,14 @@ export default function RemindersPage() {
                           {REMINDER_KIND_LABELS[item.kind]}
                         </span>
                         {item.clientId ? (
-                          <Link href={`/clients/${item.clientId}`} className="text-[15px] font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline">
+                          <Link href={`/clients/${item.clientId}`} className="text-[15px] font-semibold text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
                             {item.clientName}
                           </Link>
                         ) : (
                           <span className="text-[15px] font-semibold">{item.clientName}</span>
                         )}
                         {item.phone ? (
-                          <a href={`tel:${item.phone}`} className="flex items-center gap-1 text-[14px] text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+                          <a href={`tel:${item.phone}`} className="flex items-center gap-1 text-[14px] text-[var(--color-text-muted)] hover:text-[var(--color-primary-ink)]">
                             <Phone className="h-3.5 w-3.5" /> {item.phone}
                           </a>
                         ) : (
@@ -191,7 +191,7 @@ export default function RemindersPage() {
 
                     <Link
                       href={item.url}
-                      className="flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-bg)]"
+                      className="flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--color-primary-ink)] transition hover:bg-[var(--color-bg)]"
                     >
                       <ExternalLink className="h-3.5 w-3.5" /> Открыть
                     </Link>
@@ -246,7 +246,7 @@ function FilterTab({ active, onClick, label, count }: { active: boolean; onClick
       onClick={onClick}
       className={cn(
         "flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition",
-        active ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+        active ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
       )}
     >
       {label}
@@ -294,7 +294,7 @@ function TemplatesModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
         <div className="flex items-start justify-between border-b border-[var(--color-border)] px-5 py-4">
           <div>
             <h3 className="flex items-center gap-2 text-[16px] font-semibold">
-              <BellRing className="h-4 w-4 text-[var(--color-primary)]" /> Тексты напоминаний
+              <BellRing className="h-4 w-4 text-[var(--color-primary-ink)]" /> Тексты напоминаний
             </h3>
             <p className="text-[13px] text-[var(--color-text-muted)]">
               Подстановки: <span className="font-mono">{VARIABLES}</span>

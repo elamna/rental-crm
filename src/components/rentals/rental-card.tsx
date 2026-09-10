@@ -125,7 +125,7 @@ export function RentalCard({
           {rental.items.slice(0, 2).map((item) => (
             <div key={item.id} className="flex items-center gap-1.5 py-0.5 text-[13px]">
               {item.flagged && <AlertTriangle className="h-3 w-3 shrink-0 text-[#EF4444]" />}
-              <span className="truncate text-[var(--color-primary)]">{item.name}</span>
+              <span className="truncate text-[var(--color-primary-ink)]">{item.name}</span>
               <span className="ml-auto shrink-0 text-[var(--color-text-muted)]">({item.sku})</span>
             </div>
           ))}

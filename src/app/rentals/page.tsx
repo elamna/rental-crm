@@ -135,7 +135,7 @@ export default function RentalsPage() {
           {canImport && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
             >
               <Upload className="h-3.5 w-3.5" /> Импорт
             </button>
@@ -146,7 +146,7 @@ export default function RentalsPage() {
               className={cn(
                 "flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-[14px] font-medium transition",
                 selecting
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
               )}
             >
@@ -165,7 +165,7 @@ export default function RentalsPage() {
       </header>
 
       {importMsg && (
-        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[14px] font-medium text-[var(--color-primary)]">
+        <div className="mx-6 mt-3 rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[14px] font-medium text-[var(--color-primary-ink)]">
           {importMsg}
         </div>
       )}
@@ -183,7 +183,7 @@ export default function RentalsPage() {
             ) : allRentals.length === 0 ? (
               <div>
                 <p className="text-[14.5px]">Аренд пока нет</p>
-                <Link href="/rentals/new" className="mt-1 inline-block text-[14px] font-medium text-[var(--color-primary)]">
+                <Link href="/rentals/new" className="mt-1 inline-block text-[14px] font-medium text-[var(--color-primary-ink)]">
                   Оформить первую аренду →
                 </Link>
               </div>
@@ -220,7 +220,7 @@ export default function RentalsPage() {
             </span>
             <button
               onClick={() => setVisibleCount((n) => n + PAGE_SIZE * 2)}
-              className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
             >
               Показать ещё
             </button>

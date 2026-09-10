@@ -113,7 +113,7 @@ export default function DeliveryPage() {
             className={cn(
               "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3.5 py-2 text-[14px] font-semibold transition",
               showStats
-                ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
                 : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]"
             )}
           >
@@ -141,14 +141,14 @@ export default function DeliveryPage() {
               }}
               className={cn(
                 "relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3.5 pb-3 pt-2.5 text-[14.5px] font-semibold transition",
-                tab === t.key ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                tab === t.key ? "text-[var(--color-primary-ink)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               )}
             >
               {t.label}
               <span
                 className={cn(
                   "rounded-full px-1.5 py-0.5 text-[12px]",
-                  tab === t.key ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "bg-[var(--color-bg)]"
+                  tab === t.key ? "bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]" : "bg-[var(--color-bg)]"
                 )}
               >
                 {counts[t.key]}

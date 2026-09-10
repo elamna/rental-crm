@@ -108,7 +108,7 @@ export function TaskModal({
 
         <label className="block">
           <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
-            Название <span className="text-[var(--color-primary)]">*</span>
+            Название <span className="text-[var(--color-primary-ink)]">*</span>
           </span>
           <input value={title} onChange={(e) => setTitle(e.target.value)} className="crm-input" placeholder="Принять инструмент с объекта" />
         </label>
@@ -184,7 +184,7 @@ export function TaskModal({
                     className={cn(
                       "rounded-[8px] border px-2.5 py-1 text-[13px] font-medium transition",
                       on
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
                         : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]"
                     )}
                   >

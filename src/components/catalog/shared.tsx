@@ -19,7 +19,7 @@ export function StatBar({ items }: { items: StatItem[] }) {
           <div className="flex items-baseline gap-1.5">
             <span className={cn("font-display text-[18px] font-bold", it.muted && "text-[var(--color-text-muted)]")}>{it.value}</span>
             {it.pct && (
-              <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-[1px] text-[11.5px] font-semibold text-[var(--color-primary)]">
+              <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-[1px] text-[11.5px] font-semibold text-[var(--color-primary-ink)]">
                 {it.pct}
               </span>
             )}
@@ -100,7 +100,7 @@ export function ExportButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] sm:w-auto"
+      className="flex w-full items-center justify-center gap-1.5 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)] sm:w-auto"
     >
       <Download className="h-3.5 w-3.5" /> Экспорт
     </button>
@@ -133,7 +133,7 @@ export function Th({
   return (
     <th className={cn("whitespace-nowrap px-4 py-3 text-left text-[13.5px] font-semibold text-[var(--color-text-muted)]", className)}>
       {sortable ? (
-        <button onClick={onSort} className={cn("flex items-center gap-1 transition hover:text-[var(--color-primary)]", active && "text-[var(--color-primary)]")}>
+        <button onClick={onSort} className={cn("flex items-center gap-1 transition hover:text-[var(--color-primary-ink)]", active && "text-[var(--color-primary-ink)]")}>
           {children}
           <span className="text-[9px] leading-none opacity-60">{active ? (dir === "asc" ? "▲" : "▼") : "⇅"}</span>
         </button>
@@ -241,7 +241,7 @@ function PageBtn({
         "grid h-7 min-w-7 place-items-center rounded-[8px] border px-2 text-[13.5px] font-medium transition",
         active
           ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-on-primary)]"
-          : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",
+          : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]",
         disabled && "cursor-not-allowed opacity-40"
       )}
     >

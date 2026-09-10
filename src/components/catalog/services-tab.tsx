@@ -92,7 +92,7 @@ export function ServicesTab({ editing, onCloseEditor }: { editing: boolean; onCl
                       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[var(--color-bg)]">
                         <Wrench className="h-4 w-4 text-[var(--color-text-muted)]" />
                       </div>
-                      <button onClick={() => setEditService(s)} className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary)]">
+                      <button onClick={() => setEditService(s)} className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary-ink)]">
                         {s.name}
                       </button>
                     </div>
@@ -108,7 +108,7 @@ export function ServicesTab({ editing, onCloseEditor }: { editing: boolean; onCl
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => setEditService(s)} className="grid h-7 w-7 place-items-center rounded-[8px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]">
+                      <button onClick={() => setEditService(s)} className="grid h-7 w-7 place-items-center rounded-[8px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]">
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                       <button

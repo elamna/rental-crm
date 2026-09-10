@@ -189,7 +189,7 @@ export function ScheduleTab() {
                         <div className="flex items-center gap-2">
                           <span className={cn("h-2 w-2 shrink-0 rounded-full", broken ? "bg-[#EF4444]" : "bg-[var(--color-primary)]")} />
                           <div className="min-w-0">
-                            <Link href={`/catalog/${u.id}`} className="block truncate text-[13.5px] font-medium transition hover:text-[var(--color-primary)]">
+                            <Link href={`/catalog/${u.id}`} className="block truncate text-[13.5px] font-medium transition hover:text-[var(--color-primary-ink)]">
                               {u.name}
                             </Link>
                             <div className="text-[12px] text-[var(--color-text-muted)]">{u.sku || "без артикула"}</div>

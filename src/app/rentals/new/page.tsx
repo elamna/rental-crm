@@ -320,9 +320,9 @@ export default function NewRentalPage() {
         <div className="min-w-0 flex-1 space-y-4">
           {fromLead && (
             <div className="flex items-start gap-2.5 rounded-[var(--radius-card)] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-4 py-3">
-              <FileSignature className="mt-[2px] h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+              <FileSignature className="mt-[2px] h-4 w-4 shrink-0 text-[var(--color-primary-ink)]" />
               <div className="text-[13.5px]">
-                <div className="font-semibold text-[var(--color-primary)]">Оформление по заявке из воронки</div>
+                <div className="font-semibold text-[var(--color-primary-ink)]">Оформление по заявке из воронки</div>
                 <div className="text-[var(--color-text-muted)]">
                   Клиент подставлен{fromLead.title ? `, клиенту нужен: ${fromLead.title}` : ""}. Заявка закроется как
                   успешная после бронирования.
@@ -335,7 +335,7 @@ export default function NewRentalPage() {
             {selectedClient ? (
               <>
               <div className="flex items-center gap-3 rounded-[10px] border border-[var(--color-border)] px-3 py-2.5">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[13px] font-bold text-[var(--color-primary)]">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[13px] font-bold text-[var(--color-primary-ink)]">
                   {selectedClient.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -349,7 +349,7 @@ export default function NewRentalPage() {
                   </div>
                   <div className="text-[13px] text-[var(--color-text-muted)]">{selectedClient.phone}</div>
                 </div>
-                <button onClick={() => setSelectedClient(null)} className="shrink-0 text-[13.5px] font-medium text-[var(--color-primary)] hover:underline">
+                <button onClick={() => setSelectedClient(null)} className="shrink-0 text-[13.5px] font-medium text-[var(--color-primary-ink)] hover:underline">
                   Изменить
                 </button>
               </div>
@@ -486,7 +486,7 @@ export default function NewRentalPage() {
                   onClick={() => setTab(t.key)}
                   className={cn(
                     "flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition",
-                    tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                    tab === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
                   )}
                 >
                   {t.label}
@@ -508,7 +508,7 @@ export default function NewRentalPage() {
                       <span className="text-[13px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{catLabel}</span>
                       <button
                         onClick={() => setAddModalCategory(cat)}
-                        className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                        className="flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-2.5 py-1 text-[13px] font-medium text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
                       >
                         <Plus className="h-3 w-3" /> Добавить
                       </button>
@@ -518,7 +518,7 @@ export default function NewRentalPage() {
                         {catItems.map((item) => (
                           <div key={item.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 hover:border-[var(--color-primary-soft)]">
                             {/* Иконка */}
-                            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]">
                               <span className="text-[11px] font-bold">{item.qty}</span>
                             </div>
                             {/* Название */}
@@ -538,7 +538,7 @@ export default function NewRentalPage() {
                     ) : (
                       <button
                         onClick={() => setAddModalCategory(cat)}
-                        className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2.5 text-[13px] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                        className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-2.5 text-[13px] text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
                       >
                         <Plus className="h-3 w-3" /> Добавить {catLabel.toLowerCase()}
                       </button>
@@ -669,7 +669,7 @@ export default function NewRentalPage() {
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <button onClick={() => setDocsOpen((v) => !v)} className="flex w-full items-center justify-between">
               <span className="flex items-center gap-2 text-[14.5px] font-semibold">
-                <FileText className="h-4 w-4 text-[var(--color-primary)]" /> Документы
+                <FileText className="h-4 w-4 text-[var(--color-primary-ink)]" /> Документы
               </span>
               {docsOpen ? <ChevronUp className="h-4 w-4 text-[var(--color-text-muted)]" /> : <ChevronDown className="h-4 w-4 text-[var(--color-text-muted)]" />}
             </button>
@@ -696,7 +696,7 @@ export default function NewRentalPage() {
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-[14.5px] font-semibold">
-                <ShieldCheck className="h-4 w-4 text-[var(--color-primary)]" /> Залог
+                <ShieldCheck className="h-4 w-4 text-[var(--color-primary-ink)]" /> Залог
               </span>
               <button onClick={() => setDepositFormOpen((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md border border-[var(--color-border)] hover:bg-[var(--color-bg)]">
                 <Plus className="h-3.5 w-3.5" />
@@ -748,7 +748,7 @@ export default function NewRentalPage() {
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-[14.5px] font-semibold">
-                <AlertOctagon className="h-4 w-4 text-[var(--color-primary)]" /> Штраф
+                <AlertOctagon className="h-4 w-4 text-[var(--color-primary-ink)]" /> Штраф
               </span>
               <button onClick={() => setPenaltyFormOpen((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md border border-[var(--color-border)] hover:bg-[var(--color-bg)]">
                 <Plus className="h-3.5 w-3.5" />
@@ -803,7 +803,7 @@ export default function NewRentalPage() {
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-[14.5px] font-semibold">
-                <Receipt className="h-4 w-4 text-[var(--color-primary)]" /> Расходы
+                <Receipt className="h-4 w-4 text-[var(--color-primary-ink)]" /> Расходы
               </span>
               <button onClick={() => setExpenseFormOpen((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md border border-[var(--color-border)] hover:bg-[var(--color-bg)]">
                 <Plus className="h-3.5 w-3.5" />
@@ -849,7 +849,7 @@ export default function NewRentalPage() {
 
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 card-shadow">
             <span className="flex items-center gap-2 text-[14.5px] font-semibold">
-              <MessageSquare className="h-4 w-4 text-[var(--color-primary)]" /> Заметки и файлы
+              <MessageSquare className="h-4 w-4 text-[var(--color-primary-ink)]" /> Заметки и файлы
             </span>
             <div className="mt-3 space-y-2">
               {notes.map((n, i) => (
@@ -917,7 +917,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   return (
     <label className="block">
       <span className="mb-1.5 block text-[13px] font-medium text-[var(--color-text-muted)]">
-        {label} {required && <span className="text-[var(--color-primary)]">*</span>}
+        {label} {required && <span className="text-[var(--color-primary-ink)]">*</span>}
       </span>
       {children}
     </label>
@@ -1104,7 +1104,7 @@ function NewRentalPaymentModal({
                     onClick={() => setMethod(m)}
                     className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition border ${
                       method === m
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
                         : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
                     }`}
                   >

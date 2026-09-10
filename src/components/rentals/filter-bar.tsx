@@ -39,7 +39,7 @@ export function FilterBar({
         <button
           onClick={() => onView("list")}
           className={`grid h-7 w-7 place-items-center rounded-[8px] transition ${
-            view === "list" ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+            view === "list" ? "bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]" : "text-[var(--color-text-muted)]"
           }`}
         >
           <List className="h-4 w-4" />
@@ -47,7 +47,7 @@ export function FilterBar({
         <button
           onClick={() => onView("grid")}
           className={`grid h-7 w-7 place-items-center rounded-[8px] transition ${
-            view === "grid" ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+            view === "grid" ? "bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]" : "text-[var(--color-text-muted)]"
           }`}
         >
           <LayoutGrid className="h-4 w-4" />

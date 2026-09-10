@@ -59,7 +59,7 @@ export function PeriodPicker({ value, onChange }: { value: PeriodValue; onChange
             className={cn(
               "shrink-0 whitespace-nowrap rounded-[8px] px-3 py-1.5 text-[13.5px] font-medium transition",
               value.key === p.key
-                ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm"
+                ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             )}
           >
@@ -74,7 +74,7 @@ export function PeriodPicker({ value, onChange }: { value: PeriodValue; onChange
           className={cn(
             "flex items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 py-2 text-[13.5px] font-medium transition",
             isCustom
-              ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+              ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
               : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]"
           )}
         >

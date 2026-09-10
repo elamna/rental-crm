@@ -105,7 +105,7 @@ export function KitsTab({ editing, onCloseEditor }: { editing: boolean; onCloseE
                             <ImageIcon className="h-4 w-4 text-[var(--color-text-muted)]" />
                           )}
                         </div>
-                        <button onClick={() => setEditKit(k)} className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary)]">
+                        <button onClick={() => setEditKit(k)} className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary-ink)]">
                           {k.name}
                         </button>
                       </div>
@@ -113,7 +113,7 @@ export function KitsTab({ editing, onCloseEditor }: { editing: boolean; onCloseE
                     <td className="px-4 py-3 text-[14px] text-[var(--color-text-muted)]">{k.category || "—"}</td>
                     <td className="px-4 py-3 text-[14px]">{k.lines.length}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-block rounded-[8px] bg-[var(--color-primary-soft)] px-2.5 py-1 text-[13px] font-semibold text-[var(--color-primary)]">
+                      <span className="inline-block rounded-[8px] bg-[var(--color-primary-soft)] px-2.5 py-1 text-[13px] font-semibold text-[var(--color-primary-ink)]">
                         {formatMoney(kitPrice(k))}
                       </span>
                     </td>
@@ -128,7 +128,7 @@ export function KitsTab({ editing, onCloseEditor }: { editing: boolean; onCloseE
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setEditKit(k)} className="grid h-7 w-7 place-items-center rounded-[8px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]">
+                        <button onClick={() => setEditKit(k)} className="grid h-7 w-7 place-items-center rounded-[8px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button

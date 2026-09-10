@@ -148,7 +148,7 @@ export function DeliveryModal({
                 >
                   {active && <span className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />}
                 </span>
-                <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]")} />
+                <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[var(--color-primary-ink)]" : "text-[var(--color-text-muted)]")} />
                 <span>
                   <span className="block text-[14.5px] font-semibold">{o.label}</span>
                   <span className="block text-[12.5px] text-[var(--color-text-muted)]">{o.hint}</span>
@@ -247,7 +247,7 @@ function Field({
   return (
     <label className={cn("block", className)}>
       <span className="mb-1.5 block text-[13.5px] font-medium text-[var(--color-text-muted)]">
-        {label} {required && <span className="text-[var(--color-primary)]">*</span>}
+        {label} {required && <span className="text-[var(--color-primary-ink)]">*</span>}
       </span>
       {children}
     </label>

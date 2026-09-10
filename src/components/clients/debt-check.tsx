@@ -160,7 +160,7 @@ export function DebtCheckBlock({
               <tone.Icon className="h-3.5 w-3.5" /> {label}
             </span>
             {records.length > 0 && (
-              <button onClick={() => setShowTable(true)} className="text-[13.5px] font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)]">
+              <button onClick={() => setShowTable(true)} className="text-[13.5px] font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary-ink)]">
                 Посмотреть все
               </button>
             )}
@@ -211,7 +211,7 @@ export function DebtCheckBlock({
               <button
                 onClick={run}
                 disabled={loading}
-                className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-primary)] px-3 py-1.5 text-[13px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)] disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-primary)] px-3 py-1.5 text-[13px] font-semibold text-[var(--color-primary-ink)] transition hover:bg-[var(--color-primary-soft)] disabled:opacity-50"
               >
                 <RotateCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} /> {check ? "Обновить" : "Проверить"}
               </button>

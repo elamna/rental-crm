@@ -101,15 +101,15 @@ export default function UsersPage() {
                   <tr key={u.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)]">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[12px] font-bold text-[var(--color-primary)]">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[12px] font-bold text-[var(--color-primary-ink)]">
                           {u.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
                         </div>
                         <div>
                           <div className="font-medium">{u.name}</div>
                           {u.isOwner ? (
-                            <span className="text-[12px] font-semibold text-[var(--color-primary)]">Главный администратор</span>
+                            <span className="text-[12px] font-semibold text-[var(--color-primary-ink)]">Главный администратор</span>
                           ) : u.isAdmin ? (
-                            <span className="text-[12px] font-semibold text-[var(--color-primary)]">Администратор</span>
+                            <span className="text-[12px] font-semibold text-[var(--color-primary-ink)]">Администратор</span>
                           ) : null}
                         </div>
                       </div>
@@ -118,7 +118,7 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-[var(--color-text-muted)]">{u.position ?? "—"}</td>
                     <td className="px-4 py-3">
                       {u.isAdmin ? (
-                        <span className="flex items-center gap-1 text-[var(--color-primary)]"><ShieldCheck className="h-3.5 w-3.5" /> Полный доступ</span>
+                        <span className="flex items-center gap-1 text-[var(--color-primary-ink)]"><ShieldCheck className="h-3.5 w-3.5" /> Полный доступ</span>
                       ) : (
                         <span className="text-[var(--color-text-muted)]">{u.permissions.length} разрешений</span>
                       )}
@@ -134,7 +134,7 @@ export default function UsersPage() {
                         {u.isOwner && me?.id === u.id && (
                           <button
                             onClick={() => { setSelected(u); setModal("password"); }}
-                            className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
+                            className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]"
                             title="Сменить пароль"
                           >
                             <KeyRound className="h-3.5 w-3.5" />
@@ -143,7 +143,7 @@ export default function UsersPage() {
                         {/* Все остальные, включая назначенных администраторов */}
                         {can("users.edit") && !u.isOwner && (
                           <>
-                            <button onClick={() => { setSelected(u); setModal("edit"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]" title="Редактировать"><Pencil className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => { setSelected(u); setModal("edit"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]" title="Редактировать"><Pencil className="h-3.5 w-3.5" /></button>
                             <button onClick={() => { setSelected(u); setModal("password"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title="Сменить пароль"><KeyRound className="h-3.5 w-3.5" /></button>
                             {me?.id !== u.id && (
                               <button onClick={() => toggleActive(u)} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title={u.isActive ? "Заблокировать" : "Разблокировать"}>

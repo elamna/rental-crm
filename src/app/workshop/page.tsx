@@ -197,7 +197,7 @@ export default function WorkshopPage() {
               <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-[13px] font-semibold text-[var(--color-primary)]">{selected.number}</div>
+                    <div className="text-[13px] font-semibold text-[var(--color-primary-ink)]">{selected.number}</div>
                     <h2 className="mt-1 text-[17px] font-bold">{selected.inventoryItem?.name ?? "Оборудование"}</h2>
                     <p className="text-[13.5px] text-[var(--color-text-muted)]">{reasonLabels[selected.reason]} · {selected.title}</p>
                   </div>
@@ -222,7 +222,7 @@ export default function WorkshopPage() {
                       className={cn(
                         "rounded-[10px] border px-2 py-2 text-[13px] font-semibold transition",
                         selected.status === column.key
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
                           : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
                       )}
                     >

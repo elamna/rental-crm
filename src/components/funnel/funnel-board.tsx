@@ -179,7 +179,7 @@ function LeadCard({
         <div className="flex items-start justify-between gap-2">
           <span className="flex min-w-0 items-center gap-1.5">
             {lead.mood ? <span className="shrink-0 text-[14px]">{LEAD_MOODS[lead.mood - 1]}</span> : null}
-            <span className="text-[14px] font-semibold uppercase leading-tight text-[var(--color-primary)]">{lead.title}</span>
+            <span className="text-[14px] font-semibold uppercase leading-tight text-[var(--color-primary-ink)]">{lead.title}</span>
           </span>
           <span className="shrink-0 text-[12.5px] text-[var(--color-text-muted)]">№{lead.number}</span>
         </div>
@@ -203,7 +203,7 @@ function LeadCard({
               <span className="rounded-[6px] bg-[var(--color-bg)] px-1.5 py-0.5 text-[11.5px] text-[var(--color-text-muted)]">{lead.source}</span>
             )}
             {lead.amount > 0 && (
-              <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--color-primary)]">
+              <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--color-primary-ink)]">
                 {formatMoney(lead.amount)}
               </span>
             )}
@@ -270,7 +270,7 @@ function LeadCard({
       {canEdit && currentBucket !== "date" && (
         <button
           onClick={onSetDate}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[8px] border border-[var(--color-primary)] py-1.5 text-[13px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary-soft)]"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[8px] border border-[var(--color-primary)] py-1.5 text-[13px] font-semibold text-[var(--color-primary-ink)] transition hover:bg-[var(--color-primary-soft)]"
         >
           <CalendarPlus className="h-3.5 w-3.5" /> Поставить дату
         </button>

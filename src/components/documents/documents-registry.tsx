@@ -96,7 +96,7 @@ export function DocumentsRegistry({ canEdit }: { canEdit: boolean }) {
               onClick={() => setStatus(t.key)}
               className={cn(
                 "flex items-center gap-2 rounded-[8px] px-3 py-1.5 text-[13.5px] font-semibold transition",
-                status === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm" : "text-[var(--color-text-muted)]"
+                status === t.key ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm" : "text-[var(--color-text-muted)]"
               )}
             >
               {t.label}
@@ -163,7 +163,7 @@ export function DocumentsRegistry({ canEdit }: { canEdit: boolean }) {
                   </td>
                   <td className="px-4 py-3">
                     {doc.rentalNumber ? (
-                      <Link href={`/rentals/${doc.rentalId}`} className="text-[var(--color-primary)] underline-offset-2 hover:underline">
+                      <Link href={`/rentals/${doc.rentalId}`} className="text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
                         Аренда №{doc.rentalNumber}
                       </Link>
                     ) : (
@@ -193,7 +193,7 @@ export function DocumentsRegistry({ canEdit }: { canEdit: boolean }) {
                       )}
                       <button
                         onClick={async () => setPreview(await withBody(doc))}
-                        className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
+                        className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]"
                         title="Просмотр"
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -203,7 +203,7 @@ export function DocumentsRegistry({ canEdit }: { canEdit: boolean }) {
                           const full = await withBody(doc);
                           printDocument(full.body, full.name);
                         }}
-                        className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary)]"
+                        className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]"
                         title="Печать"
                       >
                         <Printer className="h-3.5 w-3.5" />

@@ -357,7 +357,7 @@ function ProductRow({
                 e.stopPropagation();
                 onToggle();
               }}
-              className="grid h-5 w-5 place-items-center text-[var(--color-text-muted)] transition hover:text-[var(--color-primary)]"
+              className="grid h-5 w-5 place-items-center text-[var(--color-text-muted)] transition hover:text-[var(--color-primary-ink)]"
             >
               {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </button>
@@ -374,7 +374,7 @@ function ProductRow({
               )}
             </div>
             {single ? (
-              <Link href={`/catalog/${group.units[0].id}`} className="text-[14.5px] font-semibold transition hover:text-[var(--color-primary)]">
+              <Link href={`/catalog/${group.units[0].id}`} className="text-[14.5px] font-semibold transition hover:text-[var(--color-primary-ink)]">
                 {group.name}
               </Link>
             ) : (
@@ -383,7 +383,7 @@ function ProductRow({
                   e.stopPropagation();
                   onToggle();
                 }}
-                className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary)]"
+                className="text-left text-[14.5px] font-semibold transition hover:text-[var(--color-primary-ink)]"
               >
                 {group.name}
                 <span className="ml-2 text-[12.5px] font-medium text-[var(--color-text-muted)]">{group.total} ед.</span>
@@ -416,7 +416,7 @@ function ProductRow({
             {selectable && <td />}
             <td />
             <td className="px-4 py-2 pl-16">
-              <Link href={`/catalog/${u.id}`} className="text-[13.5px] font-medium transition hover:text-[var(--color-primary)]">
+              <Link href={`/catalog/${u.id}`} className="text-[13.5px] font-medium transition hover:text-[var(--color-primary-ink)]">
                 {u.serialNumber ? `S/N ${u.serialNumber}` : u.name}
               </Link>
             </td>

@@ -16,7 +16,7 @@ export function MobileTopBar({ onMenu }: { onMenu: () => void }) {
       <button
         onClick={onMenu}
         aria-label="Открыть меню"
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[var(--color-sidebar-muted)] transition active:bg-black/[0.06]"
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[var(--color-sidebar-muted)] transition active:bg-white/10"
       >
         <Menu className="h-5 w-5" />
       </button>

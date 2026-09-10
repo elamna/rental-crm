@@ -151,7 +151,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
         <div className="space-y-4 xl:col-span-2">
           <div>
             <div className="mb-3 flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-[var(--color-primary)]" />
+              <ClipboardList className="h-4 w-4 text-[var(--color-primary-ink)]" />
               <h2 className="font-display text-[16px] font-bold">История аренды</h2>
             </div>
             {relatedRentals.length === 0 ? (
@@ -177,7 +177,7 @@ export default function InventoryItemPage({ params }: { params: Promise<{ id: st
 
           <div>
             <div className="mb-3 flex items-center gap-2">
-              <Wrench className="h-4 w-4 text-[var(--color-primary)]" />
+              <Wrench className="h-4 w-4 text-[var(--color-primary-ink)]" />
               <h2 className="font-display text-[16px] font-bold">История обслуживания</h2>
             </div>
             {relatedWorkshopTickets.length === 0 ? (

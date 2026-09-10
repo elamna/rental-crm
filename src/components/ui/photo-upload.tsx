@@ -48,11 +48,11 @@ export function PhotoUpload({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={value} alt="Фото" className="h-full w-full object-cover" />
         ) : uploading ? (
-          <Loader2 className="h-5 w-5 animate-spin text-[var(--color-primary)]" />
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--color-primary-ink)]" />
         ) : (
           <div>
-            <ImagePlus className="mx-auto mb-1 h-5 w-5 text-[var(--color-primary)]" />
-            <div className="text-[12px] font-medium text-[var(--color-primary)]">Фото</div>
+            <ImagePlus className="mx-auto mb-1 h-5 w-5 text-[var(--color-primary-ink)]" />
+            <div className="text-[12px] font-medium text-[var(--color-primary-ink)]">Фото</div>
           </div>
         )}
         {value && !uploading && (

@@ -142,11 +142,11 @@ function TaskCard({
 
       <div className="mt-2 flex items-center justify-between gap-2">
         {task.sourceUrl ? (
-          <Link href={task.sourceUrl} className="text-[12px] font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline">
+          <Link href={task.sourceUrl} className="text-[12px] font-semibold text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
             Открыть объект
           </Link>
         ) : (
-          <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--color-primary)]">
+          <span className="rounded-[6px] bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--color-primary-ink)]">
             {task.points} балл{task.points === 1 ? "" : task.points < 5 ? "а" : "ов"}
           </span>
         )}

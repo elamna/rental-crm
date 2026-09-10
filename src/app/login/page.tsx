@@ -37,12 +37,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-b from-[var(--color-sidebar)] to-[var(--color-bg)] p-4 safe-top safe-bottom">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-b from-[var(--color-primary-soft)] to-[var(--color-bg)] p-4 safe-top safe-bottom">
       <div className="w-full max-w-[380px]">
         {/* Логотип */}
         <div className="mb-8 flex flex-col items-center">
           <div className="mb-3 grid h-14 w-14 place-items-center rounded-[16px] bg-[var(--color-primary)] shadow-[var(--shadow-primary)]">
-            <Wrench className="h-7 w-7 text-white" />
+            <Wrench className="h-7 w-7 text-[var(--color-on-primary)]" />
           </div>
           <h1 className="font-display text-[22px] font-bold text-[var(--color-text)]">QURAL-SAIMAN</h1>
           <p className="mt-1 text-[14px] text-[var(--color-text-muted)]">Управление прокатом инструмента</p>

@@ -135,7 +135,7 @@ export function AddCatalogBundleModal({
                 <br />
                 Добавьте их во вкладке «{category === "kit" ? "Комплекты" : "Услуги"}».
               </p>
-              <Link href="/catalog" className="text-[13.5px] font-semibold text-[var(--color-primary)]">
+              <Link href="/catalog" className="text-[13.5px] font-semibold text-[var(--color-primary-ink)]">
                 Перейти в каталог →
               </Link>
             </div>
