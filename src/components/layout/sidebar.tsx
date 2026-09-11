@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Boxes, Users, BarChart3,
   Ban, FileText, Wallet, Wrench, Settings, Plus, Gauge, Filter, Truck, Store,
-  ChevronsLeft, LogOut, UserCog, X, BellRing } from "lucide-react";
+  ChevronsLeft, LogOut, UserCog, X, BellRing, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -41,6 +41,8 @@ const bottomNav: NavItem[] = [
   { href: "/tasks", label: "Темп", icon: Gauge, permission: "tasks.view" },
   { href: "/settings", label: "Настройки", icon: Settings, permission: "settings.view" },
   { href: "/users", label: "Пользователи", icon: UserCog, permission: "users.view" },
+  // Без права доступа: помощь нужна как раз тем, у кого прав меньше всего
+  { href: "/help", label: "Помощь", icon: HelpCircle },
 ];
 
 export function Sidebar({

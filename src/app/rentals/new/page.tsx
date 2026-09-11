@@ -474,7 +474,7 @@ export default function NewRentalPage() {
                 </div>
                 <button
                   onClick={() => setShowClientModal(true)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[var(--color-text)] px-3.5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-black"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-[var(--color-text)] px-3.5 py-2.5 text-[14px] font-semibold text-[var(--color-surface)] transition hover:opacity-90"
                 >
                   <UserPlus className="h-4 w-4" /> Новый клиент
                 </button>

@@ -63,7 +63,10 @@ h1, h2, h3, h4, .font-display {
   width: 100%;
   border-radius: 10px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  /* Именно переменная, а не #fff: в тёмной теме белое поле получало белый текст
+     и набранное становилось нечитаемым во всех формах системы */
+  background: var(--color-surface);
+  color: var(--color-text);
   padding: 0.6rem 0.75rem;
   font-size: 13.5px;
   outline: none;
