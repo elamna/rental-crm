@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import type { CompanySettings } from "@/lib/repo";
-import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor, DatabaseBackup, Download, HardDriveDownload, KeyRound, Eye, EyeOff, Check } from "lucide-react";
+import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor, DatabaseBackup, Download, HardDriveDownload, KeyRound, Eye, EyeOff, Check, Store, Plus, Trash2 } from "lucide-react";
 import { useTheme, type ThemeChoice } from "@/components/layout/theme-provider";
 import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { useAppStore } from "@/lib/store";
 
 const EMPTY: CompanySettings = {
   company_name: "", company_bin: "", company_address: "",
@@ -282,6 +283,124 @@ function PasswordSection() {
   );
 }
 
+interface BranchUsage {
+  name: string;
+  rentals: number;
+  inventory: number;
+}
+
+/**
+ * Пункты проката.
+ *
+ * Раньше список был вписан в код: третья точка означала правку исходников и
+ * новую выкладку. В арендах филиал хранится строкой, поэтому переименование
+ * не переписывает историю — прошлая аренда так и останется выданной из старого
+ * пункта. Об этом сказано прямо, иначе переименование выглядит как потеря данных.
+ */
+function BranchesSection() {
+  const branches = useAppStore((s) => s.branches);
+  const saveBranches = useAppStore((s) => s.saveBranches);
+
+  const [list, setList] = useState<string[]>(branches);
+  const [usage, setUsage] = useState<BranchUsage[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setList(branches);
+  }, [branches]);
+
+  useEffect(() => {
+    fetch("/api/branches?usage=1")
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setUsage)
+      .catch(() => setUsage([]));
+  }, [branches]);
+
+  const dirty = list.length !== branches.length || list.some((b, i) => b !== branches[i]);
+
+  function usageFor(name: string) {
+    return usage.find((u) => u.name === name);
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await saveBranches(list.map((b) => b.trim()).filter(Boolean));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось сохранить пункты проката");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Section icon={Store} title="Пункты проката">
+      <p className="mb-4 text-[13.5px] text-[var(--color-text-muted)]">
+        Этот список виден в новой аренде, в карточке инструмента и в доставке. Аренды хранят название
+        пункта текстом, поэтому переименование не меняет прошлые записи — они останутся со старым названием.
+      </p>
+
+      <div className="space-y-2">
+        {list.map((branch, i) => {
+          const used = usageFor(branch);
+          return (
+            <div key={i} className="flex items-start gap-2">
+              <div className="flex-1">
+                <input
+                  value={branch}
+                  onChange={(e) => setList((prev) => prev.map((b, idx) => (idx === i ? e.target.value : b)))}
+                  placeholder="Название пункта"
+                  className="crm-input"
+                />
+                {used && (used.rentals > 0 || used.inventory > 0) && (
+                  <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">
+                    Используется: аренд — {used.rentals}, позиций каталога — {used.inventory}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setList((prev) => prev.filter((_, idx) => idx !== i))}
+                disabled={list.length <= 1}
+                title={list.length <= 1 ? "Нужен хотя бы один пункт" : "Убрать пункт"}
+                className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border border-[var(--color-border)] text-[var(--color-text-muted)] transition hover:border-[#C0272D] hover:text-[#C0272D] disabled:opacity-40"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setList((prev) => [...prev, ""])}
+          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3.5 py-2 text-[13.5px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
+        >
+          <Plus className="h-4 w-4" /> Добавить пункт
+        </button>
+        <button
+          onClick={save}
+          disabled={!dirty || saving || list.every((b) => !b.trim())}
+          className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13.5px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+        >
+          {saving ? "Сохраняем…" : "Сохранить пункты"}
+        </button>
+        {saved && (
+          <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#1C8A46]">
+            <Check className="h-4 w-4" /> Сохранено
+          </span>
+        )}
+        {error && <span className="text-[13px] text-[#C0272D]">{error}</span>}
+      </div>
+    </Section>
+  );
+}
+
 function ThemePicker() {
   const { theme, resolved, setTheme } = useTheme();
 
@@ -480,6 +599,9 @@ export default function SettingsPage() {
               </label>
             </div>
           </Section>
+
+          {/* Пункты проката: список для форм, меняет администратор */}
+          {isAdmin && <BranchesSection />}
 
           {/* Копии базы — только у главного администратора: это вся система целиком */}
           {user?.isOwner && <BackupSection />}

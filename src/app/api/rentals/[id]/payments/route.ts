@@ -20,13 +20,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const me = await requireAuth("rentals.edit");
     const { id } = await params;
-    const { amount, method } = await req.json();
+    const { amount, method, allowOverpay } = await req.json();
 
     const value = Number(amount);
     if (!Number.isFinite(value) || value <= 0) throw new ApiError(400, "Сумма оплаты должна быть больше нуля");
     if (!METHODS.includes(method)) throw new ApiError(400, "Выберите способ оплаты");
 
-    return NextResponse.json(addRentalPayment(id, value, method, me.name));
+    return NextResponse.json(addRentalPayment(id, value, method, me.name, { allowOverpay: !!allowOverpay }));
   } catch (e) {
     return apiError(e);
   }

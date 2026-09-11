@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { DEFAULT_BRANCHES } from "./mock-data";
 import { Client, ImportReport, InventoryCheck, InventoryItem, Kit, Rental, Service, WorkshopTicket, PaymentMethod } from "./types";
 
 
@@ -19,11 +20,14 @@ interface AppState {
   inventoryChecks: InventoryCheck[];
   workshopTickets: WorkshopTicket[];
   activity: ActivityEntry[];
+  /** Пункты проката: список в настройках, а не в коде */
+  branches: string[];
   hydrated: boolean;
   hydrating: boolean;
 
   hydrate: () => Promise<void>;
   refreshActivity: () => Promise<void>;
+  saveBranches: (list: string[]) => Promise<string[]>;
 
   addClient: (
     input: Partial<Client>
@@ -91,6 +95,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   inventoryChecks: [],
   workshopTickets: [],
   activity: [],
+  // До загрузки с сервера формы не должны остаться с пустым списком пунктов
+  branches: DEFAULT_BRANCHES,
   hydrated: false,
   hydrating: false,
 
@@ -109,7 +115,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
 
     try {
-      const [clients, rentals, inventory, kits, services, inventoryChecks, workshopTickets, activity] = await Promise.all([
+      const [clients, rentals, inventory, kits, services, inventoryChecks, workshopTickets, activity, branches] = await Promise.all([
         load<Client>("/api/clients"),
         load<Rental>("/api/rentals"),
         load<InventoryItem>("/api/inventory"),
@@ -118,8 +124,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         load<InventoryCheck>("/api/inventory-checks"),
         load<WorkshopTicket>("/api/workshop"),
         load<ActivityEntry>("/api/activity"),
+        load<string>("/api/branches"),
       ]);
-      set({ clients, rentals, inventory, kits, services, inventoryChecks, workshopTickets, activity, hydrated: true, hydrating: false });
+      set({
+        clients, rentals, inventory, kits, services, inventoryChecks, workshopTickets, activity,
+        // Пустой ответ бывает, если раздел закрыт правами — тогда оставляем
+        // прежний список, иначе формы останутся без пунктов проката
+        branches: branches.length ? branches : get().branches,
+        hydrated: true,
+        hydrating: false,
+      });
     } catch (err) {
       console.error("Не удалось загрузить данные с сервера", err);
       set({ hydrating: false });
@@ -129,6 +143,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   refreshActivity: async () => {
     const activity = await api<ActivityEntry[]>("/api/activity");
     set({ activity });
+  },
+
+  saveBranches: async (list) => {
+    const branches = await api<string[]>("/api/branches", {
+      method: "PUT",
+      body: JSON.stringify({ branches: list }),
+    });
+    set({ branches });
+    get().refreshActivity();
+    return branches;
   },
 
   addClient: async (input) => {

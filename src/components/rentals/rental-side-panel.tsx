@@ -200,7 +200,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  async function handleAcceptPayment(amount: number, method: PaymentMethod) {
+  async function handleAcceptPayment(amount: number, method: PaymentMethod, allowOverpay = false) {
     if (amount <= 0) return;
     const paid = Math.min(rental.total, rental.paid + amount);
     setPaying(true);
@@ -211,7 +211,7 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
       const res = await fetch(`/api/rentals/${rental.id}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, method }),
+        body: JSON.stringify({ amount, method, allowOverpay }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Не удалось принять оплату");
       // Платёж прошёл мимо store — перечитываем аренды, чтобы суммы обновились
@@ -1259,13 +1259,22 @@ function DocumentsSection({ rental }: { rental: Rental }) {
 
 function PaymentModal({ remaining, onPay, onClose, paying }: {
   remaining: number;
-  onPay: (amount: number, method: PaymentMethod) => Promise<void>;
+  onPay: (amount: number, method: PaymentMethod, allowOverpay?: boolean) => Promise<void>;
   onClose: () => void;
   paying: boolean;
 }) {
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [amountStr, setAmountStr] = useState(String(remaining));
   const amount = parseFloat(amountStr.replace(/\s/g, "").replace(",", ".")) || 0;
+
+  // Переплата — почти всегда лишний ноль. Не запрещаем (бывает предоплата),
+  // но просим подтвердить: иначе опечатка уходит в кассу дня незамеченной
+  const [overpayConfirmed, setOverpayConfirmed] = useState(false);
+  const isOverpay = amount > remaining + 0.5;
+  const overpayBy = Math.round(amount - remaining);
+  useEffect(() => {
+    setOverpayConfirmed(false);
+  }, [amountStr]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
@@ -1321,14 +1330,27 @@ function PaymentModal({ remaining, onPay, onClose, paying }: {
             />
           </div>
 
-          {/* Добавить способ оплаты — будет добавлено позже */}
+          {isOverpay && (
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-[10px] border border-[#F0D9A8] bg-[#FDF3E2] px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={overpayConfirmed}
+                onChange={(e) => setOverpayConfirmed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#B8620A]"
+              />
+              <span className="text-[13px] leading-relaxed text-[#7A5B18]">
+                Это больше остатка на <b>{formatMoney(overpayBy)}</b>. К оплате {formatMoney(remaining)}.
+                Подтвердите, если клиент платит вперёд — иначе проверьте сумму.
+              </span>
+            </label>
+          )}
         </div>
 
         {/* Кнопка */}
         <div className="border-t border-[var(--color-border)] px-5 py-4">
           <button
-            onClick={() => onPay(amount, method)}
-            disabled={paying || amount <= 0}
+            onClick={() => onPay(amount, method, isOverpay && overpayConfirmed)}
+            disabled={paying || amount <= 0 || (isOverpay && !overpayConfirmed)}
             className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] py-3 text-[15px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
           >
             {paying ? "Оплата…" : `Принять оплату ${amount > 0 ? formatMoney(amount) : ""}`}

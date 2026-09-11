@@ -1,9 +1,10 @@
 "use client";
 
+import { useAppStore } from "@/lib/store";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { InventoryItem, InventoryStatus } from "@/lib/types";
-import { branches, inventoryCategories, inventoryStatusLabels } from "@/lib/mock-data";
+import { inventoryCategories, inventoryStatusLabels } from "@/lib/mock-data";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -53,6 +54,8 @@ export function InventoryForm({
   error?: string | null;
 }) {
   const router = useRouter();
+  // Пункты проката задаются в настройках
+  const branches = useAppStore((s) => s.branches);
   // Прейскурант правит только администратор — по этим цифрам считается выручка
   const { user } = useAuth();
   const canEditPrice = !!user?.isAdmin;

@@ -117,3 +117,28 @@ export function assertNonNegativeFields(body: Record<string, unknown>, fields: R
     if (body[key] !== undefined && body[key] !== null && body[key] !== "") nonNegative(body[key], label);
   }
 }
+
+/**
+ * Разумные пределы для обычных полей формы.
+ *
+ * Имя клиента в двести тысяч символов система принимала молча: база пухнет,
+ * списки и печать разъезжаются. Ограничения намеренно щедрые — чтобы не
+ * мешать живым данным вроде длинного названия компании.
+ */
+export const TEXT_LIMITS = {
+  /** Имена, названия, короткие поля вроде номера документа */
+  short: 200,
+  /** Адреса, реквизиты, причины */
+  medium: 1000,
+  /** Заметки и комментарии */
+  long: 5000,
+} as const;
+
+export function assertTextLimits(body: Record<string, unknown>, fields: Record<string, [number, string]>) {
+  for (const [key, [max, label]] of Object.entries(fields)) {
+    const value = body[key];
+    if (typeof value === "string" && value.length > max) {
+      throw new ApiError(400, `${label}: слишком длинно — не больше ${max} символов`);
+    }
+  }
+}

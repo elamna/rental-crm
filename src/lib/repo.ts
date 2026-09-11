@@ -1,7 +1,8 @@
 import { db, logActivity } from "./db";
 import { maybeDailyBackup } from "./backup";
 import { isOneTimeLine, lineTotal } from "./utils";
-import { branches } from "./mock-data";
+import { DEFAULT_BRANCHES } from "./mock-data";
+
 import { Client, ClientRatingBreakdown, DebtCase, DebtCheck, FunnelDaySummary, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
@@ -1497,7 +1498,7 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
       sku,
       category: template?.category ?? null,
       price: template?.price ?? 0,
-      branch: branches[0] ?? null,
+      branch: getBranches()[0] ?? null,
       createdAt,
     });
     const created = { id, price: template?.price ?? 0 };
@@ -1574,7 +1575,7 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
         number,
         status: row.status,
         paymentStatus: row.paymentStatus,
-        branch: branches[0] ?? null,
+        branch: getBranches()[0] ?? null,
         startAt: row.startAt ?? createdAt,
         endAt: row.endAt ?? row.startAt ?? createdAt,
         clientId,
@@ -1766,10 +1767,28 @@ export function resolveShortage(id: string, resolved: boolean, actorName?: strin
  * платежа: без неё способ оплаты пропадал — в модалке его выбирали, а в базе
  * не оставалось следа, и в аналитике нечего было разложить по Kaspi и наличным.
  */
-export function addRentalPayment(rentalId: string, amount: number, method: PaymentMethod, actorName?: string) {
+export function addRentalPayment(
+  rentalId: string,
+  amount: number,
+  method: PaymentMethod,
+  actorName?: string,
+  options: { allowOverpay?: boolean } = {}
+) {
   const rental = getRental(rentalId);
   if (!rental) throw httpError(404, "Аренда не найдена");
   if (!(amount > 0)) throw httpError(400, "Сумма оплаты должна быть больше нуля");
+
+  // Сумма больше долга — почти всегда опечатка: 999 999 вместо 9 999. В самой
+  // аренде лишнее обрезалось, но в журнале платежей оставалось целиком, и касса
+  // за день показывала деньги, которых не было. Настоящая предоплата бывает,
+  // поэтому не запрещаем совсем, а требуем подтвердить осознанно
+  const remaining = Math.max(0, rental.total - rental.paid);
+  if (amount > remaining + 0.5 && !options.allowOverpay) {
+    throw httpError(
+      400,
+      `Сумма больше остатка. К оплате ${Math.round(remaining)} ₸, введено ${Math.round(amount)} ₸`
+    );
+  }
 
   const now = new Date().toISOString();
   const paid = Math.min(rental.total, rental.paid + amount);
@@ -4748,6 +4767,63 @@ export type CompanySettings = {
   currency: string;
   city: string;
 };
+
+/**
+ * Пункты проката.
+ *
+ * Раньше список был вписан в код: третья точка означала правку исходников и
+ * выкладку. Теперь он в настройках, менять может администратор.
+ *
+ * В арендах и карточках инструмента филиал хранится строкой, а не ссылкой:
+ * переименование или удаление пункта не должно задним числом менять историю —
+ * прошлая аренда так и останется выданной из «Астаны».
+ */
+export { DEFAULT_BRANCHES } from "./mock-data";
+
+export function getBranches(): string[] {
+  const row = db.prepare(`SELECT value FROM company_settings WHERE key = 'branches'`).get() as
+    | { value: string }
+    | undefined;
+  if (!row?.value) return DEFAULT_BRANCHES;
+  try {
+    const list = JSON.parse(row.value) as unknown;
+    if (!Array.isArray(list)) return DEFAULT_BRANCHES;
+    const clean = list.filter((b): b is string => typeof b === "string" && b.trim().length > 0);
+    return clean.length ? clean : DEFAULT_BRANCHES;
+  } catch {
+    return DEFAULT_BRANCHES;
+  }
+}
+
+export function setBranches(list: unknown): string[] {
+  if (!Array.isArray(list)) throw httpError(400, "Ожидается список пунктов проката");
+  const clean: string[] = [];
+  for (const raw of list) {
+    const name = typeof raw === "string" ? raw.trim() : "";
+    if (!name) continue;
+    if (name.length > 200) throw httpError(400, "Название пункта слишком длинное");
+    // Без учёта регистра: «Атырау» и «атырау» — это один и тот же пункт
+    if (clean.some((b) => b.toLowerCase() === name.toLowerCase())) continue;
+    clean.push(name);
+  }
+  if (!clean.length) throw httpError(400, "Нужен хотя бы один пункт проката");
+  if (clean.length > 50) throw httpError(400, "Слишком много пунктов проката");
+
+  db.prepare(
+    `INSERT INTO company_settings (key, value) VALUES ('branches', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).run(JSON.stringify(clean));
+  logActivity("Изменён список пунктов проката");
+  return clean;
+}
+
+/** Сколько записей ссылается на пункт — чтобы предупредить перед удалением */
+export function branchUsage(name: string): { rentals: number; inventory: number } {
+  const rentals = (db.prepare(`SELECT COUNT(*) AS c FROM rentals WHERE branch = ?`).get(name) as { c: number }).c;
+  const inventory = (
+    db.prepare(`SELECT COUNT(*) AS c FROM inventory_items WHERE branch = ?`).get(name) as { c: number }
+  ).c;
+  return { rentals, inventory };
+}
 
 export function getCompanySettings(): CompanySettings {
   const rows = db.prepare(`SELECT key, value FROM company_settings`).all() as { key: string; value: string }[];

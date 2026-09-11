@@ -1,8 +1,9 @@
 "use client";
 
+import { useAppStore } from "@/lib/store";
 import { useEffect, useState } from "react";
 import { Delivery, DeliveryDirection, DeliveryKind, DELIVERY_DIRECTION_LABELS } from "@/lib/types";
-import { branches } from "@/lib/mock-data";
+
 import { cn } from "@/lib/utils";
 import { Package, Trash2, Truck, X } from "lucide-react";
 
@@ -36,6 +37,8 @@ export function DeliveryModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  // Пункты проката приходят из настроек
+  const branches = useAppStore((s) => s.branches);
   const [kind, setKind] = useState<DeliveryKind>(delivery?.kind ?? "delivery");
   const [direction, setDirection] = useState<DeliveryDirection>(delivery?.direction ?? "to");
   const [courierId, setCourierId] = useState(delivery?.courierId ?? "");

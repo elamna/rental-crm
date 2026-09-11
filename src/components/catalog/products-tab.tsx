@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
-import { branches, inventoryCategories, inventoryStatusLabels } from "@/lib/mock-data";
+import { inventoryCategories, inventoryStatusLabels } from "@/lib/mock-data";
 import { groupProducts, isInactiveUnit, exportRows, ProductGroup } from "@/lib/catalog-utils";
 import { cn, formatMoney } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ export function ProductsTab({ showInactive }: { showInactive: boolean }) {
   const inventory = useAppStore((s) => s.inventory);
   const rentals = useAppStore((s) => s.rentals);
   const hydrated = useAppStore((s) => s.hydrated);
+  const branches = useAppStore((s) => s.branches);
 
   const [search, setSearch] = useState("");
   const [branch, setBranch] = useState("");

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
-import { branches, inventoryCategories } from "@/lib/mock-data";
+import { inventoryCategories } from "@/lib/mock-data";
 import { exportRows, isInactiveUnit } from "@/lib/catalog-utils";
 import { cn, statusStyles, statusLabels } from "@/lib/utils";
 import { ExportButton, FilterSelect, Pagination, SearchInput, paginate } from "./shared";
@@ -26,6 +26,7 @@ export function ScheduleTab() {
   const inventory = useAppStore((s) => s.inventory);
   const rentals = useAppStore((s) => s.rentals);
   const hydrated = useAppStore((s) => s.hydrated);
+  const branches = useAppStore((s) => s.branches);
 
   const today = startOfDay(new Date());
   const [from, setFrom] = useState(() => toInput(new Date(today.getFullYear(), today.getMonth(), 1)));

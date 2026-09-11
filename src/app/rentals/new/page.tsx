@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
-import { branches, rentalPeriods, depositTypeLabels } from "@/lib/mock-data";
+import { rentalPeriods, depositTypeLabels } from "@/lib/mock-data";
 import { Client, DocumentTemplate, InventoryLine, LineCategory, PaymentMethod, PAYMENT_METHOD_LABELS, PaymentStatus, Rental, RentalPeriod } from "@/lib/types";
 import { cn, formatDateTimeDisplay, formatMoney, statusLabels, statusStyles, durationDays, lineTotal, isOneTimeLine } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
@@ -55,6 +55,8 @@ const tabDefs: { key: "all" | LineCategory; label: string }[] = [
 
 export default function NewRentalPage() {
   const isMobile = useIsMobile();
+  // Пункты проката задаются в настройках, а не в коде
+  const branches = useAppStore((s) => s.branches);
   const router = useRouter();
   const { user: sessionUser } = useAuth();
   const clients = useAppStore((s) => s.clients);
