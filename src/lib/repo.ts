@@ -1,4 +1,5 @@
 import { db, logActivity } from "./db";
+import { maybeDailyBackup } from "./backup";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { branches } from "./mock-data";
 import { Client, ClientRatingBreakdown, DebtCase, DebtCheck, FunnelDaySummary, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
@@ -2511,6 +2512,13 @@ if (!global.__penaltySchedulerStarted) {
       if (result.markedOverdue || result.penaltiesAdded) {
         console.log(`[penalty-scheduler] Просрочено: ${result.markedOverdue}, начислено штрафов: ${result.penaltiesAdded}`);
       }
+      // Раз в сутки тем же проходом снимаем копию базы: отдельный таймер был бы
+      // вторым механизмом, который может незаметно не отработать
+      maybeDailyBackup()
+        .then((file) => {
+          if (file) console.log(`[backup] Сделана копия базы: ${file.name}`);
+        })
+        .catch((err) => console.error("[backup] Не удалось сделать копию базы:", err));
     } catch (err) {
       console.error("[penalty-scheduler] Ошибка при проверке просрочек:", err);
     }

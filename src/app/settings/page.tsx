@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import type { CompanySettings } from "@/lib/repo";
-import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor } from "lucide-react";
+import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor, DatabaseBackup, Download, HardDriveDownload } from "lucide-react";
 import { useTheme, type ThemeChoice } from "@/components/layout/theme-provider";
 import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -20,6 +20,142 @@ const THEME_OPTIONS: { value: ThemeChoice; label: string; hint: string; icon: Re
   { value: "dark", label: "Тёмная", hint: "Чёрный фон, мятный акцент", icon: Moon },
   { value: "system", label: "Как в системе", hint: "Следовать настройке устройства", icon: Monitor },
 ];
+
+interface BackupFile {
+  name: string;
+  size: number;
+  createdAt: string;
+}
+
+function formatSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} КБ`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+}
+
+function formatWhen(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} в ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Резервные копии базы.
+ *
+ * Копии на сервере спасают от испорченного импорта и ошибочного удаления, но
+ * лежат на том же диске, что и база. От потери диска спасает только скачанный
+ * файл, поэтому кнопка скачивания стоит первой и об этом сказано прямо.
+ */
+function BackupSection() {
+  const [backups, setBackups] = useState<BackupFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [making, setMaking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    try {
+      const res = await fetch("/api/backup");
+      if (!res.ok) throw new Error((await res.json()).error ?? "Не удалось получить список копий");
+      const data = await res.json();
+      setBackups(data.backups ?? []);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось получить список копий");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function makeNow() {
+    setMaking(true);
+    try {
+      const res = await fetch("/api/backup", { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Не удалось сделать копию");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось сделать копию");
+    } finally {
+      setMaking(false);
+    }
+  }
+
+  const last = backups[0];
+
+  return (
+    <Section icon={DatabaseBackup} title="Резервные копии базы">
+      <p className="mb-4 text-[13.5px] text-[var(--color-text-muted)]">
+        Вся система хранится в одном файле: аренды, клиенты, деньги, документы. Копия снимается
+        автоматически раз в сутки и хранится две недели. Копии лежат на том же диске, что и база,
+        поэтому раз в неделю скачивайте файл себе — это единственная защита от потери диска.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <a
+          href="/api/backup/download"
+          className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+        >
+          <HardDriveDownload className="h-4 w-4" /> Скачать базу сейчас
+        </a>
+        <button
+          onClick={makeNow}
+          disabled={making}
+          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 text-[14px] font-semibold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)] disabled:opacity-60"
+        >
+          <DatabaseBackup className="h-4 w-4" /> {making ? "Делаем копию…" : "Сделать копию на сервере"}
+        </button>
+      </div>
+      <p className="mt-2 text-[12.5px] text-[var(--color-text-muted)]">
+        Копию на сервере стоит сделать перед импортом или массовой правкой — к ней можно вернуться.
+      </p>
+
+      {error && <p className="mt-3 text-[13.5px] text-[#C0272D]">{error}</p>}
+
+      <div className="mt-4">
+        <div className="mb-2 flex items-baseline justify-between">
+          <span className="text-[13.5px] font-semibold">Копии на сервере</span>
+          <span className="text-[12.5px] text-[var(--color-text-muted)]">
+            {last ? `последняя — ${formatWhen(last.createdAt)}` : "пока ни одной"}
+          </span>
+        </div>
+
+        {loading ? (
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">Загрузка…</p>
+        ) : backups.length === 0 ? (
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">
+            Первая копия появится в ближайший час работы системы.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {backups.map((b) => (
+              <div
+                key={b.name}
+                className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--color-border)] px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-[13.5px] font-medium">{formatWhen(b.createdAt)}</div>
+                  <div className="truncate text-[12px] text-[var(--color-text-muted)]">
+                    {b.name} · {formatSize(b.size)}
+                  </div>
+                </div>
+                <a
+                  href={`/api/backup/download?file=${encodeURIComponent(b.name)}`}
+                  title="Скачать эту копию"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]"
+                >
+                  <Download className="h-4 w-4" />
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
 
 function ThemePicker() {
   const { theme, resolved, setTheme } = useTheme();
@@ -216,6 +352,9 @@ export default function SettingsPage() {
               </label>
             </div>
           </Section>
+
+          {/* Копии базы — только у главного администратора: это вся система целиком */}
+          {user?.isOwner && <BackupSection />}
 
           {/* Переменные для шаблонов — подсказка */}
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
