@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
 import { getIronSession } from "iron-session";
-import { sessionOptions } from "./session";
+import { assertSessionSecret, sessionOptions } from "./session";
 import { Permission, SessionUser } from "./types";
 import { getUser, passwordChangedAt } from "./repo";
 
 export async function getSession() {
+  // На боевом сервере без своего ключа работать нельзя: запасной лежит в коде
+  assertSessionSecret();
   const cookieStore = await cookies();
   return getIronSession<{ user?: SessionUser }>(cookieStore, sessionOptions);
 }
