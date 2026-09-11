@@ -1287,12 +1287,26 @@ export function enforceCatalogPrices(items: InventoryLine[]): InventoryLine[] {
   });
 }
 
+/**
+ * Срок аренды. Проверка серверная: интерфейс не даёт выбрать конец раньше
+ * начала, но через API такая аренда сохранялась молча — а дальше на ней
+ * ломается и длительность, и сумма, и просрочка.
+ */
+function assertRentalPeriod(startAt?: string, endAt?: string) {
+  if (!startAt || !endAt) return;
+  const from = new Date(startAt).getTime();
+  const to = new Date(endAt).getTime();
+  if (isNaN(from) || isNaN(to)) throw httpError(400, "Некорректная дата начала или конца аренды");
+  if (to < from) throw httpError(400, "Конец аренды не может быть раньше начала");
+}
+
 export function createRental(
   input: Rental,
   payments: { amount: number; method: PaymentMethod }[] = [],
   actorName?: string
 ): Rental {
   const now = new Date().toISOString();
+  assertRentalPeriod(input.startAt, input.endAt);
   // Номер присваивает сервер: на клиенте два менеджера могли бы получить одинаковый
   input = { ...input, number: nextRentalNumber() };
   db.prepare(
@@ -1343,6 +1357,7 @@ export function updateRental(id: string, patch: Partial<Rental>, options: { sile
   const existingRow = db.prepare(`SELECT * FROM rentals WHERE id = ?`).get(id) as RentalRow | undefined;
   if (!existingRow) return null;
   const existing = rentalRowToDomain(existingRow)!;
+  assertRentalPeriod(patch.startAt ?? existing.startAt, patch.endAt ?? existing.endAt);
   // Номер аренды не перезаписываем пустым: его присвоил сервер при создании
   const now = new Date().toISOString();
   const merged: Rental = {
@@ -2723,6 +2738,21 @@ export function deleteRentalDocument(id: string) {
 }
 
 // Подстановка переменных шаблона
+/**
+ * Текст в HTML документа. Имя клиента и название инструмента — это данные,
+ * а не разметка: без экранирования клиент с именем вида
+ * `Иванов<img src=x onerror=...>` выполнял бы свой код в предпросмотре и
+ * печати документа у того, кто его откроет.
+ */
+function escapeHtml(value: string): string {
+  return String(value)
+    .split("&").join("&amp;")
+    .split("<").join("&lt;")
+    .split(">").join("&gt;")
+    .split('"').join("&quot;")
+    .split("'").join("&#39;");
+}
+
 export function renderTemplate(template: string, rental: Rental): string {
   const client = rental.client;
   const now = new Date();
@@ -2824,7 +2854,7 @@ export function renderTemplate(template: string, rental: Rental): string {
   // Таблица товаров
   const itemRows = rental.items.map((i, idx) => `<tr>
     <td style="border:1px solid #ccc;padding:4px 8px;text-align:center">${idx + 1}</td>
-    <td style="border:1px solid #ccc;padding:4px 8px">${i.name}</td>
+    <td style="border:1px solid #ccc;padding:4px 8px">${escapeHtml(i.name)}</td>
     <td style="border:1px solid #ccc;padding:4px 8px;text-align:center">${i.qty}</td>
     <td style="border:1px solid #ccc;padding:4px 8px;text-align:right">${fmt(i.pricePerDay)}/сут</td>
     <td style="border:1px solid #ccc;padding:4px 8px;text-align:right">${fmt(lineTotal(i, durationDays))}</td>
@@ -2973,7 +3003,10 @@ export function renderTemplate(template: string, rental: Rental): string {
 
   let result = template;
   for (const [key, val] of Object.entries(vars)) {
-    result = result.split(key).join(val);
+    // Таблицу позиций собрали мы сами — она и должна остаться разметкой.
+    // Всё остальное приходит из базы и вставляется как текст
+    const safe = key === "{{items_table}}" ? val : escapeHtml(val);
+    result = result.split(key).join(safe);
   }
   return result;
 }
