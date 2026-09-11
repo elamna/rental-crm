@@ -355,7 +355,9 @@ ensureColumns("rentals", {
   shop_written_off: "INTEGER NOT NULL DEFAULT 0",
 });
 
-ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0" });
+// password_changed_at нужен, чтобы смена пароля выгоняла старые сессии:
+// иначе укравший доступ остаётся в системе, даже когда пароль уже другой
+ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0", password_changed_at: "TEXT" });
 
 // Чек оплаты показывает, кто принял деньги — раньше в платеже этого не было
 ensureColumns("rental_payments", { created_by: "TEXT" });

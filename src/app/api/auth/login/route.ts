@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { verifyPassword } from "@/lib/repo";
+import { passwordChangedAt, verifyPassword } from "@/lib/repo";
 
 export async function POST(req: NextRequest) {
   const { login, password } = await req.json();
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     isAdmin: user.isAdmin,
     isOwner: user.isOwner,
     permissions: user.permissions,
+    pwdAt: passwordChangedAt(user.id),
   };
   await session.save();
   return NextResponse.json({ ok: true, user: session.user });

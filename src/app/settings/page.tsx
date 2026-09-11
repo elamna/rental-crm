@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import type { CompanySettings } from "@/lib/repo";
-import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor, DatabaseBackup, Download, HardDriveDownload } from "lucide-react";
+import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor, DatabaseBackup, Download, HardDriveDownload, KeyRound, Eye, EyeOff, Check } from "lucide-react";
 import { useTheme, type ThemeChoice } from "@/components/layout/theme-provider";
 import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -157,6 +157,131 @@ function BackupSection() {
   );
 }
 
+const MIN_PASSWORD_LENGTH = 6;
+
+/**
+ * Смена собственного пароля.
+ *
+ * Доступна всем, кто вошёл: раньше пароль менял только администратор через
+ * «Пользователей», из-за чего пароли передавались в переписке и оставались
+ * известны посторонним.
+ */
+function PasswordSection() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [repeat, setRepeat] = useState("");
+  const [show, setShow] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const tooShort = next.length > 0 && next.length < MIN_PASSWORD_LENGTH;
+  const mismatch = repeat.length > 0 && next !== repeat;
+  const ready = current.length > 0 && next.length >= MIN_PASSWORD_LENGTH && next === repeat;
+
+  async function submit() {
+    if (!ready || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Не удалось сменить пароль");
+      setCurrent("");
+      setNext("");
+      setRepeat("");
+      setDone(true);
+      setTimeout(() => setDone(false), 6000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось сменить пароль");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const field = "crm-input pr-10";
+
+  return (
+    <Section icon={KeyRound} title="Мой пароль">
+      <p className="mb-4 text-[13.5px] text-[var(--color-text-muted)]">
+        Меняете только себе. Текущий пароль спрашиваем на случай, если за вашим компьютером
+        сел кто-то другой при открытой системе.
+      </p>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label className="block">
+          <span className="field-label">Текущий пароль</span>
+          <div className="relative">
+            <input
+              type={show ? "text" : "password"}
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+              autoComplete="current-password"
+              className={field}
+            />
+            <button
+              type="button"
+              onClick={() => setShow((v) => !v)}
+              title={show ? "Скрыть" : "Показать"}
+              className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+            >
+              {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </label>
+
+        <label className="block">
+          <span className="field-label">Новый пароль</span>
+          <input
+            type={show ? "text" : "password"}
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            autoComplete="new-password"
+            className="crm-input"
+          />
+        </label>
+
+        <label className="block">
+          <span className="field-label">Новый пароль ещё раз</span>
+          <input
+            type={show ? "text" : "password"}
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            autoComplete="new-password"
+            className="crm-input"
+          />
+        </label>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          onClick={submit}
+          disabled={!ready || saving}
+          className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:shadow-none"
+        >
+          {saving ? "Меняем…" : "Сменить пароль"}
+        </button>
+
+        {tooShort && (
+          <span className="text-[13px] text-[#B8620A]">Не короче {MIN_PASSWORD_LENGTH} символов</span>
+        )}
+        {mismatch && <span className="text-[13px] text-[#C0272D]">Пароли не совпадают</span>}
+        {error && <span className="text-[13px] text-[#C0272D]">{error}</span>}
+        {done && (
+          <span className="flex items-center gap-1.5 text-[13px] font-medium text-[#1C8A46]">
+            <Check className="h-4 w-4" /> Пароль изменён — на других устройствах придётся войти заново
+          </span>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 function ThemePicker() {
   const { theme, resolved, setTheme } = useTheme();
 
@@ -266,6 +391,9 @@ export default function SettingsPage() {
           </Section>
 
           {/* Логотип */}
+          {/* Свой пароль меняет любой вошедший, права тут ни при чём */}
+          <PasswordSection />
+
           <Section icon={Building2} title="Логотип компании">
             <div className="flex items-center gap-5">
               <div className="grid h-20 w-20 shrink-0 place-items-center rounded-[14px] border-2 border-dashed border-[var(--color-border)] bg-[var(--color-bg)] overflow-hidden">

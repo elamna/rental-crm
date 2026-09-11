@@ -4617,6 +4617,11 @@ export async function updateUser(id: string, patch: {
   }
 
   const passwordHash = patch.password ? await bcrypt.hash(patch.password, 10) : existing.password_hash;
+  // Сброс пароля администратором тоже должен выгонять старые сессии этого
+  // человека: иначе сброс после утечки ничего не даёт
+  if (patch.password) {
+    db.prepare(`UPDATE app_users SET password_changed_at = ? WHERE id = ?`).run(new Date().toISOString(), id);
+  }
   const isAdmin = patch.isAdmin !== undefined ? patch.isAdmin : existing.is_admin === 1;
 
   db.prepare(
@@ -4638,6 +4643,51 @@ export function deleteUser(id: string) {
   const row = db.prepare(`SELECT is_owner FROM app_users WHERE id = ?`).get(id) as { is_owner: number } | undefined;
   if (row?.is_owner) throw httpError(403, "Главного администратора нельзя удалить");
   db.prepare(`DELETE FROM app_users WHERE id = ?`).run(id);
+}
+
+/** Минимальная длина пароля: короче — это не пароль, а формальность */
+export const MIN_PASSWORD_LENGTH = 6;
+
+/** Когда пользователь последний раз менял пароль (null — ни разу) */
+export function passwordChangedAt(id: string): string | null {
+  const row = db.prepare(`SELECT password_changed_at FROM app_users WHERE id = ?`).get(id) as
+    | { password_changed_at: string | null }
+    | undefined;
+  return row?.password_changed_at ?? null;
+}
+
+/**
+ * Смена собственного пароля.
+ *
+ * Старый пароль спрашиваем обязательно: сессия может остаться открытой на
+ * чужом компьютере, и без этой проверки любой, кто за него сядет, сменил бы
+ * пароль и забрал доступ себе.
+ */
+export async function changeOwnPassword(
+  id: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ changedAt: string }> {
+  const row = db.prepare(`SELECT password_hash, name FROM app_users WHERE id = ?`).get(id) as
+    | { password_hash: string; name: string }
+    | undefined;
+  if (!row) throw httpError(404, "Пользователь не найден");
+
+  const ok = await bcrypt.compare(currentPassword, row.password_hash);
+  if (!ok) throw httpError(403, "Текущий пароль указан неверно");
+
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    throw httpError(400, `Новый пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов`);
+  }
+  if (await bcrypt.compare(newPassword, row.password_hash)) {
+    throw httpError(400, "Новый пароль совпадает со старым");
+  }
+
+  const changedAt = new Date().toISOString();
+  const hash = await bcrypt.hash(newPassword, 10);
+  db.prepare(`UPDATE app_users SET password_hash = ?, password_changed_at = ? WHERE id = ?`).run(hash, changedAt, id);
+  logActivity(`${row.name} сменил пароль`);
+  return { changedAt };
 }
 
 export async function verifyPassword(login: string, password: string): Promise<AppUser | null> {

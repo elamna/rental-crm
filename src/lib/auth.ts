@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { getIronSession } from "iron-session";
 import { sessionOptions } from "./session";
 import { Permission, SessionUser } from "./types";
-import { getUser } from "./repo";
+import { getUser, passwordChangedAt } from "./repo";
 
 export async function getSession() {
   const cookieStore = await cookies();
@@ -23,6 +23,11 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   // Пользователя удалили или заблокировали — сессия больше не действует
   if (!fresh || !fresh.isActive) return null;
 
+  // Пароль сменили после того, как выдали эту сессию — значит доступ отзывают
+  // именно у неё: ради этого пароль обычно и меняют
+  const changedAt = passwordChangedAt(fresh.id);
+  if (changedAt && (!stored.pwdAt || stored.pwdAt < changedAt)) return null;
+
   return {
     id: fresh.id,
     login: fresh.login,
@@ -30,6 +35,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     isAdmin: fresh.isAdmin,
     isOwner: fresh.isOwner,
     permissions: fresh.permissions,
+    pwdAt: stored.pwdAt ?? null,
   };
 }
 

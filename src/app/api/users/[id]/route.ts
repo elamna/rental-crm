@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, apiError, ApiError } from "@/lib/auth";
-import { getUser, updateUser, deleteUser } from "@/lib/repo";
+import { requireAuth, getSession, apiError, ApiError } from "@/lib/auth";
+import { getUser, updateUser, deleteUser, passwordChangedAt } from "@/lib/repo";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -38,6 +38,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const user = await updateUser(id, patch);
     if (!user) return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
+
+    // Сменили пароль себе же — обновляем отметку в своей сессии: сессии старше
+    // смены пароля перестают действовать, и следующий запрос выкинул бы из системы
+    if (patch.password && me.id === id) {
+      const session = await getSession();
+      if (session.user) {
+        session.user = { ...session.user, pwdAt: passwordChangedAt(id) };
+        await session.save();
+      }
+    }
+
     return NextResponse.json(user);
   } catch (e) {
     return apiError(e);
