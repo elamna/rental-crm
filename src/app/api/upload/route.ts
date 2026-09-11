@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
-
-// Локально: public/uploads (отдаётся Next.js статикой)
-// На Railway/VPS: /data/uploads (постоянный диск)
-const uploadsDir = process.env.UPLOADS_DIR
-  ? path.resolve(process.env.UPLOADS_DIR)
-  : path.join(process.cwd(), "public", "uploads");
+import { uploadsDir, ensureUploadsDir } from "@/lib/uploads";
 
 const allowedExt = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".pdf"]);
 
@@ -30,13 +25,13 @@ export async function POST(req: NextRequest) {
   if (!allowedExt.has(ext))
     return NextResponse.json({ error: "Недопустимый тип файла" }, { status: 400 });
 
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  ensureUploadsDir();
 
   const filename = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
   fs.writeFileSync(path.join(uploadsDir, filename), buffer);
 
-  // Если UPLOADS_DIR задан — файлы вне public/, отдаём через /api/file/
-  const url = process.env.UPLOADS_DIR ? `/api/file/${filename}` : `/uploads/${filename}`;
-  return NextResponse.json({ url }, { status: 201 });
+  // Всегда через роут с проверкой входа: это сканы удостоверений и договоров,
+  // прямая раздача статикой открывала их любому, кто знает имя файла
+  return NextResponse.json({ url: `/api/file/${filename}` }, { status: 201 });
 }

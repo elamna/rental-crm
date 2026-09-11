@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, apiError } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
-
-const uploadsDir = process.env.UPLOADS_DIR
-  ? path.resolve(process.env.UPLOADS_DIR)
-  : path.join(process.cwd(), "public", "uploads");
+import { requireAuth, apiError } from "@/lib/auth";
+import { resolveUploadPath } from "@/lib/uploads";
 
 const MIME: Record<string, string> = {
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
   ".webp": "image/webp", ".gif": "image/gif", ".pdf": "application/pdf",
 };
 
+/**
+ * Отдача загруженных файлов. Только для вошедших: здесь фотографии клиентов и
+ * сканы документов. Сюда же ведёт старый адрес /uploads/... — он переписывается
+ * на этот роут в next.config.ts, чтобы ранее загруженные файлы не перестали
+ * открываться и при этом больше не раздавались всем подряд.
+ */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
@@ -23,22 +26,29 @@ export async function GET(
   }
 
   const { name } = await params;
-  // Защита от path traversal
-  const safe = path.basename(name);
-  const filePath = path.join(uploadsDir, safe);
+  const filePath = resolveUploadPath(name);
+  if (!filePath) return new NextResponse("Not found", { status: 404 });
 
-  if (!fs.existsSync(filePath)) {
-    return new NextResponse("Not found", { status: 404 });
-  }
-
-  const ext = path.extname(safe).toLowerCase();
+  const ext = path.extname(filePath).toLowerCase();
   const mime = MIME[ext] ?? "application/octet-stream";
   const buffer = fs.readFileSync(filePath);
 
-  return new NextResponse(buffer, {
+  // Заголовки HTTP не принимают кириллицу: имя вроде «акт_иванов.pdf» роняло
+  // выдачу файла ошибкой сервера. Латиницей идёт запасное имя, настоящее —
+  // отдельным полем по стандарту
+  const base = path.basename(filePath);
+  const asciiName = base.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "");
+  const disposition =
+    'inline; filename="' + asciiName + '"; filename*=UTF-8\'\'' + encodeURIComponent(base);
+
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": mime,
-      "Cache-Control": "public, max-age=31536000, immutable",
+      // Файл под доступом — в общих кэшах ему не место
+      "Cache-Control": "private, max-age=31536000, immutable",
+      // Браузер не должен угадывать тип: загруженный «рисунок» может оказаться скриптом
+      "X-Content-Type-Options": "nosniff",
+      "Content-Disposition": disposition,
     },
   });
 }

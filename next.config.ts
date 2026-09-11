@@ -5,9 +5,17 @@ const nextConfig: NextConfig = {
   // Ответы API — это мегабайты JSON: без сжатия список аренд весит 3,9 МБ,
   // со сжатием — около 400 КБ. На телефоне разница между «мгновенно» и «лагает»
   compress: true,
-  // Путь к загруженным файлам через переменную среды
-  env: {
-    UPLOADS_DIR: process.env.UPLOADS_DIR ?? "./public/uploads",
+  // UPLOADS_DIR намеренно не пробрасывается сюда через env: значение по умолчанию
+  // делало переменную всегда заданной, а путь к папке с документами утекал
+  // в клиентскую сборку. Роуты читают её напрямую на сервере.
+  async rewrites() {
+    return {
+      // beforeFiles — до поиска файла на диске: иначе Next отдал бы старый файл
+      // из public/uploads статикой, в обход проверки входа
+      beforeFiles: [{ source: "/uploads/:name", destination: "/api/file/:name" }],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 };
 

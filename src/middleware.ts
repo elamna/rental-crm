@@ -10,8 +10,10 @@ export async function middleware(req: NextRequest) {
   // Публичные пути — пропускаем
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
-  // Статика — пропускаем
-  if (pathname.startsWith("/_next") || pathname.startsWith("/uploads") || pathname.includes(".")) {
+  // Статика — пропускаем. /uploads сюда больше не входит: этот адрес переписан
+  // на /api/file/[name], где есть проверка входа. Раньше он пропускался мимо
+  // всякой проверки, и файл открывался любому, кто знал имя
+  if (pathname.startsWith("/_next") || pathname.includes(".")) {
     return NextResponse.next();
   }
 
