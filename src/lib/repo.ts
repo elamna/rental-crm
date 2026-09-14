@@ -2555,7 +2555,20 @@ declare global {
   var __penaltySchedulerStarted: boolean | undefined;
 }
 
-if (!global.__penaltySchedulerStarted) {
+/**
+ * Во время сборки планировщик запускать нельзя.
+ *
+ * Next при сборке импортирует каждый маршрут, чтобы собрать о нём сведения,
+ * и делает это несколькими процессами сразу. Вместе с модулем поднимался и
+ * планировщик: через десять секунд он начинал писать в базу — пересчитывать
+ * просрочки и снимать копию, — а писали одновременно несколько процессов.
+ * База отвечала SQLITE_BUSY, и падала вся сборка, а с ней и выкладка.
+ *
+ * Сборке эта работа не нужна вовсе: она собирает код, а не обслуживает прокат.
+ */
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+
+if (!global.__penaltySchedulerStarted && !isBuildPhase) {
   global.__penaltySchedulerStarted = true;
   const HOUR = 60 * 60 * 1000;
 

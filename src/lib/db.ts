@@ -18,7 +18,10 @@ if (process.env.NODE_ENV !== "production") global.__rentalCrmDb = db;
 
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
-db.pragma("busy_timeout = 5000");
+// Ждём освобождения базы, а не падаем сразу: копия базы и пересчёт просрочек
+// держат блокировку заметное время, а параллельный запрос не должен из-за
+// этого получать ошибку
+db.pragma("busy_timeout = 15000");
 
 /**
  * Понижение регистра с поддержкой кириллицы. Встроенная SQLite `LOWER()` знает
