@@ -5,9 +5,8 @@ import { useMemo, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { formatMoney, formatDateTimeDisplay } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { findBlacklistMatch, phoneDigits } from "@/lib/blacklist";
 
-/** Только цифры номера: «+7 707 111 22 33» и «87071112233» — один и тот же телефон */
-const onlyDigits = (value: string) => (value || "").replace(/D/g, "");
 import { Ban, ShieldOff, Siren, Plus, X } from "lucide-react";
 
 /** Частые причины — чтобы не набирать руками то, что пишут каждый раз */
@@ -57,15 +56,31 @@ export default function BlacklistPage() {
         <AddToBlacklist
           clients={clients}
           onClose={() => setAdding(false)}
-          onSave={async ({ name, phone, reason }) => {
-            // Если такой телефон уже есть — блокируем существующего, а не плодим
-            // второго клиента с той же трубкой
-            const digits = onlyDigits(phone);
-            const existing = clients.find((c) => digits && onlyDigits(c.phone) === digits);
+          onSave={async ({ name, phone, iin, reason }) => {
+            // Человека ищем по телефону и по ИИН/БИН: номер меняют, документ — нет.
+            // Если он уже в базе — блокируем его карточку, а не плодим двойника
+            const digits = phoneDigits(phone);
+            const doc = iin.trim();
+            const existing = clients.find(
+              (c) =>
+                (digits && phoneDigits(c.phone) === digits) ||
+                (doc && ((c.iin ?? "").trim() === doc || (c.bin ?? "").trim() === doc))
+            );
             if (existing) {
-              await updateClient(existing.id, { blacklisted: true, blacklistReason: reason });
+              await updateClient(existing.id, {
+                blacklisted: true,
+                blacklistReason: reason,
+                // Документ мог быть неизвестен раньше — сохраним заодно
+                ...(doc && !existing.iin && !existing.bin ? { iin: doc } : {}),
+              });
             } else {
-              await addClient({ name: name || phone, phone, blacklisted: true, blacklistReason: reason });
+              await addClient({
+                name: name || phone || doc,
+                phone,
+                iin: doc || undefined,
+                blacklisted: true,
+                blacklistReason: reason,
+              });
             }
             setAdding(false);
           }}
@@ -155,28 +170,39 @@ function AddToBlacklist({
   onClose,
   onSave,
 }: {
-  clients: { id: string; name: string; phone: string; blacklisted?: boolean }[];
+  clients: { id: string; name: string; phone: string; iin?: string; bin?: string; blacklisted?: boolean }[];
   onClose: () => void;
-  onSave: (values: { name: string; phone: string; reason: string }) => Promise<void>;
+  onSave: (values: { name: string; phone: string; iin: string; reason: string }) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [iin, setIin] = useState("");
   const [reason, setReason] = useState(REASONS[0]);
   const [custom, setCustom] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const digits = onlyDigits(phone);
-  const match = digits.length >= 10 ? clients.find((c) => onlyDigits(c.phone) === digits) : undefined;
+  const digits = phoneDigits(phone);
+  const doc = iin.trim();
+  // Показываем, если такой человек уже есть в базе — по телефону или по документу
+  const match =
+    digits.length >= 10 || doc.length >= 12
+      ? clients.find(
+          (c) =>
+            (digits.length >= 10 && phoneDigits(c.phone) === digits) ||
+            (doc.length >= 12 && ((c.iin ?? "").trim() === doc || (c.bin ?? "").trim() === doc))
+        )
+      : undefined;
   const finalReason = reason === "Другое" ? custom.trim() : reason;
-  const ready = digits.length >= 10 && finalReason.length > 0 && !match?.blacklisted;
+  // Хватит либо телефона, либо документа: мошенника часто знают только по ИИН
+  const ready = (digits.length >= 10 || doc.length >= 12) && finalReason.length > 0 && !match?.blacklisted;
 
   async function submit() {
     if (!ready || saving) return;
     setSaving(true);
     setError(null);
     try {
-      await onSave({ name: name.trim(), phone: phone.trim(), reason: finalReason });
+      await onSave({ name: name.trim(), phone: phone.trim(), iin: doc, reason: finalReason });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось добавить в чёрный список");
       setSaving(false);
@@ -198,8 +224,22 @@ function AddToBlacklist({
 
         <div className="space-y-3">
           <label className="block">
-            <span className="field-label">Номер телефона *</span>
+            <span className="field-label">Номер телефона</span>
             <PhoneInput value={phone} onChange={setPhone} />
+          </label>
+
+          <label className="block">
+            <span className="field-label">ИИН или БИН</span>
+            <input
+              value={iin}
+              onChange={(e) => setIin(e.target.value.replace(/\D/g, "").slice(0, 12))}
+              placeholder="000000000000"
+              inputMode="numeric"
+              className="crm-input"
+            />
+            <span className="mt-1 block text-[12px] text-[var(--color-text-muted)]">
+              Достаточно телефона или документа. По документу надёжнее: номер меняют, ИИН — нет.
+            </span>
           </label>
 
           {match ? (

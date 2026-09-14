@@ -14,6 +14,7 @@ import { AddCatalogBundleModal } from "@/components/rentals/add-catalog-bundle-m
 import { AddCatalogItemModal } from "@/components/rentals/add-catalog-item-modal";
 import { AddShopItemModal } from "@/components/rentals/add-shop-item-modal";
 import { DebtCheckBlock } from "@/components/clients/debt-check";
+import { findBlacklistMatch, blacklistWarningText } from "@/lib/blacklist";
 import {
   ArrowLeft,
   Search,
@@ -76,11 +77,21 @@ export default function NewRentalPage() {
   // Модальное предупреждение при выборе клиента из ЧС
   const [blacklistWarningClient, setBlacklistWarningClient] = useState<Client | null>(null);
 
-  // Украденные аренды выбранного клиента для предупреждения
+  /**
+   * Чёрный список ищем по данным человека, а не по выбранной карточке: один
+   * и тот же клиент заводится дважды (в списке «Еламан», в аренде «еламан»),
+   * и метка остаётся на первой записи. Сверяем телефон, ИИН и БИН.
+   */
+  const blacklistMatch = useMemo(
+    () => (selectedClient ? findBlacklistMatch(selectedClient, clients) : null),
+    [selectedClient, clients]
+  );
+
+  // Украденные аренды — того, кто в списке, даже если это карточка-двойник
   const clientStolenRentals = useMemo(() => {
-    if (!selectedClient?.blacklisted) return [];
-    return rentals.filter((r) => r.client.id === selectedClient.id && r.status === "stolen");
-  }, [selectedClient, rentals]);
+    if (!blacklistMatch) return [];
+    return rentals.filter((r) => r.client.id === blacklistMatch.client.id && r.status === "stolen");
+  }, [blacklistMatch, rentals]);
 
   const [startAt, setStartAt] = useState(() => toLocalInputValue(new Date()));
   const [endAt, setEndAt] = useState(() => toLocalInputValue(new Date(Date.now() + 24 * 3600 * 1000)));
@@ -380,7 +391,7 @@ export default function NewRentalPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="truncate text-[14.5px] font-semibold">{selectedClient.name}</span>
-                    {selectedClient.blacklisted && (
+                    {blacklistMatch && (
                       <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#FDECEC] px-1.5 py-0.5 text-[11px] font-semibold text-[#C0272D]">
                         <Ban className="h-2.5 w-2.5" /> ЧС
                       </span>
@@ -400,11 +411,11 @@ export default function NewRentalPage() {
               </div>
 
               {/* Предупреждение о чёрном списке */}
-              {selectedClient.blacklisted && (
+              {blacklistMatch && (
                 <div className="mt-3 rounded-[12px] border border-[#F3B7B7] bg-[#FDECEC] p-4">
                   <div className="flex items-center gap-2 text-[#C0272D]">
                     <Siren className="h-4 w-4 shrink-0" />
-                    <span className="text-[14px] font-bold">Внимание! Клиент в чёрном списке</span>
+                    <span className="text-[14px] font-bold">Внимание! {blacklistWarningText(blacklistMatch)}</span>
                   </div>
                   {clientStolenRentals.length > 0 ? (
                     <div className="mt-2 space-y-2">
@@ -446,8 +457,9 @@ export default function NewRentalPage() {
                         <button
                           key={c.id}
                           onClick={() => {
-                            if (c.blacklisted) {
-                              // Сначала показываем предупреждение
+                            // Предупреждаем и о двойнике: метка могла остаться
+                            // на другой карточке того же человека
+                            if (findBlacklistMatch(c, clients)) {
                               setBlacklistWarningClient(c);
                               setClientQuery("");
                             } else {
@@ -459,7 +471,7 @@ export default function NewRentalPage() {
                         >
                           <span className="font-medium">{c.name}</span>
                           <span className="text-[var(--color-text-muted)]">{c.phone}</span>
-                          {c.blacklisted && (
+                          {findBlacklistMatch(c, clients) && (
                             <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-[#FDECEC] px-1.5 py-0.5 text-[11px] font-semibold text-[#C0272D]">
                               <Ban className="h-2.5 w-2.5" /> ЧС
                             </span>

@@ -1,13 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { Client, ClientType } from "@/lib/types";
-import { X, Upload } from "lucide-react";
+import { X, Upload, Siren } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { findBlacklistMatch, blacklistWarningText } from "@/lib/blacklist";
 
 export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: (client: Client) => void }) {
   const addClient = useAppStore((s) => s.addClient);
+  const clients = useAppStore((s) => s.clients);
 
   // Основная информация
   const [name, setName] = useState("");
@@ -35,6 +37,16 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Проверяем прямо во время ввода: если такой телефон, ИИН или БИН уже в
+   * чёрном списке, менеджер должен увидеть это до того, как заведёт двойника
+   * и выдаст инструмент.
+   */
+  const blacklistMatch = useMemo(
+    () => findBlacklistMatch({ phone, iin, bin }, clients),
+    [phone, iin, bin, clients]
+  );
 
   const canSubmit = name.trim().length > 0 && phone.trim().length > 0 && !saving;
 
@@ -125,6 +137,13 @@ export function QuickClientModal({ onClose, onCreated }: { onClose: () => void; 
                     <PhoneInput value={phone} onChange={setPhone} />
                   </label>
                 </div>
+
+                {blacklistMatch && (
+                  <div className="mt-3 flex items-start gap-2 rounded-[10px] border border-[#F3B7B7] bg-[#FDECEC] px-3 py-2.5 text-[13.5px] text-[#C0272D]">
+                    <Siren className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span className="font-medium">{blacklistWarningText(blacklistMatch)}</span>
+                  </div>
+                )}
               </div>
 
               {/* Фото */}
