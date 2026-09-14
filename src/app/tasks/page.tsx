@@ -43,6 +43,14 @@ export default function TasksPage() {
     loadTasks();
   }, [loadTasks]);
 
+  // Кто-то из менеджеров изменил данные — перечитываем свой список
+  useEffect(() => {
+    const onChanged = () => loadTasks();
+    window.addEventListener("crm:data-changed", onChanged);
+    return () => window.removeEventListener("crm:data-changed", onChanged);
+  }, [loadTasks]);
+
+
   useEffect(() => {
     if (!canManageAll) return;
     fetch("/api/staff")

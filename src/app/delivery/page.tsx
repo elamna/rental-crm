@@ -65,6 +65,14 @@ export default function DeliveryPage() {
     return () => clearTimeout(id);
   }, [load, search]);
 
+  // Кто-то из менеджеров изменил данные — перечитываем свой список
+  useEffect(() => {
+    const onChanged = () => load();
+    window.addEventListener("crm:data-changed", onChanged);
+    return () => window.removeEventListener("crm:data-changed", onChanged);
+  }, [load]);
+
+
   useEffect(() => {
     if (!showStats) return;
     fetch("/api/deliveries/stats?period=month")

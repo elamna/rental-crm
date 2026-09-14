@@ -26,6 +26,8 @@ interface AppState {
   hydrating: boolean;
 
   hydrate: () => Promise<void>;
+  /** Перечитать всё заново — когда в базе появились чужие изменения */
+  refresh: () => Promise<void>;
   refreshActivity: () => Promise<void>;
   saveBranches: (list: string[]) => Promise<string[]>;
 
@@ -138,6 +140,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error("Не удалось загрузить данные с сервера", err);
       set({ hydrating: false });
     }
+  },
+
+  refresh: async () => {
+    // hydrate() выходит сразу, если данные уже загружены, — для обновления
+    // сбрасываем отметку и запускаем ту же загрузку
+    if (get().hydrating) return;
+    set({ hydrated: false });
+    await get().hydrate();
   },
 
   refreshActivity: async () => {

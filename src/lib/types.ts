@@ -89,6 +89,9 @@ export interface Client {
   lastRentalDate?: string;
   createdAt: string;
   blacklisted?: boolean;
+  /** Почему заблокирован: «мошенник», «сомнительный» или своя формулировка */
+  blacklistReason?: string;
+  blacklistedAt?: string;
 }
 
 /** Расшифровка рейтинга: три составляющие, каждая 0–100 % */

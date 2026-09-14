@@ -461,6 +461,17 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           <Siren className="h-4 w-4" /> Украдено
         </button>
       )}
+      {/* Возврат товара стоит рядом с «Украдено»: это действия с инструментом,
+          а не с деньгами. В блоке «К оплате» кнопка терялась между скидкой и
+          возвратом средств, хотя нажимают её каждый день */}
+      {canReturn && (
+        <button
+          onClick={() => setShowReturnModal(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+        >
+          <Undo2 className="h-4 w-4" /> Возврат товара
+        </button>
+      )}
       {actionError && (
         <div className="rounded-[10px] border border-[#F3B7B7] bg-[#FDECEC] px-3 py-2 text-[13.5px] font-medium text-[#C0272D]">
           {actionError}
@@ -517,15 +528,6 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
             Возврат средств
           </button>
         </div>
-        {canReturn && (
-          <button
-            onClick={() => setShowReturnModal(true)}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-primary-ink)] transition hover:bg-[var(--color-primary-soft)]"
-          >
-            <Undo2 className="h-3.5 w-3.5" /> Возврат товара
-          </button>
-        )}
-
         <PaymentReceipts rentalId={rental.id} paid={rental.paid} />
       </Section>
 

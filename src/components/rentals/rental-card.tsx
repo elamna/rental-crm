@@ -13,7 +13,7 @@ import {
   isOneTimeLine,
   isDebtorRental,
 } from "@/lib/utils";
-import { Phone, Truck, ChevronDown, AlertTriangle, History, Copy } from "lucide-react";
+import { Phone, Truck, ChevronDown, AlertTriangle, History, Copy, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { SelectBox } from "@/components/common/selection-bar";
 
@@ -32,7 +32,10 @@ export function RentalCard({
   onToggleSelect?: () => void;
 }) {
   const st = statusHeaderStyles[rental.status];
-  const pay = paymentStyles[rental.paymentStatus];
+  // Статус из базы может оказаться незнакомым — например, после импорта из
+  // чужой системы или ручной правки. Без запасного варианта одна такая запись
+  // роняла весь список аренд
+  const pay = paymentStyles[rental.paymentStatus] ?? paymentStyles.pending;
 
   // «Должник» — закрытая аренда с долгом: инструмент вернули, а деньги нет.
   // Пока аренда идёт, виден её статус и неоплаченный остаток отдельной строкой
@@ -113,8 +116,8 @@ export function RentalCard({
 
         <div className={cn("mt-2.5 rounded-[10px] px-2.5 py-2 text-center text-[13.5px] font-semibold", pay.bg, pay.text)}>
           {rental.paymentStatus === "pending" || rental.paymentStatus === "overdue"
-            ? `${paymentLabels[rental.paymentStatus]} (${formatMoney(rental.total - rental.paid)})`
-            : paymentLabels[rental.paymentStatus]}
+            ? `${paymentLabels[rental.paymentStatus] ?? "Ожидает оплату"} (${formatMoney(rental.total - rental.paid)})`
+            : paymentLabels[rental.paymentStatus] ?? "Ожидает оплату"}
         </div>
 
         <div className="mt-3 rounded-[10px] border border-[var(--color-border)] px-2.5 py-2">
@@ -136,6 +139,16 @@ export function RentalCard({
             <div className="text-[12px] text-[var(--color-text-muted)]">+{rental.items.length - 2} ещё</div>
           )}
         </div>
+
+        {rental.comment && (
+          /* Комментарий писали, чтобы его прочитали: раньше он был виден только
+             внутри аренды, и предупреждение «клиент заберёт после обеда»
+             не доходило до того, кто смотрит список */
+          <div className="mt-2.5 flex gap-1.5 rounded-[10px] bg-[var(--color-bg)] px-2.5 py-2 text-[12.5px] text-[var(--color-text-muted)]">
+            <MessageSquare className="mt-0.5 h-3 w-3 shrink-0" />
+            <span className="line-clamp-2">{rental.comment}</span>
+          </div>
+        )}
 
         <div className="mt-2.5 flex items-center justify-between text-[12.5px]">
           <div>

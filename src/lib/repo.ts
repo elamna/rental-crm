@@ -47,6 +47,8 @@ interface ClientRow {
   notes: string | null;
   rating: number | null;
   blacklisted: number;
+  blacklist_reason: string | null;
+  blacklisted_at: string | null;
   created_at: string;
 }
 
@@ -160,6 +162,8 @@ function clientRowToDomain(row: ClientRow, rentalRows: RentalForRating[]): Clien
     rating,
     ratingBreakdown: breakdown,
     blacklisted: !!row.blacklisted,
+    blacklistReason: row.blacklist_reason ?? undefined,
+    blacklistedAt: row.blacklisted_at ?? undefined,
     createdAt: row.created_at,
     totalRentals,
     totalSpent,
@@ -223,8 +227,8 @@ export function createClient(input: Partial<Client>): Client {
   const id = newId("cl");
   const createdAt = new Date().toISOString();
   db.prepare(
-    `INSERT INTO clients (id, name, type, phone, email, photo_url, iin, birth_date, document_number, document_issued_by, document_issued_at, document_expires_at, bin, legal_address, company_director, bank_account, bank, bik, acquisition_channel, discount, rating, notes, blacklisted, created_at)
-     VALUES (@id, @name, @type, @phone, @email, @photoUrl, @iin, @birthDate, @documentNumber, @documentIssuedBy, @documentIssuedAt, @documentExpiresAt, @bin, @legalAddress, @companyDirector, @bankAccount, @bank, @bik, @acquisitionChannel, @discount, @rating, @notes, @blacklisted, @createdAt)`
+    `INSERT INTO clients (id, name, type, phone, email, photo_url, iin, birth_date, document_number, document_issued_by, document_issued_at, document_expires_at, bin, legal_address, company_director, bank_account, bank, bik, acquisition_channel, discount, rating, notes, blacklisted, blacklist_reason, blacklisted_at, created_at)
+     VALUES (@id, @name, @type, @phone, @email, @photoUrl, @iin, @birthDate, @documentNumber, @documentIssuedBy, @documentIssuedAt, @documentExpiresAt, @bin, @legalAddress, @companyDirector, @bankAccount, @bank, @bik, @acquisitionChannel, @discount, @rating, @notes, @blacklisted, @blacklistReason, @blacklistedAt, @createdAt)`
   ).run({
     id,
     name: input.name ?? "",
@@ -249,6 +253,8 @@ export function createClient(input: Partial<Client>): Client {
     rating: input.rating ?? null,
     notes: input.notes ?? null,
     blacklisted: input.blacklisted ? 1 : 0,
+    blacklistReason: input.blacklistReason ?? null,
+    blacklistedAt: input.blacklisted ? input.blacklistedAt ?? createdAt : null,
     // При импорте сохраняем дату из выгрузки, иначе вся база «заведена сегодня»
     createdAt: input.createdAt ?? createdAt,
   });
@@ -263,7 +269,8 @@ export function updateClient(id: string, patch: Partial<Client>) {
     `UPDATE clients SET name=@name, type=@type, phone=@phone, email=@email, photo_url=@photo_url, iin=@iin, birth_date=@birth_date,
      document_number=@document_number, document_issued_by=@document_issued_by, document_issued_at=@document_issued_at, document_expires_at=@document_expires_at,
      bin=@bin, legal_address=@legal_address, company_director=@company_director, bank_account=@bank_account, bank=@bank, bik=@bik,
-     acquisition_channel=@acquisition_channel, discount=@discount, rating=@rating, notes=@notes, blacklisted=@blacklisted WHERE id=@id`
+     acquisition_channel=@acquisition_channel, discount=@discount, rating=@rating, notes=@notes, blacklisted=@blacklisted,
+     blacklist_reason=@blacklist_reason, blacklisted_at=@blacklisted_at WHERE id=@id`
   ).run({
     id,
     name: patch.name ?? existing.name,
@@ -288,6 +295,20 @@ export function updateClient(id: string, patch: Partial<Client>) {
     rating: patch.rating ?? existing.rating,
     notes: patch.notes !== undefined ? patch.notes || null : existing.notes,
     blacklisted: patch.blacklisted !== undefined ? (patch.blacklisted ? 1 : 0) : existing.blacklisted,
+    // Снимают из чёрного списка — причина и дата уходят вместе с пометкой,
+    // иначе в карточке остаётся «мошенник» у клиента, которого уже разблокировали
+    blacklist_reason:
+      patch.blacklisted === false
+        ? null
+        : patch.blacklistReason !== undefined
+          ? patch.blacklistReason || null
+          : existing.blacklist_reason,
+    blacklisted_at:
+      patch.blacklisted === false
+        ? null
+        : patch.blacklisted === true && !existing.blacklisted
+          ? new Date().toISOString()
+          : existing.blacklisted_at,
   });
   return getClient(id);
 }
@@ -4779,6 +4800,43 @@ export type CompanySettings = {
  * прошлая аренда так и останется выданной из «Астаны».
  */
 export { DEFAULT_BRANCHES } from "./mock-data";
+
+/**
+ * Отпечаток состояния базы одной строкой.
+ *
+ * Считается по количеству строк и последнему изменению в каждой таблице: если
+ * кто-то завёл аренду, принял оплату или добавил клиента — строка изменится.
+ * Дешевле, чем отдавать сами данные: вкладка спрашивает часто, а перезагружает
+ * всё только когда что-то действительно поменялось.
+ */
+export function dataPulse(): string {
+  const parts: string[] = [];
+  const tables: [string, string][] = [
+    ["rentals", "updated_at"],
+    ["clients", "created_at"],
+    ["inventory_items", "created_at"],
+    ["kits", "created_at"],
+    ["services", "created_at"],
+    ["workshop_tickets", "created_at"],
+    ["leads", "updated_at"],
+    ["tasks", "updated_at"],
+    ["deliveries", "updated_at"],
+    ["rental_payments", "created_at"],
+    ["rental_documents", "created_at"],
+    ["return_shortages", "created_at"],
+  ];
+  for (const [table, column] of tables) {
+    try {
+      const row = db
+        .prepare(`SELECT COUNT(*) AS c, COALESCE(MAX(${column}), '') AS m FROM ${table}`)
+        .get() as { c: number; m: string };
+      parts.push(`${table}:${row.c}:${row.m}`);
+    } catch {
+      // Таблицы может не быть на старой базе — пропускаем, отпечаток не ломается
+    }
+  }
+  return parts.join("|");
+}
 
 export function getBranches(): string[] {
   const row = db.prepare(`SELECT value FROM company_settings WHERE key = 'branches'`).get() as

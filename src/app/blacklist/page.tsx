@@ -1,16 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAppStore } from "@/lib/store";
-import { formatMoney } from "@/lib/utils";
-import { Ban, ShieldOff, Siren } from "lucide-react";
+import { formatMoney, formatDateTimeDisplay } from "@/lib/utils";
+import { PhoneInput } from "@/components/ui/phone-input";
+
+/** Только цифры номера: «+7 707 111 22 33» и «87071112233» — один и тот же телефон */
+const onlyDigits = (value: string) => (value || "").replace(/D/g, "");
+import { Ban, ShieldOff, Siren, Plus, X } from "lucide-react";
+
+/** Частые причины — чтобы не набирать руками то, что пишут каждый раз */
+const REASONS = ["Мошенник", "Сомнительный", "Не вернул инструмент", "Испортил инструмент", "Долг"];
 
 export default function BlacklistPage() {
   const clients = useAppStore((s) => s.clients);
   const rentals = useAppStore((s) => s.rentals);
   const hydrated = useAppStore((s) => s.hydrated);
   const updateClient = useAppStore((s) => s.updateClient);
+  const addClient = useAppStore((s) => s.addClient);
+  const [adding, setAdding] = useState(false);
 
   const blacklisted = useMemo(() => clients.filter((c) => c.blacklisted), [clients]);
 
@@ -29,12 +38,39 @@ export default function BlacklistPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-6 py-4 backdrop-blur">
-        <h1 className="font-display text-[20px] font-bold">Чёрный список</h1>
-        <p className="text-[14px] text-[var(--color-text-muted)]">
-          Клиенты с ограничением доступа к аренде — попадают сюда автоматически (например, при краже товара) или вручную
-        </p>
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-6 py-4 backdrop-blur">
+        <div>
+          <h1 className="font-display text-[20px] font-bold">Чёрный список</h1>
+          <p className="text-[14px] text-[var(--color-text-muted)]">
+            Клиенты с ограничением доступа к аренде — попадают сюда автоматически (например, при краже товара) или вручную
+          </p>
+        </div>
+        <button
+          onClick={() => setAdding(true)}
+          className="flex items-center gap-1.5 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
+        >
+          <Plus className="h-4 w-4" /> Добавить
+        </button>
       </header>
+
+      {adding && (
+        <AddToBlacklist
+          clients={clients}
+          onClose={() => setAdding(false)}
+          onSave={async ({ name, phone, reason }) => {
+            // Если такой телефон уже есть — блокируем существующего, а не плодим
+            // второго клиента с той же трубкой
+            const digits = onlyDigits(phone);
+            const existing = clients.find((c) => digits && onlyDigits(c.phone) === digits);
+            if (existing) {
+              await updateClient(existing.id, { blacklisted: true, blacklistReason: reason });
+            } else {
+              await addClient({ name: name || phone, phone, blacklisted: true, blacklistReason: reason });
+            }
+            setAdding(false);
+          }}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {!hydrated ? (
@@ -65,6 +101,15 @@ export default function BlacklistPage() {
                     </span>
                   </div>
 
+                  {c.blacklistReason && (
+                    <div className="mt-2 rounded-[8px] bg-[#FDECEC] px-2.5 py-1.5 text-[13px] font-medium text-[#C0272D]">
+                      {c.blacklistReason}
+                      {c.blacklistedAt && (
+                        <span className="ml-1 font-normal opacity-80">· {formatDateTimeDisplay(c.blacklistedAt).split(",")[0]}</span>
+                      )}
+                    </div>
+                  )}
+
                   {stolenCount > 0 && (
                     <div className="mt-2 flex items-center gap-1.5 rounded-[8px] bg-[#FDECEC] px-2.5 py-1.5 text-[13px] font-medium text-[#C0272D]">
                       <Siren className="h-3.5 w-3.5 shrink-0" />
@@ -94,6 +139,119 @@ export default function BlacklistPage() {
             })}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Добавление в чёрный список вручную.
+ *
+ * Сюда попадают и те, кого в базе ещё нет: в прокат позвонил человек, которого
+ * уже знают как мошенника, и записать его нужно до того, как он придёт.
+ */
+function AddToBlacklist({
+  clients,
+  onClose,
+  onSave,
+}: {
+  clients: { id: string; name: string; phone: string; blacklisted?: boolean }[];
+  onClose: () => void;
+  onSave: (values: { name: string; phone: string; reason: string }) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [reason, setReason] = useState(REASONS[0]);
+  const [custom, setCustom] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const digits = onlyDigits(phone);
+  const match = digits.length >= 10 ? clients.find((c) => onlyDigits(c.phone) === digits) : undefined;
+  const finalReason = reason === "Другое" ? custom.trim() : reason;
+  const ready = digits.length >= 10 && finalReason.length > 0 && !match?.blacklisted;
+
+  async function submit() {
+    if (!ready || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({ name: name.trim(), phone: phone.trim(), reason: finalReason });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось добавить в чёрный список");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[420px] rounded-t-[20px] bg-[var(--color-surface)] p-5 safe-bottom sm:rounded-[16px] card-shadow"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-[16px] font-bold">В чёрный список</h3>
+          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <label className="block">
+            <span className="field-label">Номер телефона *</span>
+            <PhoneInput value={phone} onChange={setPhone} />
+          </label>
+
+          {match ? (
+            <p className="rounded-[10px] bg-[var(--color-primary-soft)] px-3 py-2 text-[13px]">
+              Это {match.name}{match.blacklisted ? " — он уже в чёрном списке" : " из базы. Заблокируем его карточку"}.
+            </p>
+          ) : (
+            <label className="block">
+              <span className="field-label">Имя</span>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Если известно" className="crm-input" />
+            </label>
+          )}
+
+          <div>
+            <span className="field-label">Причина *</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[...REASONS, "Другое"].map((rsn) => (
+                <button
+                  key={rsn}
+                  onClick={() => setReason(rsn)}
+                  className={
+                    "rounded-full border px-3 py-1.5 text-[13px] font-medium transition " +
+                    (reason === rsn
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
+                      : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]")
+                  }
+                >
+                  {rsn}
+                </button>
+              ))}
+            </div>
+            {reason === "Другое" && (
+              <input
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+                placeholder="Своя формулировка"
+                className="crm-input mt-2"
+                autoFocus
+              />
+            )}
+          </div>
+        </div>
+
+        {error && <p className="mt-3 text-[13px] text-[#C0272D]">{error}</p>}
+
+        <button
+          onClick={submit}
+          disabled={!ready || saving}
+          className="mt-4 w-full rounded-[10px] bg-[#C0272D] py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#A31F24] disabled:opacity-50"
+        >
+          {saving ? "Добавляем…" : "В чёрный список"}
+        </button>
       </div>
     </div>
   );

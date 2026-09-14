@@ -358,6 +358,9 @@ ensureColumns("rentals", {
 // password_changed_at нужен, чтобы смена пароля выгоняла старые сессии:
 // иначе укравший доступ остаётся в системе, даже когда пароль уже другой
 ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0", password_changed_at: "TEXT" });
+// Причина блокировки: пометка «в чёрном списке» без объяснения ничего не говорит
+// тому, кто откроет карточку через полгода
+ensureColumns("clients", { blacklist_reason: "TEXT", blacklisted_at: "TEXT" });
 
 // Чек оплаты показывает, кто принял деньги — раньше в платеже этого не было
 ensureColumns("rental_payments", { created_by: "TEXT" });

@@ -9,7 +9,7 @@ import { clientTypeLabels } from "@/lib/mock-data";
 import { formatMoney } from "@/lib/utils";
 import { RatingStars, RatingBreakdown } from "@/components/clients/rating-stars";
 import { RentalCard } from "@/components/rentals/rental-card";
-import { ArrowLeft, Phone, Mail, Calendar, Percent, ClipboardList, Trash2, Ban } from "lucide-react";
+import { ArrowLeft, Phone, Mail, Calendar, Percent, ClipboardList, Trash2, Ban, Pencil } from "lucide-react";
 import { DebtCheckBlock } from "@/components/clients/debt-check";
 
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -49,6 +49,13 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             <p className="text-[13.5px] text-[var(--color-text-muted)]">{clientTypeLabels[client.type]}</p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+        <Link
+          href={`/clients/${client.id}/edit`}
+          className="flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[14px] font-medium transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
+        >
+          <Pencil className="h-3.5 w-3.5" /> Редактировать
+        </Link>
         <button
           onClick={() => {
             if (confirm(`Удалить клиента «${client.name}»?`)) {
@@ -59,6 +66,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         >
           <Trash2 className="h-3.5 w-3.5" /> Удалить
         </button>
+        </div>
       </header>
 
       <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto p-6 xl:grid-cols-3">
