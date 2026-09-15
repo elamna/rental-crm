@@ -5,6 +5,43 @@ import { FunnelDaySummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Check, ClipboardCopy, X } from "lucide-react";
 
+type PeriodKey = "day" | "week" | "month" | "year";
+
+const PERIODS: { key: PeriodKey; label: string }[] = [
+  { key: "day", label: "День" },
+  { key: "week", label: "Неделя" },
+  { key: "month", label: "Месяц" },
+  { key: "year", label: "Год" },
+];
+
+/**
+ * Границы периода от выбранной даты.
+ *
+ * Неделя считается с понедельника, а не «минус семь дней»: владелец сверяет
+ * её с рабочей неделей проката, а не со скользящим окном. Считает браузер —
+ * только он знает часовой пояс пользователя.
+ */
+function periodRange(dateInput: string, period: PeriodKey) {
+  const base = new Date(`${dateInput}T00:00:00`);
+  const from = new Date(base);
+  const to = new Date(base);
+
+  if (period === "week") {
+    const weekDay = (base.getDay() + 6) % 7; // понедельник = 0
+    from.setDate(base.getDate() - weekDay);
+    to.setDate(from.getDate() + 6);
+  } else if (period === "month") {
+    from.setDate(1);
+    to.setMonth(base.getMonth() + 1, 0);
+  } else if (period === "year") {
+    from.setMonth(0, 1);
+    to.setMonth(11, 31);
+  }
+
+  to.setHours(23, 59, 59, 999);
+  return { from: from.toISOString(), to: to.toISOString(), fromDate: from, toDate: to };
+}
+
 function toDateInput(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -21,13 +58,13 @@ function ruDate(value: string) {
  * Текст для отправки в переписку — ровно тот отчёт, который прокат и так шлёт
  * владельцу вечером, только собранный системой, а не руками.
  */
-function asText(s: FunnelDaySummary) {
+function asText(s: FunnelDaySummary, periodTitle: string, isDay: boolean) {
   const lines = [
-    `📅 Дата: ${ruDate(s.date)}`,
+    `📅 ${periodTitle}`,
     "",
     `📞 Всего обращений: ${s.calls}`,
     "",
-    "📈 Сегодня:",
+    isDay ? "📈 Сегодня:" : "📈 За период:",
     `• Взяли в аренду: ${s.won}`,
     `• Отказались: ${s.lost}`,
     "",
@@ -54,28 +91,35 @@ function asText(s: FunnelDaySummary) {
  */
 export function DaySummary({ onClose }: { onClose: () => void }) {
   const [date, setDate] = useState(() => toDateInput(new Date()));
+  const [period, setPeriod] = useState<PeriodKey>("day");
   const [data, setData] = useState<FunnelDaySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
+  const range = periodRange(date, period);
+
   const load = useCallback(async () => {
     setLoading(true);
-    // Границы суток считает браузер: часовой пояс знает только он
-    const from = new Date(`${date}T00:00:00`).toISOString();
-    const to = new Date(`${date}T23:59:59.999`).toISOString();
+    const { from, to } = periodRange(date, period);
     const res = await fetch(`/api/leads/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
-  }, [date]);
+  }, [date, period]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  /** «Дата: 15.09.2026» или «Период: 01.09.2026 — 30.09.2026» */
+  const periodTitle =
+    period === "day"
+      ? `Дата: ${ruDate(range.from)}`
+      : `Период: ${ruDate(range.from)} — ${ruDate(range.to)}`;
+
   async function copy() {
     if (!data) return;
     try {
-      await navigator.clipboard.writeText(asText(data));
+      await navigator.clipboard.writeText(asText(data, periodTitle, period === "day"));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -91,8 +135,8 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-start justify-between border-b border-[var(--color-border)] px-5 py-4">
           <div>
-            <h3 className="font-display text-[17px] font-bold">Сводка за день</h3>
-            <p className="text-[13px] text-[var(--color-text-muted)]">Что было в воронке и чего не хватило</p>
+            <h3 className="font-display text-[17px] font-bold">Сводка</h3>
+            <p className="text-[13px] text-[var(--color-text-muted)]">{periodTitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <input
@@ -107,6 +151,24 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        {/* Один и тот же отчёт за день, неделю, месяц или год */}
+        <div className="flex gap-1.5 border-b border-[var(--color-border)] px-5 py-3">
+          {PERIODS.map((pr) => (
+            <button
+              key={pr.key}
+              onClick={() => setPeriod(pr.key)}
+              className={cn(
+                "flex-1 rounded-[10px] border px-3 py-1.5 text-[13.5px] font-semibold transition",
+                period === pr.key
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
+                  : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+              )}
+            >
+              {pr.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex-1 overflow-y-auto p-5">
           {loading || !data ? (
             <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
@@ -114,7 +176,7 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
             <div className="space-y-4">
               <Stat label="📞 Всего обращений" value={data.calls} big />
 
-              <Group title="📈 Сегодня">
+              <Group title={period === "day" ? "📈 Сегодня" : "📈 За период"}>
                 <Row label="Взяли в аренду" value={data.won} tone="#1C8A46" />
                 <Row label="Отказались" value={data.lost} tone={data.lost > 0 ? "#C0272D" : undefined} />
               </Group>

@@ -213,8 +213,13 @@ export interface Rental {
   updatedAt?: string;
 }
 
-/** servicing и in_progress — параллельные ветки: обслуживание и ремонт идут по-разному */
-export type WorkshopStatus = "new" | "servicing" | "in_progress" | "done" | "archived";
+/**
+ * servicing и in_progress — параллельные ветки: обслуживание и ремонт идут
+ * по-разному. waiting_parts — работа начата, но встала: деталь заказана и
+ * её ждут. Без отдельного состояния такие ремонты висели в «В ремонте» и
+ * выглядели как простаивающая работа мастера, хотя мастер тут ни при чём.
+ */
+export type WorkshopStatus = "new" | "servicing" | "in_progress" | "waiting_parts" | "done" | "archived";
 /** service — плановое ТО, maintenance — диагностика после возврата, repair — ремонт */
 export type WorkshopReason = "service" | "maintenance" | "repair";
 
@@ -262,6 +267,9 @@ export interface DocumentTemplate {
 }
 
 export interface RentalDocument {
+  /** Ключ ссылки для клиента; пусто — ссылку ещё не создавали или отозвали */
+  shareToken?: string;
+  sharedAt?: string;
   id: string;
   rentalId: string;
   templateId?: string;

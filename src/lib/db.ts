@@ -502,6 +502,10 @@ ensureColumns("rental_documents", {
   signed_at: "TEXT",
   signed_by: "TEXT",
   sign_method: "TEXT",
+  // Ключ ссылки для клиента: по нему документ открывается без входа в систему.
+  // Создаётся только когда менеджер решил отправить документ, и его можно отозвать
+  share_token: "TEXT",
+  shared_at: "TEXT",
 });
 
 ensureColumns("clients", {

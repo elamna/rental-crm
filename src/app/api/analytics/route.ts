@@ -122,6 +122,25 @@ export async function GET(req: NextRequest) {
     `SELECT COUNT(*) as v FROM workshop_tickets WHERE status NOT IN ('done','archived')`
   ).get() as { v: number }).v;
 
+  /**
+   * Итоги за всё время — рядом с показателями за период.
+   *
+   * Владельцу нужны обе цифры: сколько принесли эти тридцать дней и сколько
+   * прокат заработал вообще. Раньше на экране была только первая, и общую
+   * сумму приходилось складывать по месяцам руками.
+   */
+  const allTimeRevenue = (
+    db.prepare(`SELECT COALESCE(SUM(paid), 0) AS v FROM rentals WHERE status NOT IN ('cancelled')`).get() as { v: number }
+  ).v;
+  const allTimeRentals = (db.prepare(`SELECT COUNT(*) AS v FROM rentals`).get() as { v: number }).v;
+  const allTimeDebt = (
+    db.prepare(`SELECT COALESCE(SUM(total - paid), 0) AS v FROM rentals WHERE total > paid AND status NOT IN ('cancelled')`).get() as {
+      v: number;
+    }
+  ).v;
+  // Средний чек: по закрытым и текущим арендам, чтобы пустые заявки не занижали
+  const avgCheck = allTimeRentals > 0 ? Math.round(allTimeRevenue / allTimeRentals) : 0;
+
   return NextResponse.json({
     period,
     granularity,
@@ -132,6 +151,7 @@ export async function GET(req: NextRequest) {
       totalDebt, newClients, totalClients, freeInventory, totalInventory,
       workshopActive,
     },
+    allTime: { revenue: allTimeRevenue, rentals: allTimeRentals, debt: allTimeDebt, avgCheck },
     revenueByDay,
     revenueByMonth,
     topClients,

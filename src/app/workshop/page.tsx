@@ -5,12 +5,15 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { InventoryItem, WorkshopLine, WorkshopReason, WorkshopStatus, WorkshopTicket } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
-import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Settings2, Wrench, X, Trash2 } from "lucide-react";
+import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Settings2, Wrench, X, Trash2, PackageSearch } from "lucide-react";
 
 const columns: { key: WorkshopStatus; label: string; dot: string; icon: React.ElementType }[] = [
   { key: "new", label: "Новая", dot: "bg-[#8B8F98]", icon: Circle },
   { key: "servicing", label: "На обслуживании", dot: "bg-[#2B5FD9]", icon: Settings2 },
   { key: "in_progress", label: "В ремонте", dot: "bg-[#F59E0B]", icon: Clock3 },
+  // Ждём деталь: ремонт начат, но продолжить нельзя. Отдельная колонка, чтобы
+  // такие инструменты не путали с теми, над которыми мастер работает сейчас
+  { key: "waiting_parts", label: "Ждём запчасти", dot: "bg-[#A855F7]", icon: PackageSearch },
   { key: "done", label: "Готово", dot: "bg-[#34C987]", icon: CheckCircle2 },
   { key: "archived", label: "Архив", dot: "bg-[#8B8F98]", icon: Archive },
 ];

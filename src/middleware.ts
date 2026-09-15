@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 // /api/version отдаёт только короткий SHA развёрнутого коммита — им проверяют,
 // что деплой применился, поэтому он открыт
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/version"];
+// /d/… — документ по ссылке для клиента: у него учётной записи нет, защищает
+// длинный случайный ключ в самой ссылке
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/version", "/d/"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

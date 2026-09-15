@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { db, logActivity } from "./db";
 import { maybeDailyBackup } from "./backup";
 import { isOneTimeLine, lineTotal } from "./utils";
@@ -2536,8 +2537,9 @@ export function updateWorkshopTicket(id: string, patch: Partial<WorkshopTicket>)
   if (merged.status === "done") {
     db.prepare(`UPDATE inventory_items SET status = 'available' WHERE id = ?`).run(merged.inventoryItemId);
   } else if (merged.status !== "archived") {
-    // В каталоге состояний всего два: «в ремонте» и «в мастерской». Обслуживание и
-    // диагностика для склада одинаковы — инструмент временно не выдаётся
+    // В каталоге состояний всего два: «в ремонте» и «в мастерской». Обслуживание,
+    // диагностика и ожидание запчастей для склада одинаковы — инструмент
+    // временно не выдаётся
     const inventoryStatus = merged.reason === "repair" ? "repair" : "maintenance";
     db.prepare(`UPDATE inventory_items SET status = ? WHERE id = ?`).run(inventoryStatus, merged.inventoryItemId);
   }
@@ -2637,6 +2639,8 @@ export function deleteDocumentTemplate(id: string) {
 // ---------- Документы аренды ----------
 
 interface RentalDocumentRow {
+  share_token: string | null;
+  shared_at: string | null;
   id: string;
   rental_id: string;
   template_id: string | null;
@@ -2667,6 +2671,8 @@ function documentRowToDomain(r: RentalDocumentRow): RentalDocument {
     rentalNumber: r.rental_number ?? undefined,
     clientName: r.client_name ?? undefined,
     clientPhone: r.client_phone ?? undefined,
+    shareToken: r.share_token ?? undefined,
+    sharedAt: r.shared_at ?? undefined,
   };
 }
 
@@ -2767,6 +2773,48 @@ export function setDocumentSigned(id: string, signed: boolean, actorName?: strin
   });
 
   return getRentalDocument(id);
+}
+
+/**
+ * Ссылка на документ для клиента.
+ *
+ * WhatsApp по обычной ссылке wa.me умеет передавать только текст — вложить
+ * файл он не даёт. Поэтому клиенту уходит ссылка на страницу с документом,
+ * а не сам файл.
+ *
+ * Ключ длинный и случайный: страница открывается без входа в систему, и
+ * подобрать её перебором нельзя. Ссылка создаётся только по нажатию
+ * менеджера и отзывается тем же способом — тогда старая перестаёт работать.
+ */
+export function shareRentalDocument(id: string): RentalDocument | null {
+  const row = db.prepare(`SELECT share_token FROM rental_documents WHERE id = ?`).get(id) as
+    | { share_token: string | null }
+    | undefined;
+  if (!row) return null;
+  if (row.share_token) return getRentalDocument(id);
+
+  const token = randomBytes(24).toString("base64url");
+  db.prepare(`UPDATE rental_documents SET share_token = ?, shared_at = ? WHERE id = ?`).run(
+    token,
+    new Date().toISOString(),
+    id
+  );
+  return getRentalDocument(id);
+}
+
+/** Отозвать ссылку: у клиента она перестанет открываться */
+export function revokeRentalDocumentShare(id: string): RentalDocument | null {
+  db.prepare(`UPDATE rental_documents SET share_token = NULL, shared_at = NULL WHERE id = ?`).run(id);
+  return getRentalDocument(id);
+}
+
+/** Документ по ключу ссылки — для страницы, которую открывает клиент */
+export function getRentalDocumentByToken(token: string): RentalDocument | null {
+  if (!token || token.length < 16) return null;
+  const row = db.prepare(`SELECT * FROM rental_documents WHERE share_token = ?`).get(token) as
+    | RentalDocumentRow
+    | undefined;
+  return row ? documentRowToDomain(row) : null;
 }
 
 export function createRentalDocument(input: { rentalId: string; templateId?: string; name: string; body: string }): RentalDocument {

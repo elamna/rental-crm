@@ -3,6 +3,7 @@
 import { Rental, DocumentTemplate, RentalDocument, Delivery, DELIVERY_KIND_LABELS, DELIVERY_STATUS_LABELS } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
 import { DOCUMENT_CSS } from "@/lib/document-styles";
+import { waLink } from "@/lib/utils";
 import { printDocument } from "@/lib/print-document";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { useAppStore } from "@/lib/store";
@@ -1128,6 +1129,43 @@ function DocumentsSection({ rental }: { rental: Rental }) {
     setGenerating(false);
   }
 
+  const [sharing, setSharing] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
+
+  /**
+   * Отправка документа клиенту в WhatsApp.
+   *
+   * Вложить файл через обычную ссылку wa.me нельзя — она умеет только текст.
+   * Поэтому создаём ссылку на страницу с документом и отправляем её: клиент
+   * открывает, читает и при желании сохраняет в PDF средствами браузера.
+   *
+   * Окно WhatsApp открываем сразу после ответа сервера — если открыть его
+   * заранее, браузер посчитает это всплывающим окном и заблокирует.
+   */
+  async function sendToWhatsApp(doc: RentalDocument) {
+    setSharing(doc.id);
+    setShareError(null);
+    try {
+      const res = await fetch(`/api/rental-documents/${doc.id}/share`, { method: "POST" });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Не удалось создать ссылку");
+      const updated = (await res.json()) as RentalDocument;
+      setDocs((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+
+      const link = `${window.location.origin}/d/${updated.shareToken}`;
+      const text = `${rental.client.name}, здравствуйте! Документ по аренде № ${rental.number}: ${doc.name}\n${link}`;
+      const wa = waLink(rental.client.phone, text);
+      if (!wa) {
+        setShareError("У клиента не указан телефон — отправить не получится");
+        return;
+      }
+      window.open(wa, "_blank");
+    } catch (err) {
+      setShareError(err instanceof Error ? err.message : "Не удалось отправить документ");
+    } finally {
+      setSharing(null);
+    }
+  }
+
   async function deleteDoc(id: string) {
     await fetch(`/api/rental-documents/${id}`, { method: "DELETE" });
     setDocs((prev) => prev.filter((d) => d.id !== id));
@@ -1198,6 +1236,14 @@ function DocumentsSection({ rental }: { rental: Rental }) {
                       <Check className="h-3.5 w-3.5" />
                     </button>
                   )}
+                  <button
+                    onClick={() => sendToWhatsApp(doc)}
+                    disabled={sharing === doc.id}
+                    className="grid h-6 w-6 place-items-center rounded-md hover:bg-[#EAF7EE] hover:text-[#1C8A46] disabled:opacity-50"
+                    title="Отправить клиенту в WhatsApp"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                  </button>
                   <button onClick={() => setPreviewDoc(doc)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Просмотр"><ExternalLink className="h-3.5 w-3.5" /></button>
                   <button onClick={() => printDoc(doc.body, doc.name, doc)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Печать"><Printer className="h-3.5 w-3.5" /></button>
                   <button onClick={() => deleteDoc(doc.id)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[#FDECEC] hover:text-[#C0272D]" title="Удалить"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -1207,6 +1253,7 @@ function DocumentsSection({ rental }: { rental: Rental }) {
             <button onClick={() => setShowPicker(true)} className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[var(--color-border)] py-1.5 text-[13px] text-[var(--color-text-muted)] transition hover:bg-[var(--color-bg)]">
               <Plus className="h-3.5 w-3.5" /> Ещё документ
             </button>
+            {shareError && <p className="text-[12.5px] text-[#C0272D]">{shareError}</p>}
           </div>
         )}
       </Section>

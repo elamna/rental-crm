@@ -18,6 +18,8 @@ interface AnalyticsData {
     totalClients: number; freeInventory: number; totalInventory: number;
     workshopActive: number;
   };
+  /** Итоги за всё время, а не за выбранный период */
+  allTime: { revenue: number; rentals: number; debt: number; avgCheck: number };
   revenueByDay: { day: string; revenue: number; count: number }[];
   revenueByMonth: { month: string; revenue: number; count: number }[];
   topClients: { id: string; name: string; phone: string; rentals_count: number; total_paid: number; total_debt: number }[];
@@ -113,6 +115,44 @@ export default function AnalyticsPage() {
           </div>
         ) : !data ? null : (
           <>
+            {/* Общая сумма за всё время: период показывает срез, а владельцу
+                нужна и цифра целиком — раньше её приходилось складывать руками */}
+            {data.allTime && (
+              <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+                <h2 className="font-display text-[17px] font-bold">За всё время</h2>
+                <p className="mb-4 text-[13.5px] text-[var(--color-text-muted)]">
+                  Всё, что прокат заработал с начала работы, независимо от выбранного периода
+                </p>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <div className="rounded-[12px] bg-[var(--color-primary-soft)] px-4 py-3">
+                    <div className="text-[12.5px] font-medium text-[var(--color-primary-ink)]">Общая сумма</div>
+                    <div className="mt-0.5 font-display text-[22px] font-bold text-[var(--color-primary-ink)]">
+                      {formatMoney(data.allTime.revenue)}
+                    </div>
+                  </div>
+                  <div className="rounded-[12px] bg-[var(--color-bg)] px-4 py-3">
+                    <div className="text-[12.5px] text-[var(--color-text-muted)]">Аренд всего</div>
+                    <div className="mt-0.5 font-display text-[22px] font-bold">{data.allTime.rentals}</div>
+                  </div>
+                  <div className="rounded-[12px] bg-[var(--color-bg)] px-4 py-3">
+                    <div className="text-[12.5px] text-[var(--color-text-muted)]">Средний чек</div>
+                    <div className="mt-0.5 font-display text-[22px] font-bold">{formatMoney(data.allTime.avgCheck)}</div>
+                  </div>
+                  <div className="rounded-[12px] bg-[var(--color-bg)] px-4 py-3">
+                    <div className="text-[12.5px] text-[var(--color-text-muted)]">Не оплачено</div>
+                    <div
+                      className={
+                        "mt-0.5 font-display text-[22px] font-bold " +
+                        (data.allTime.debt > 0 ? "text-[#C0272D]" : "")
+                      }
+                    >
+                      {formatMoney(data.allTime.debt)}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {income && (
               <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
