@@ -9,7 +9,7 @@ import { deleteClients } from "@/lib/repo";
 export async function POST(req: NextRequest) {
   try {
     // Массовое удаление доступно только администратору
-    const me = await requireAuth("clients.edit");
+    const me = await requireAuth("clients.delete");
     if (!me.isAdmin) throw new ApiError(403, "Массовое удаление доступно только администратору");
     const { ids, withRentals } = await req.json();
     if (!Array.isArray(ids) || ids.length === 0) throw new ApiError(400, "Не выбрано ни одного клиента");

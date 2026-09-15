@@ -408,7 +408,7 @@ export function LeadModal({
 
         {error && <p className="mt-3 text-[14px] text-[#C0272D]">{error}</p>}
 
-        {lead && lead.status === "open" && can("rentals.edit") && (
+        {lead && lead.status === "open" && can("rentals.create") && (
           <button
             onClick={convertToRental}
             disabled={saving}

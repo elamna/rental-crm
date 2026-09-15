@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     // Массовое удаление доступно только администратору: обычный менеджер
     // с правом на раздел может стереть половину базы одним нажатием
-    const me = await requireAuth("rentals.edit");
+    const me = await requireAuth("rentals.delete");
     if (!me.isAdmin) throw new ApiError(403, "Массовое удаление доступно только администратору");
     const { ids } = await req.json();
     if (!Array.isArray(ids) || ids.length === 0) throw new ApiError(400, "Не выбрано ни одной аренды");

@@ -283,68 +283,110 @@ export interface RentalDocument {
 
 // ---------- Auth & RBAC ----------
 
+/**
+ * Права доступа.
+ *
+ * Раньше их было два уровня: «просмотр» и «редактирование», причём последний
+ * означал сразу и создание, и правку, и удаление. На практике этого мало:
+ * менеджеру нужно заводить аренды и править их, но удалять — нет, иначе
+ * неудобная запись просто исчезает вместе с деньгами и историей.
+ *
+ * Теперь по каждому разделу четыре действия. Отдельной строкой идут
+ * «особые» права — то, что не укладывается в эту четвёрку: например доступ
+ * к чужим задачам в «Темпе».
+ */
+export type PermissionAction = "view" | "create" | "edit" | "delete";
+
+export const PERMISSION_ACTION_LABELS: Record<PermissionAction, string> = {
+  view: "Просмотр",
+  create: "Добавление",
+  edit: "Изменение",
+  delete: "Удаление",
+};
+
+/** Разделы и то, что в них можно делать */
+export const PERMISSION_SECTIONS: {
+  key: string;
+  label: string;
+  actions: PermissionAction[];
+  /** Права, которые не ложатся в четвёрку действий */
+  special?: { key: string; label: string }[];
+}[] = [
+  { key: "dashboard", label: "Главная", actions: ["view"] },
+  { key: "rentals", label: "Аренда", actions: ["view", "create", "edit", "delete"] },
+  { key: "clients", label: "Клиенты", actions: ["view", "create", "edit", "delete"] },
+  { key: "catalog", label: "Каталог", actions: ["view", "create", "edit", "delete"] },
+  { key: "shop", label: "Магазин", actions: ["view", "create", "edit", "delete"] },
+  { key: "leads", label: "Воронка заявок", actions: ["view", "create", "edit", "delete"] },
+  { key: "workshop", label: "Мастерская", actions: ["view", "create", "edit", "delete"] },
+  { key: "delivery", label: "Доставка", actions: ["view", "create", "edit", "delete"] },
+  { key: "documents", label: "Документы", actions: ["view", "create", "edit", "delete"] },
+  {
+    // В «Темпе» деление другое: свои задачи видит и закрывает каждый, а вести
+    // чужие и смотреть KPI — отдельное право. Четвёрка действий сюда не ложится
+    key: "tasks",
+    label: "Темп (задачи)",
+    actions: ["view"],
+    special: [{ key: "tasks.manage", label: "Все задачи и KPI" }],
+  },
+  { key: "blacklist", label: "Чёрный список", actions: ["view"] },
+  { key: "analytics", label: "Аналитика", actions: ["view"] },
+  { key: "finance", label: "Финансы", actions: ["view"] },
+  { key: "settings", label: "Настройки", actions: ["view"] },
+  { key: "users", label: "Пользователи", actions: ["view", "create", "edit", "delete"] },
+];
+
 export type Permission =
   | "dashboard.view"
-  | "rentals.view" | "rentals.edit"
-  | "catalog.view" | "catalog.edit"
-  | "clients.view" | "clients.edit"
-  | "workshop.view" | "workshop.edit"
-  | "documents.view" | "documents.edit"
+  | "rentals.view" | "rentals.create" | "rentals.edit" | "rentals.delete"
+  | "catalog.view" | "catalog.create" | "catalog.edit" | "catalog.delete"
+  | "clients.view" | "clients.create" | "clients.edit" | "clients.delete"
+  | "workshop.view" | "workshop.create" | "workshop.edit" | "workshop.delete"
+  | "documents.view" | "documents.create" | "documents.edit" | "documents.delete"
   | "blacklist.view"
   | "tasks.view" | "tasks.manage"
-  | "leads.view" | "leads.edit"
-  | "delivery.view" | "delivery.edit"
-  | "shop.view" | "shop.edit"
+  | "leads.view" | "leads.create" | "leads.edit" | "leads.delete"
+  | "delivery.view" | "delivery.create" | "delivery.edit" | "delivery.delete"
+  | "shop.view" | "shop.create" | "shop.edit" | "shop.delete"
   | "analytics.view"
   | "finance.view"
   | "settings.view"
-  | "users.view" | "users.edit";
+  | "users.view" | "users.create" | "users.edit" | "users.delete";
 
-export const ALL_PERMISSIONS: Permission[] = [
-  "dashboard.view",
-  "rentals.view", "rentals.edit",
-  "catalog.view", "catalog.edit",
-  "clients.view", "clients.edit",
-  "workshop.view", "workshop.edit",
-  "documents.view", "documents.edit",
-  "blacklist.view",
-  "tasks.view", "tasks.manage",
-  "leads.view", "leads.edit",
-  "delivery.view", "delivery.edit",
-  "shop.view", "shop.edit",
-  "analytics.view",
-  "finance.view",
-  "settings.view",
-  "users.view", "users.edit",
-];
+export const ALL_PERMISSIONS: Permission[] = PERMISSION_SECTIONS.flatMap((section) => [
+  ...section.actions.map((action) => `${section.key}.${action}` as Permission),
+  ...(section.special ?? []).map((s) => s.key as Permission),
+]);
 
-export const PERMISSION_LABELS: Record<Permission, string> = {
-  "dashboard.view": "Главная — просмотр",
-  "rentals.view": "Аренда — просмотр",
-  "rentals.edit": "Аренда — редактирование",
-  "catalog.view": "Каталог — просмотр",
-  "catalog.edit": "Каталог — редактирование",
-  "clients.view": "Клиенты — просмотр",
-  "clients.edit": "Клиенты — редактирование",
-  "workshop.view": "Мастерская — просмотр",
-  "workshop.edit": "Мастерская — редактирование",
-  "documents.view": "Документы — просмотр",
-  "documents.edit": "Документы — редактирование",
-  "blacklist.view": "Чёрный список — просмотр",
-  "tasks.view": "Темп — свои задачи",
-  "tasks.manage": "Темп — все задачи и KPI",
-  "leads.view": "Воронка — просмотр заявок",
-  "leads.edit": "Воронка — создание и изменение",
-  "delivery.view": "Доставка — просмотр",
-  "delivery.edit": "Доставка — создание и выполнение",
-  "shop.view": "Магазин — просмотр",
-  "shop.edit": "Магазин — приход и продажа",
-  "analytics.view": "Аналитика — просмотр",
-  "finance.view": "Финансы — просмотр",
-  "settings.view": "Настройки — просмотр",
-  "users.view": "Пользователи — просмотр",
-  "users.edit": "Пользователи — редактирование",
-};
+/** Подпись для журнала и подсказок: «Аренда — удаление» */
+export const PERMISSION_LABELS: Record<string, string> = Object.fromEntries(
+  PERMISSION_SECTIONS.flatMap((section) => [
+    ...section.actions.map((action) => [
+      `${section.key}.${action}`,
+      `${section.label} — ${PERMISSION_ACTION_LABELS[action].toLowerCase()}`,
+    ]),
+    ...(section.special ?? []).map((s) => [s.key, `${section.label} — ${s.label.toLowerCase()}`]),
+  ])
+) as Record<string, string>;
+
+/**
+ * Старое право «редактирование» означало ещё и создание с удалением.
+ * При переходе на четыре действия его нужно разворачивать, иначе у людей
+ * молча пропала бы половина возможностей.
+ */
+export function expandLegacyPermissions(permissions: string[]): Permission[] {
+  const set = new Set(permissions);
+  for (const section of PERMISSION_SECTIONS) {
+    if (!section.actions.includes("create")) continue;
+    if (set.has(`${section.key}.edit`)) {
+      set.add(`${section.key}.create`);
+      set.add(`${section.key}.delete`);
+    }
+  }
+  // Кто ведёт все задачи, тот их и видит
+  const known = new Set<string>(ALL_PERMISSIONS);
+  return [...set].filter((p): p is Permission => known.has(p));
+}
 
 export interface AppUser {
   id: string;

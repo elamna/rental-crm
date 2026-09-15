@@ -5,7 +5,7 @@ import { importRentals } from "@/lib/repo";
 /** Импорт истории аренд из выгрузки. Как каталог и клиенты — только главный администратор */
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuth("rentals.edit");
+    const me = await requireAuth("rentals.create");
     if (!me.isOwner) throw new ApiError(403, "Импорт доступен только главному администратору");
 
     const rows = await req.json();

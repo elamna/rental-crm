@@ -24,6 +24,7 @@ const VIEWS: { key: View; label: string }[] = [
 export default function FunnelPage() {
   const { can } = useAuth();
   const canEdit = can("leads.edit");
+  const canCreate = can("leads.create");
 
   const [view, setView] = useState<View>("open");
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -156,7 +157,7 @@ export default function FunnelPage() {
           >
             <BarChart3 className="h-3.5 w-3.5" /> Сводка за день
           </button>
-        {canEdit && (
+        {canCreate && (
           <button
             onClick={() => setCreating(true)}
             className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth("catalog.edit");
+    await requireAuth("catalog.create");
     const body = await req.json();
     body.name = required(body.name, "название инструмента");
     assertNonNegativeFields(body, { rentalPricePerDay: "Стоимость аренды", purchasePrice: "Стоимость покупки" });

@@ -5,7 +5,7 @@ import { deleteInventoryItems } from "@/lib/repo";
 /** Массовое удаление позиций каталога — как аренды и клиенты, только администратору */
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuth("catalog.edit");
+    const me = await requireAuth("catalog.delete");
     if (!me.isAdmin) throw new ApiError(403, "Массовое удаление доступно только администратору");
 
     const { ids } = await req.json();

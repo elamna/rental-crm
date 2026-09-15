@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth("documents.edit");
+    await requireAuth("documents.create");
     const body = (await req.json()) as { rentalId: string; templateId: string };
 
     const rental = getRental(body.rentalId);

@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await requireAuth("leads.edit");
+    await requireAuth("leads.delete");
     deleteLead(id);
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

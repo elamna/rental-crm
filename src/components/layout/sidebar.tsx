@@ -145,7 +145,7 @@ export function Sidebar({
       </div>
 
       {/* Новая аренда */}
-      {can("rentals.edit") && (
+      {can("rentals.create") && (
         <div className="relative z-10 px-3">
           <Link
             href="/rentals/new"

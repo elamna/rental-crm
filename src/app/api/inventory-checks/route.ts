@@ -13,7 +13,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuth("catalog.edit");
+    const me = await requireAuth("catalog.create");
     const body = await req.json();
     required(body.inventoryItemId, "единицу инвентаря");
     // Кто проверял — берём из сессии, а не из тела запроса

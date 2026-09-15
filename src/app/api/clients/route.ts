@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth("clients.edit");
+    await requireAuth("clients.create");
     const body = await req.json();
     body.name = required(body.name, "имя клиента");
     assertNonNegativeFields(body, { discount: "Скидка" });

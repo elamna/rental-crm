@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth("delivery.edit");
+    await requireAuth("delivery.create");
     const body = await req.json();
     assertNonNegativeFields(body, { price: "Цена" });
     return NextResponse.json(createDelivery(body), { status: 201 });

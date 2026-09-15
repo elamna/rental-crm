@@ -13,7 +13,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth("documents.edit");
+    await requireAuth("documents.create");
     const body = await req.json();
     body.name = required(body.name, "название шаблона");
     return NextResponse.json(createDocumentTemplate(body), { status: 201 });

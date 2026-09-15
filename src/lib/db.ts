@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { expandLegacyPermissions } from "./types";
 
 // На Railway/VPS данные хранятся в /data (постоянный диск)
 // Локально — в папке data/ рядом с проектом
@@ -364,6 +365,49 @@ ensureColumns("app_users", { is_owner: "INTEGER NOT NULL DEFAULT 0", password_ch
 // Причина блокировки: пометка «в чёрном списке» без объяснения ничего не говорит
 // тому, кто откроет карточку через полгода
 ensureColumns("clients", { blacklist_reason: "TEXT", blacklisted_at: "TEXT" });
+
+/**
+ * Переход на расширенные права.
+ *
+ * Старое «редактирование» означало сразу создание, правку и удаление. После
+ * разделения на четыре действия у людей молча пропала бы половина доступа —
+ * поэтому один раз разворачиваем старые права в новые. Делается однократно:
+ * иначе снятая вручную галочка «удаление» возвращалась бы при каждом запуске.
+ */
+{
+  const done = db
+    .prepare(`SELECT value FROM company_settings WHERE key = 'permissions_v2_done'`)
+    .get() as { value: string } | undefined;
+
+  if (!done) {
+    const rows = db.prepare(`SELECT id, permissions_json FROM app_users`).all() as {
+      id: string;
+      permissions_json: string;
+    }[];
+    const update = db.prepare(`UPDATE app_users SET permissions_json = ? WHERE id = ?`);
+    let changed = 0;
+
+    for (const row of rows) {
+      let list: string[] = [];
+      try {
+        const parsed = JSON.parse(row.permissions_json || "[]");
+        if (Array.isArray(parsed)) list = parsed.filter((x): x is string => typeof x === "string");
+      } catch {
+        list = [];
+      }
+      const expanded = expandLegacyPermissions(list);
+      if (expanded.length !== list.length) {
+        update.run(JSON.stringify(expanded), row.id);
+        changed++;
+      }
+    }
+
+    db.prepare(
+      `INSERT INTO company_settings (key, value) VALUES ('permissions_v2_done', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run(new Date().toISOString());
+    if (changed) console.log(`[permissions] Старые права развёрнуты в новые у ${changed} пользователей`);
+  }
+}
 
 // Чек оплаты показывает, кто принял деньги — раньше в платеже этого не было
 ensureColumns("rental_payments", { created_by: "TEXT" });

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuth("rentals.edit");
+    const me = await requireAuth("rentals.create");
     const body = (await req.json()) as Rental & { payments?: { amount: number; method: PaymentMethod }[] };
     if (!body?.client?.id) throw new ApiError(400, "Выберите клиента");
     if (!body.startAt || !body.endAt) throw new ApiError(400, "Укажите даты аренды");

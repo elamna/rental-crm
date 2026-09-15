@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await requireAuth("rentals.edit");
+    await requireAuth("rentals.delete");
     deleteRental(id);
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

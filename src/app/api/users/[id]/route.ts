@@ -57,7 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const me = await requireAuth("users.edit");
+    const me = await requireAuth("users.delete");
     const { id } = await params;
     if (me.id === id) throw new ApiError(400, "Нельзя удалить самого себя");
     deleteUser(id);

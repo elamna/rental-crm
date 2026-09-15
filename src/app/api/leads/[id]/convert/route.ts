@@ -10,7 +10,7 @@ import { getLead, findClientByPhone, createClient } from "@/lib/repo";
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await requireAuth("rentals.edit");
+    await requireAuth("rentals.create");
 
     const lead = getLead(id);
     if (!lead) return NextResponse.json({ error: "Заявка не найдена" }, { status: 404 });

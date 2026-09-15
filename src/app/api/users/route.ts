@@ -13,7 +13,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuth("users.edit");
+    const me = await requireAuth("users.create");
     const body = await req.json();
     required(body.login, "логин");
     required(body.password, "пароль");

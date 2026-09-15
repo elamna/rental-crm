@@ -13,7 +13,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth("workshop.edit");
+    await requireAuth("workshop.create");
     const input = await req.json();
     required(input.inventoryItemId, "единицу инвентаря");
     required(input.title, "описание заявки");

@@ -5,7 +5,7 @@ import { importInventoryItems } from "@/lib/repo";
 /** Импорт каталога из выгрузки. Как и клиенты — только главный администратор */
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuth("catalog.edit");
+    const me = await requireAuth("catalog.create");
     if (!me.isOwner) throw new ApiError(403, "Импорт доступен только главному администратору");
 
     // Старый вызов присылал голый список — он должен работать и дальше

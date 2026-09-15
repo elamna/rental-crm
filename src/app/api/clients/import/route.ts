@@ -5,7 +5,7 @@ import { importClients } from "@/lib/repo";
 /** Импорт базы клиентов. Операция разовая и необратимая, поэтому только владелец системы */
 export async function POST(req: NextRequest) {
   try {
-    const me = await requireAuth("clients.edit");
+    const me = await requireAuth("clients.create");
     if (!me.isOwner) throw new ApiError(403, "Импорт доступен только главному администратору");
 
     const rows = await req.json();

@@ -21,6 +21,8 @@ interface Summary {
 export default function ShopPage() {
   const { can } = useAuth();
   const canEdit = can("shop.edit");
+  const canCreate = can("shop.create");
+  const canDelete = can("shop.delete");
 
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -69,7 +71,7 @@ export default function ShopPage() {
             Товары на продажу — уходят без возврата
           </p>
         </div>
-        {canEdit && (
+        {canCreate && (
           <button
             onClick={() => setCreating(true)}
             className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
@@ -146,7 +148,7 @@ export default function ShopPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {canEdit && (
+                      {(canEdit || canDelete) && (
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setEditing(p)}

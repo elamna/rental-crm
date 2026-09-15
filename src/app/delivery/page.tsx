@@ -28,6 +28,7 @@ interface Stats {
 export default function DeliveryPage() {
   const { can } = useAuth();
   const canEdit = can("delivery.edit");
+  const canCreate = can("delivery.create");
 
   const [tab, setTab] = useState<DeliveryStatus>("new");
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
@@ -127,7 +128,7 @@ export default function DeliveryPage() {
           >
             <BarChart3 className="h-3.5 w-3.5" /> Аналитика
           </button>
-          {canEdit && (
+          {canCreate && (
             <button
               onClick={() => setCreating(true)}
               className="flex items-center gap-1.5 whitespace-nowrap rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"

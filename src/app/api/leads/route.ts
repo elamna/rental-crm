@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth("leads.edit");
+    await requireAuth("leads.create");
     const body = await req.json();
     if (!body.title || !String(body.title).trim()) {
       return NextResponse.json({ error: "Укажите, что нужно клиенту" }, { status: 400 });

@@ -2,26 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { AppUser, Permission, ALL_PERMISSIONS, PERMISSION_LABELS } from "@/lib/types";
+import {
+  AppUser,
+  Permission,
+  ALL_PERMISSIONS,
+  PERMISSION_LABELS,
+  PERMISSION_SECTIONS,
+  PERMISSION_ACTION_LABELS,
+  PermissionAction,
+} from "@/lib/types";
 import { Plus, Pencil, Trash2, X, ShieldCheck, ShieldOff, KeyRound, Lock, Unlock, Check } from "lucide-react";
 
 // Группировка прав по разделам для UI
-const PERMISSION_GROUPS = [
-  { label: "Главная", permissions: ["dashboard.view"] as Permission[] },
-  { label: "Аренда", permissions: ["rentals.view", "rentals.edit"] as Permission[] },
-  { label: "Каталог", permissions: ["catalog.view", "catalog.edit"] as Permission[] },
-  { label: "Клиенты", permissions: ["clients.view", "clients.edit"] as Permission[] },
-  { label: "Мастерская", permissions: ["workshop.view", "workshop.edit"] as Permission[] },
-  { label: "Документы", permissions: ["documents.view", "documents.edit"] as Permission[] },
-  { label: "Чёрный список", permissions: ["blacklist.view"] as Permission[] },
-  { label: "Воронка (заявки)", permissions: ["leads.view", "leads.edit"] as Permission[] },
-  { label: "Доставка", permissions: ["delivery.view", "delivery.edit"] as Permission[] },
-  { label: "Темп (задачи)", permissions: ["tasks.view", "tasks.manage"] as Permission[] },
-  { label: "Аналитика", permissions: ["analytics.view"] as Permission[] },
-  { label: "Финансы", permissions: ["finance.view"] as Permission[] },
-  { label: "Настройки", permissions: ["settings.view"] as Permission[] },
-  { label: "Пользователи", permissions: ["users.view", "users.edit"] as Permission[] },
-];
+/** Колонки таблицы прав — в том же порядке, что и действия в разделе */
+const ACTION_COLUMNS: PermissionAction[] = ["view", "create", "edit", "delete"];
 
 export default function UsersPage() {
   const { can, user: me } = useAuth();
@@ -72,7 +66,7 @@ export default function UsersPage() {
             <h1 className="font-display text-[20px] font-bold">Пользователи</h1>
             <p className="text-[14px] text-[var(--color-text-muted)]">Управление доступом к системе</p>
           </div>
-          {can("users.edit") && (
+          {can("users.create") && (
             <button onClick={() => { setSelected(null); setModal("create"); }} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[14px] font-semibold text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]">
               <Plus className="h-4 w-4" /> Новый пользователь
             </button>
@@ -141,7 +135,7 @@ export default function UsersPage() {
                           </button>
                         )}
                         {/* Все остальные, включая назначенных администраторов */}
-                        {can("users.edit") && !u.isOwner && (
+                        {(can("users.edit") || can("users.delete")) && !u.isOwner && (
                           <>
                             <button onClick={() => { setSelected(u); setModal("edit"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)]" title="Редактировать"><Pencil className="h-3.5 w-3.5" /></button>
                             <button onClick={() => { setSelected(u); setModal("password"); }} className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]" title="Сменить пароль"><KeyRound className="h-3.5 w-3.5" /></button>
@@ -318,27 +312,90 @@ function UserModal({
                 </button>
               </div>
             </div>
-            <div className="rounded-[12px] border border-[var(--color-border)] divide-y divide-[var(--color-border)]">
-              {PERMISSION_GROUPS.map((group) => (
-                <div key={group.label} className="flex items-center justify-between px-4 py-3">
-                  <span className="text-[14px] font-medium">{group.label}</span>
-                  <div className="flex gap-3">
-                    {group.permissions.map((p) => (
-                      <label key={p} className="flex items-center gap-1.5 text-[13.5px] text-[var(--color-text-muted)] first-letter:uppercase">
-                        <input
-                          type="checkbox"
-                          checked={permissions.includes(p)}
-                          onChange={() => togglePerm(p)}
-                          className="h-3.5 w-3.5 accent-[var(--color-primary)]"
-                        />
-                        {/* Берём название из общего словаря: у «Темпа» вторая галочка
-                            не «.edit», и обе подписывались как «Просмотр» */}
-                        {PERMISSION_LABELS[p].split(" — ")[1] ?? PERMISSION_LABELS[p]}
-                      </label>
+            {/* Таблица: раздел × действие. Так сразу видно, что человек может
+                делать в каждом разделе, и можно выдать правку без удаления */}
+            <div className="overflow-x-auto rounded-[12px] border border-[var(--color-border)]">
+              <table className="w-full min-w-[520px] border-collapse text-[13.5px]">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)]">
+                    <th className="px-4 py-2.5 text-left font-semibold">Раздел</th>
+                    {ACTION_COLUMNS.map((action) => (
+                      <th key={action} className="px-2 py-2.5 text-center font-semibold text-[var(--color-text-muted)]">
+                        {PERMISSION_ACTION_LABELS[action]}
+                      </th>
                     ))}
-                  </div>
-                </div>
-              ))}
+                    <th className="px-3 py-2.5 text-left font-semibold text-[var(--color-text-muted)]">Особые</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PERMISSION_SECTIONS.map((section) => {
+                    const rowPerms = [
+                      ...section.actions.map((a) => `${section.key}.${a}` as Permission),
+                      ...(section.special ?? []).map((sp) => sp.key as Permission),
+                    ];
+                    const allOn = rowPerms.every((rp) => permissions.includes(rp));
+                    return (
+                      <tr key={section.key} className="border-b border-[var(--color-border)] last:border-0">
+                        <td className="px-4 py-2">
+                          {/* Клик по названию — быстро выдать или снять весь раздел */}
+                          <button
+                            type="button"
+                            onClick={() => setPermissions((prev) =>
+                              allOn
+                                ? prev.filter((x) => !rowPerms.includes(x))
+                                : [...new Set([...prev, ...rowPerms])]
+                            )}
+                            className="text-left font-medium hover:text-[var(--color-primary-ink)] hover:underline"
+                            title={allOn ? "Снять весь раздел" : "Выдать весь раздел"}
+                          >
+                            {section.label}
+                          </button>
+                        </td>
+
+                        {ACTION_COLUMNS.map((action) => {
+                          const perm = `${section.key}.${action}` as Permission;
+                          const exists = section.actions.includes(action);
+                          return (
+                            <td key={action} className="px-2 py-2 text-center">
+                              {exists ? (
+                                <input
+                                  type="checkbox"
+                                  checked={permissions.includes(perm)}
+                                  onChange={() => togglePerm(perm)}
+                                  title={PERMISSION_LABELS[perm]}
+                                  className="h-4 w-4 accent-[var(--color-primary)]"
+                                />
+                              ) : (
+                                <span className="text-[var(--color-text-muted)] opacity-40">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+
+                        <td className="px-3 py-2">
+                          {(section.special ?? []).length === 0 ? (
+                            <span className="text-[var(--color-text-muted)] opacity-40">—</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {(section.special ?? []).map((sp) => (
+                                <label key={sp.key} className="flex items-center gap-1.5 text-[13px] text-[var(--color-text-muted)]">
+                                  <input
+                                    type="checkbox"
+                                    checked={permissions.includes(sp.key as Permission)}
+                                    onChange={() => togglePerm(sp.key as Permission)}
+                                    className="h-4 w-4 accent-[var(--color-primary)]"
+                                  />
+                                  {sp.label}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

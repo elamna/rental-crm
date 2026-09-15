@@ -28,7 +28,7 @@ export function MobileTopBar({ onMenu }: { onMenu: () => void }) {
         <span className="truncate font-display text-[15px] font-bold text-[var(--color-sidebar-text)]">QURAL-SAIMAN</span>
       </Link>
 
-      {can("rentals.edit") && (
+      {can("rentals.create") && (
         <Link
           href="/rentals/new"
           aria-label="Новая аренда"
