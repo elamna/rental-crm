@@ -9,7 +9,7 @@ import { useIsMobile } from "@/lib/use-is-mobile";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
 import { DeliveryModal } from "@/components/delivery/delivery-modal";
-import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check, Truck, CalendarCheck } from "lucide-react";
+import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check, Truck, CalendarCheck, Link2 as LinkIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PaymentMethod, PAYMENT_METHOD_LABELS, RentalPayment } from "@/lib/types";
 
@@ -1131,6 +1131,7 @@ function DocumentsSection({ rental }: { rental: Rental }) {
 
   const [sharing, setSharing] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   /**
    * Отправка документа клиенту в WhatsApp.
@@ -1142,16 +1143,36 @@ function DocumentsSection({ rental }: { rental: Rental }) {
    * Окно WhatsApp открываем сразу после ответа сервера — если открыть его
    * заранее, браузер посчитает это всплывающим окном и заблокирует.
    */
+  /** Создаёт ссылку (или возвращает уже созданную) и обновляет список */
+  async function ensureLink(doc: RentalDocument): Promise<string> {
+    const res = await fetch(`/api/rental-documents/${doc.id}/share`, { method: "POST" });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Не удалось создать ссылку");
+    const updated = (await res.json()) as RentalDocument;
+    setDocs((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+    return `${window.location.origin}/d/${updated.shareToken}`;
+  }
+
+  /** Запасной путь: ссылку можно скопировать и отправить чем угодно */
+  async function copyLink(doc: RentalDocument) {
+    setSharing(doc.id);
+    setShareError(null);
+    try {
+      const link = await ensureLink(doc);
+      await navigator.clipboard.writeText(link);
+      setCopiedLink(doc.id);
+      setTimeout(() => setCopiedLink(null), 2500);
+    } catch (err) {
+      setShareError(err instanceof Error ? err.message : "Не удалось скопировать ссылку");
+    } finally {
+      setSharing(null);
+    }
+  }
+
   async function sendToWhatsApp(doc: RentalDocument) {
     setSharing(doc.id);
     setShareError(null);
     try {
-      const res = await fetch(`/api/rental-documents/${doc.id}/share`, { method: "POST" });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Не удалось создать ссылку");
-      const updated = (await res.json()) as RentalDocument;
-      setDocs((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
-
-      const link = `${window.location.origin}/d/${updated.shareToken}`;
+      const link = await ensureLink(doc);
       const text = `${rental.client.name}, здравствуйте! Документ по аренде № ${rental.number}: ${doc.name}\n${link}`;
       const wa = waLink(rental.client.phone, text);
       if (!wa) {
@@ -1243,6 +1264,14 @@ function DocumentsSection({ rental }: { rental: Rental }) {
                     title="Отправить клиенту в WhatsApp"
                   >
                     <MessageCircle className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => copyLink(doc)}
+                    disabled={sharing === doc.id}
+                    className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)] hover:text-[var(--color-primary-ink)] disabled:opacity-50"
+                    title="Скопировать ссылку на документ"
+                  >
+                    {copiedLink === doc.id ? <Check className="h-3.5 w-3.5 text-[#1C8A46]" /> : <LinkIcon className="h-3.5 w-3.5" />}
                   </button>
                   <button onClick={() => setPreviewDoc(doc)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Просмотр"><ExternalLink className="h-3.5 w-3.5" /></button>
                   <button onClick={() => printDoc(doc.body, doc.name, doc)} className="grid h-6 w-6 place-items-center rounded-md hover:bg-[var(--color-bg)]" title="Печать"><Printer className="h-3.5 w-3.5" /></button>

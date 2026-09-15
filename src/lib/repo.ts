@@ -2785,6 +2785,10 @@ export function setDocumentSigned(id: string, signed: boolean, actorName?: strin
  * Ключ длинный и случайный: страница открывается без входа в систему, и
  * подобрать её перебором нельзя. Ссылка создаётся только по нажатию
  * менеджера и отзывается тем же способом — тогда старая перестаёт работать.
+ *
+ * В ключе только буквы и цифры. Подчёркивание и дефис брать нельзя: в
+ * WhatsApp подчёркивание — это разметка курсива, и адрес со ссылкой
+ * приходил клиенту обрезанным, а страница отвечала «ссылка недействительна».
  */
 export function shareRentalDocument(id: string): RentalDocument | null {
   const row = db.prepare(`SELECT share_token FROM rental_documents WHERE id = ?`).get(id) as
@@ -2793,7 +2797,10 @@ export function shareRentalDocument(id: string): RentalDocument | null {
   if (!row) return null;
   if (row.share_token) return getRentalDocument(id);
 
-  const token = randomBytes(24).toString("base64url");
+  const ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = randomBytes(32);
+  let token = "";
+  for (const byte of bytes) token += ALPHABET[byte % ALPHABET.length];
   db.prepare(`UPDATE rental_documents SET share_token = ?, shared_at = ? WHERE id = ?`).run(
     token,
     new Date().toISOString(),

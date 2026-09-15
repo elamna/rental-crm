@@ -86,13 +86,16 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "relative flex shrink-0 flex-col overflow-hidden border-r border-[var(--color-sidebar-border)] transition-all duration-300 ease-out",
+          // relative здесь ставить нельзя: в Tailwind оно перебивает fixed
+          // у выдвижного меню, и на телефоне панель переставала быть плавающей —
+          // занимала 272 точки ширины и вытесняла содержимое за край экрана
+          "flex shrink-0 flex-col overflow-hidden border-r border-[var(--color-sidebar-border)] transition-all duration-300 ease-out",
           mobile
             ? cn(
                 "fixed inset-y-0 left-0 z-50 h-[100dvh] w-[272px] max-w-[85vw] shadow-2xl",
                 open ? "translate-x-0" : "-translate-x-full"
               )
-            : cn("h-[100dvh]", collapsed ? "w-[76px]" : "w-[248px]")
+            : cn("relative h-[100dvh]", collapsed ? "w-[76px]" : "w-[248px]")
         )}
         style={{ background: "var(--color-sidebar)" }}
       >
