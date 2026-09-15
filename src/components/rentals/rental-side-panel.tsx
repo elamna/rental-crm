@@ -8,7 +8,7 @@ import { useIsMobile } from "@/lib/use-is-mobile";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
 import { DeliveryModal } from "@/components/delivery/delivery-modal";
-import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check, Truck } from "lucide-react";
+import { FileText, Printer, ShieldCheck, Receipt, Plus, Undo2, PackageCheck, Siren, Trash2, ExternalLink, CreditCard, Banknote, QrCode, Building2, X, AlertCircle, MessageCircle, Check, Truck, CalendarCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { PaymentMethod, PAYMENT_METHOD_LABELS, RentalPayment } from "@/lib/types";
 
@@ -226,8 +226,31 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
   }
 
   const [issuing, setIssuing] = useState(false);
+  const [booking, setBooking] = useState(false);
   const isFullyPaid = rental.paid >= rental.total;
-  const canIssue = rental.status === "booked";
+
+  /**
+   * «Запрос» — это заявка, записанная со слов клиента: позвонил, спросил,
+   * договорились. Дальше она либо превращается в бронь, либо инструмент
+   * выдают сразу — клиент пришёл и забрал.
+   *
+   * Раньше выдача была доступна только из брони, и заявка оказывалась тупиком:
+   * открыть карточку можно, а сделать с ней нечего.
+   */
+  const canBook = rental.status === "request";
+  const canIssue = rental.status === "booked" || rental.status === "request";
+
+  async function handleBook() {
+    setBooking(true);
+    setActionError(null);
+    try {
+      await updateRental(rental.id, { status: "booked" });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Не удалось забронировать");
+    } finally {
+      setBooking(false);
+    }
+  }
 
   async function handleIssue() {
     setIssuing(true);
@@ -426,17 +449,24 @@ export function RentalSidePanel({ rental }: { rental: Rental }) {
           )}
           <button
             onClick={handleIssue}
-            disabled={issuing}
+            disabled={issuing || booking}
             className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--color-primary)] py-3.5 text-[15px] font-semibold text-[var(--color-on-primary)] transition hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
           >
             <PackageCheck className="h-4 w-4" />
             {issuing ? "Выдаём…" : "Выдать в аренду"}
           </button>
-        </div>
-      )}
-      {rental.status === "booked" && !isFullyPaid && !canIssue && (
-        <div className="rounded-[var(--radius-card)] border border-[#FFDCA8] bg-[#FFF8EA] p-3 text-[13.5px] font-medium text-[#B8620A]">
-          После полной оплаты появится кнопка «Выдать в аренду».
+          {canBook && (
+            /* Клиент только договорился и придёт позже — бронь держит инструмент
+               за ним, но со склада он ещё не ушёл */
+            <button
+              onClick={handleBook}
+              disabled={issuing || booking}
+              className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[var(--color-primary)] py-2.5 text-[14px] font-semibold text-[var(--color-primary-ink)] transition hover:bg-[var(--color-primary-soft)] disabled:opacity-60"
+            >
+              <CalendarCheck className="h-4 w-4" />
+              {booking ? "Бронируем…" : "Забронировать"}
+            </button>
+          )}
         </div>
       )}
       {rental.status === "stolen" && (
