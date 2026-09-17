@@ -3561,6 +3561,22 @@ export function funnelDaySummary(fromIso: string, toIso: string): FunnelDaySumma
   const wonRow = closed.find((r) => r.status === "won");
   const lostRow = closed.find((r) => r.status === "lost");
 
+  /**
+   * «Нет в наличии» — событие периода, а не состояние доски.
+   *
+   * Раньше считались все открытые заявки с этой пометкой за всё время, и в
+   * сводке за сегодня стояло число, накопленное за месяцы. Теперь берём по
+   * дате обращения и независимо от статуса: если заявку потом закрыли, спрос
+   * всё равно был, и вчерашняя сводка не должна меняться задним числом.
+   */
+  const unavailableRows = db
+    .prepare(`SELECT title FROM leads WHERE unavailable = 1 AND created_at >= @from AND created_at <= @to`)
+    .all(range) as { title: string }[];
+  const unavailable = unavailableRows.length;
+  const unavailableItems = [
+    ...new Set(unavailableRows.map((r) => r.title?.trim()).filter((t): t is string => !!t)),
+  ].slice(0, 20);
+
   // Кого ждём дальше: считаем по той же логике, что раскладывает карточки по доске
   const open = db
     .prepare(`SELECT title, needed_at, unavailable, future, other_city FROM leads WHERE status = 'open'`)
@@ -3575,16 +3591,11 @@ export function funnelDaySummary(fromIso: string, toIso: string): FunnelDaySumma
   let tomorrow = 0;
   let thisWeek = 0;
   let later = 0;
-  let unavailable = 0;
   let otherCity = 0;
-  const unavailableItems: string[] = [];
 
   for (const lead of open) {
-    if (lead.unavailable) {
-      unavailable++;
-      if (lead.title?.trim()) unavailableItems.push(lead.title.trim());
-      continue;
-    }
+    // Ждать нечего: товара нет. Считается выше, по дате обращения
+    if (lead.unavailable) continue;
     if (lead.other_city) {
       otherCity++;
       continue;
@@ -3610,7 +3621,7 @@ export function funnelDaySummary(fromIso: string, toIso: string): FunnelDaySumma
     later,
     unavailable,
     otherCity,
-    unavailableItems: [...new Set(unavailableItems)].slice(0, 20),
+    unavailableItems,
   };
 }
 

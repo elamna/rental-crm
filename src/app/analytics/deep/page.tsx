@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Users, Package, Clock, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Users, Package, Clock, ShieldCheck, Wrench } from "lucide-react";
 import { formatMoney, plural } from "@/lib/utils";
 import { PeriodPicker } from "@/components/ui/period-picker";
 import { periodQuery, PERIOD_LABELS, type PeriodValue } from "@/lib/period";
@@ -56,6 +56,9 @@ interface ToolRow {
   utilization: number;
   avgDays: number;
   rentalsPerRepair: number | null;
+  workshopDays: number;
+  idleCost: number;
+  repairShare: number | null;
 }
 
 interface DeepData {
@@ -76,7 +79,19 @@ interface DeepData {
     };
     rows: ToolRow[];
   };
+  workshop: {
+    totals: { tickets: number; open: number; cost: number; avgTicket: number; days: number; idleCost: number };
+    byReason: Record<string, { count: number; cost: number; days: number }>;
+    longest: { id: string; number: string; title: string; item: string; days: number; cost: number; open: boolean }[];
+    rows: ToolRow[];
+  };
 }
+
+const REASON_LABELS: Record<string, string> = {
+  service: "Плановое ТО",
+  maintenance: "Диагностика после возврата",
+  repair: "Ремонт",
+};
 
 type ClientView = "revenue" | "often" | "debt" | "late" | "sleeping";
 type ToolView = "profit" | "often" | "idle" | "breaks" | "durable";
@@ -151,7 +166,7 @@ export default function DeepAnalyticsPage() {
               <ArrowLeft className="h-3.5 w-3.5" /> Аналитика
             </Link>
             <h1 className="font-display text-[20px] font-bold">Подробный отчёт</h1>
-            <p className="text-[14px] text-[var(--color-text-muted)]">Клиенты и инструмент за {periodLabel}</p>
+            <p className="text-[14px] text-[var(--color-text-muted)]">Клиенты, инструмент и мастерская за {periodLabel}</p>
           </div>
           <PeriodPicker value={period} onChange={setPeriod} />
         </div>
@@ -170,6 +185,7 @@ export default function DeepAnalyticsPage() {
           <>
             <ClientsBlock data={data} view={clientView} onView={setClientView} periodLabel={periodLabel} />
             <ToolsBlock data={data} view={toolView} onView={setToolView} periodLabel={periodLabel} />
+            {data.workshop && <WorkshopBlock data={data} periodLabel={periodLabel} />}
           </>
         )}
       </div>
@@ -475,6 +491,152 @@ function sortTools(rows: ToolRow[], view: ToolView): ToolRow[] {
       if (aRes !== bRes) return bRes - aRes;
       return b.rentals - a.rentals;
     });
+}
+
+// ─── Мастерская ──────────────────────────────────────────────────────────────
+
+/**
+ * Мастерская глазами владельца.
+ *
+ * На странице аналитики видно, сколько мастерская стоила. Здесь второй счёт,
+ * который обычно не ведут: простой. Пока инструмент чинится, он не сдаётся, и
+ * дни в ремонте по дневной ставке — это деньги, которых прокат не увидел.
+ * Оценка сверху: в эти дни инструмент мог и не найти клиента.
+ */
+function WorkshopBlock({ data, periodLabel }: { data: DeepData; periodLabel: string }) {
+  const { totals, byReason, longest, rows } = data.workshop;
+  const reasons = Object.entries(byReason).filter(([, v]) => v.count > 0);
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#FEF6E3] text-[#B8860B]">
+          <Wrench className="h-4 w-4" />
+        </div>
+        <h2 className="font-display text-[18px] font-bold">Мастерская</h2>
+      </div>
+
+      {totals.tickets === 0 ? (
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center text-[14px] text-[var(--color-text-muted)] card-shadow">
+          За {periodLabel} мастерская не работала — заявок нет.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Tile
+              label="Заявок"
+              value={String(totals.tickets)}
+              sub={totals.open > 0 ? `${totals.open} ещё не закрыты` : "все закрыты"}
+            />
+            <Tile label="Потратили" value={formatMoney(totals.cost)} sub={`в среднем ${formatMoney(totals.avgTicket)} на заявку`} tone="danger" />
+            <Tile
+              label="Простой"
+              value={`${totals.days} ${plural(totals.days, "день", "дня", "дней")}`}
+              sub="инструмент был в мастерской, а не в работе"
+              tone="warning"
+            />
+            <Tile label="Простой стоил" value={formatMoney(totals.idleCost)} sub="по дневной ставке, оценка сверху" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+              <h3 className="mb-3 text-[15px] font-semibold">Куда уходит время и деньги</h3>
+              <div className="space-y-2">
+                {reasons.map(([key, value]) => (
+                  // Подпись тянется, цифры стоят на своих местах: при фиксированной
+                  // ширине подписи сумма упиралась в край карточки и обрезалась
+                  <div key={key} className="flex items-center gap-2 text-[13.5px]">
+                    <span className="min-w-0 flex-1 truncate text-[var(--color-text-muted)]">{REASON_LABELS[key] ?? key}</span>
+                    <span className="w-14 shrink-0 text-right text-[var(--color-text-muted)]">{value.count} шт.</span>
+                    <span className="w-16 shrink-0 text-right text-[var(--color-text-muted)]">
+                      {value.days} {plural(value.days, "день", "дня", "дней")}
+                    </span>
+                    <span className="w-24 shrink-0 text-right font-semibold">{formatMoney(value.cost)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[12.5px] text-[var(--color-text-muted)]">
+                Дни — средний срок от заявки до закрытия. Открытые заявки считаются по сегодняшний день.
+              </p>
+            </div>
+
+            <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+              <h3 className="mb-3 text-[15px] font-semibold">Самые долгие ремонты</h3>
+              <div className="space-y-2">
+                {longest.map((t) => (
+                  <div key={t.id} className="flex items-center gap-3 text-[13.5px]">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{t.item}</div>
+                      <div className="truncate text-[12px] text-[var(--color-text-muted)]">
+                        {t.number} · {t.title}
+                        {t.open ? " · ещё в работе" : ""}
+                      </div>
+                    </div>
+                    <span className={`shrink-0 font-semibold ${t.open ? "text-[#B8620A]" : ""}`}>
+                      {t.days} {plural(t.days, "день", "дня", "дней")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+            <h3 className="mb-4 text-[15px] font-semibold">Что чиним и почём</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-[14px]">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] text-left text-[13px] text-[var(--color-text-muted)]">
+                    <th className="pb-2 font-semibold">Инструмент</th>
+                    <th className="pb-2 text-right font-semibold">Заявок</th>
+                    <th className="pb-2 text-right font-semibold">Ремонтов</th>
+                    <th className="pb-2 text-right font-semibold">Потратили</th>
+                    <th className="pb-2 text-right font-semibold">От цены покупки</th>
+                    <th className="pb-2 text-right font-semibold">Простой</th>
+                    <th className="pb-2 text-right font-semibold">Простой стоил</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.slice(0, 25).map((t) => (
+                    <tr key={t.id} className="border-b border-[var(--color-border)] last:border-0">
+                      <td className="py-2.5">
+                        <Link href={`/catalog/${t.id}`} className="font-medium text-[var(--color-primary-ink)] underline-offset-2 hover:underline">
+                          {t.name}
+                        </Link>
+                        <div className="text-[12.5px] text-[var(--color-text-muted)]">
+                          {t.purchaseCost ? `куплен за ${formatMoney(t.purchaseCost)}` : t.sku || "без артикула"}
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-right">{t.tickets}</td>
+                      <td className={`py-2.5 text-right ${t.repairs > 0 ? "font-semibold text-[#C0272D]" : "text-[var(--color-text-muted)]"}`}>
+                        {t.repairs || "—"}
+                      </td>
+                      <td className="py-2.5 text-right font-semibold">{formatMoney(t.repairCost)}</td>
+                      <td className="py-2.5 text-right">
+                        {t.repairShare === null ? (
+                          <span className="text-[var(--color-text-muted)]">цена не указана</span>
+                        ) : (
+                          // Ремонт съел половину стоимости — инструмент пора менять,
+                          // а не чинить: об этом и говорит красная цифра
+                          <span className={t.repairShare >= 50 ? "font-semibold text-[#C0272D]" : "text-[var(--color-text-muted)]"}>
+                            {t.repairShare}%
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 text-right text-[var(--color-text-muted)]">
+                        {t.workshopDays} {plural(t.workshopDays, "день", "дня", "дней")}
+                      </td>
+                      <td className="py-2.5 text-right text-[var(--color-text-muted)]">{formatMoney(t.idleCost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </section>
+  );
 }
 
 // ─── Общие мелочи ────────────────────────────────────────────────────────────

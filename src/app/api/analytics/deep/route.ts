@@ -53,6 +53,7 @@ interface ItemRow {
   category: string | null;
   status: string;
   purchase_cost: number | null;
+  rental_price: number;
   created_at: string;
 }
 
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
       .all() as ClientRow[];
 
     const items = db
-      .prepare(`SELECT id, name, sku, category, status, purchase_cost, created_at FROM inventory_items`)
+      .prepare(`SELECT id, name, sku, category, status, purchase_cost, rental_price, created_at FROM inventory_items`)
       .all() as ItemRow[];
 
     // ── Клиенты ────────────────────────────────────────────────────────────
@@ -131,12 +132,14 @@ export async function GET(req: NextRequest) {
       repairs: number;
       repairCost: number;
       lastRepairAt: string | null;
+      /** Сколько суток позиция пролежала в мастерской вместо работы */
+      workshopDays: number;
     }
     const itemStats = new Map<string, ItemStat>();
     const itemStatFor = (id: string) => {
       let stat = itemStats.get(id);
       if (!stat) {
-        stat = { rentals: 0, days: 0, revenue: 0, tickets: 0, repairs: 0, repairCost: 0, lastRepairAt: null };
+        stat = { rentals: 0, days: 0, revenue: 0, tickets: 0, repairs: 0, repairCost: 0, lastRepairAt: null, workshopDays: 0 };
         itemStats.set(id, stat);
       }
       return stat;
@@ -259,19 +262,75 @@ export async function GET(req: NextRequest) {
     // ── Мастерская по позициям ─────────────────────────────────────────────
     const tickets = db
       .prepare(
-        `SELECT inventory_item_id, reason, lines_json, created_at
+        `SELECT id, number, title, status, reason, inventory_item_id, lines_json, created_at, updated_at
          FROM workshop_tickets WHERE created_at >= ? AND created_at <= ?`
       )
-      .all(from, to) as { inventory_item_id: string; reason: string; lines_json: string; created_at: string }[];
+      .all(from, to) as {
+      id: string;
+      number: string;
+      title: string;
+      status: string;
+      reason: string;
+      inventory_item_id: string;
+      lines_json: string;
+      created_at: string;
+      updated_at: string;
+    }[];
+
+    const itemById = new Map(items.map((i) => [i.id, i]));
+    const byReason: Record<string, { count: number; cost: number; days: number }> = {
+      service: { count: 0, cost: 0, days: 0 },
+      maintenance: { count: 0, cost: 0, days: 0 },
+      repair: { count: 0, cost: 0, days: 0 },
+    };
+    const longest: { id: string; number: string; title: string; item: string; days: number; cost: number; open: boolean }[] = [];
+    let workshopCostTotal = 0;
+    let workshopDaysTotal = 0;
+    let workshopOpen = 0;
 
     for (const ticket of tickets) {
       const stat = itemStatFor(ticket.inventory_item_id);
+      const cost = parseLines(ticket.lines_json).reduce((sum, l) => sum + num(l.qty) * num(l.price), 0);
       stat.tickets += 1;
-      stat.repairCost += parseLines(ticket.lines_json).reduce((sum, l) => sum + num(l.qty) * num(l.price), 0);
+      stat.repairCost += cost;
       if (ticket.reason === "repair") {
         stat.repairs += 1;
         if (!stat.lastRepairAt || ticket.created_at > stat.lastRepairAt) stat.lastRepairAt = ticket.created_at;
       }
+
+      /**
+       * Сколько суток инструмент стоит в мастерской. Закрытая заявка — от
+       * создания до последнего изменения (другого следа о закрытии в базе
+       * нет), открытая — до сих пор: она простаивает прямо сейчас.
+       */
+      const opened = Date.parse(ticket.created_at);
+      const isOpen = ticket.status !== "done" && ticket.status !== "archived";
+      const closed = isOpen ? now : Date.parse(ticket.updated_at);
+      const days = !isNaN(opened) && !isNaN(closed) && closed > opened ? (closed - opened) / DAY : 0;
+      stat.workshopDays += days;
+      workshopCostTotal += cost;
+      workshopDaysTotal += days;
+      if (isOpen) workshopOpen += 1;
+
+      const reason = byReason[ticket.reason] ?? (byReason[ticket.reason] = { count: 0, cost: 0, days: 0 });
+      reason.count += 1;
+      reason.cost += cost;
+      reason.days += days;
+
+      longest.push({
+        id: ticket.id,
+        number: ticket.number,
+        title: ticket.title,
+        item: itemById.get(ticket.inventory_item_id)?.name ?? "Списанный инструмент",
+        days: Math.round(days * 10) / 10,
+        cost: Math.round(cost),
+        open: isOpen,
+      });
+    }
+
+    for (const value of Object.values(byReason)) {
+      value.cost = Math.round(value.cost);
+      value.days = value.count > 0 ? Math.round((value.days / value.count) * 10) / 10 : 0;
     }
 
     const toolRows = items
@@ -284,6 +343,7 @@ export async function GET(req: NextRequest) {
         // внутри периода: купленный вчера не должен выглядеть простаивающим
         const bornAt = Math.max(Date.parse(item.created_at) || periodStart, periodStart);
         const ageDays = Math.max(1, (now - bornAt) / DAY);
+        const workshopDays = Math.round((stat?.workshopDays ?? 0) * 10) / 10;
         return {
           id: item.id,
           name: item.name,
@@ -299,6 +359,12 @@ export async function GET(req: NextRequest) {
           tickets: stat?.tickets ?? 0,
           repairs: stat?.repairs ?? 0,
           lastRepairAt: stat?.lastRepairAt ?? null,
+          workshopDays,
+          // Во сколько обошёлся простой: дни в мастерской по дневной ставке.
+          // Это оценка сверху — инструмент мог и не найти клиента в эти дни
+          idleCost: Math.round(workshopDays * num(item.rental_price)),
+          // Сколько процентов от цены покупки уже съел ремонт
+          repairShare: item.purchase_cost ? Math.round((repairCost / item.purchase_cost) * 100) : null,
           utilization: Math.min(100, Math.round((days / ageDays) * 100)),
           avgDays: stat && stat.rentals > 0 ? Math.round((days / stat.rentals) * 10) / 10 : 0,
           // Наработка до поломки: сколько выдач выдерживает между ремонтами
@@ -350,6 +416,19 @@ export async function GET(req: NextRequest) {
           unlinkedRevenue: Math.round(unlinkedRevenue),
         },
         rows: toolRows,
+      },
+      workshop: {
+        totals: {
+          tickets: tickets.length,
+          open: workshopOpen,
+          cost: Math.round(workshopCostTotal),
+          avgTicket: tickets.length > 0 ? Math.round(workshopCostTotal / tickets.length) : 0,
+          days: Math.round(workshopDaysTotal),
+          idleCost: toolRows.reduce((sum, t) => sum + t.idleCost, 0),
+        },
+        byReason,
+        longest: longest.sort((a, b) => b.days - a.days).slice(0, 6),
+        rows: toolRows.filter((t) => t.tickets > 0).sort((a, b) => b.repairCost - a.repairCost),
       },
     });
   } catch (e) {

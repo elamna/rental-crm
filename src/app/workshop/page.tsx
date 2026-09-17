@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { InventoryItem, WorkshopLine, WorkshopReason, WorkshopStatus, WorkshopTicket } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
-import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Settings2, Wrench, X, Trash2, PackageSearch } from "lucide-react";
+import { inventoryStatusLabels } from "@/lib/mock-data";
+import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Search, Settings2, X, Trash2, PackageSearch } from "lucide-react";
 
 const columns: { key: WorkshopStatus; label: string; dot: string; icon: React.ElementType }[] = [
   { key: "new", label: "Новая", dot: "bg-[#8B8F98]", icon: Circle },
@@ -34,9 +35,44 @@ export default function WorkshopPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [reasonFilter, setReasonFilter] = useState<WorkshopReason | "all">("all");
+  // Архив копится годами и на доске не нужен: открывается по кнопке
+  const [showArchive, setShowArchive] = useState(false);
 
   const selected = tickets.find((ticket) => ticket.id === selectedId) ?? tickets[0];
   const activeTickets = tickets.filter((ticket) => ticket.status !== "archived");
+
+  /** Инструменты с незакрытой заявкой — чтобы не заводить вторую по тому же */
+  const busyItemIds = useMemo(
+    () => new Set(activeTickets.map((ticket) => ticket.inventoryItemId)),
+    [activeTickets]
+  );
+
+  /**
+   * Что показывать на доске.
+   *
+   * При шестидесяти заявках доска без отбора нечитаема: приёмщик ищет свой
+   * станок глазами по всем колонкам. Поиск идёт по инструменту, номеру заявки
+   * и названию — тому, что человек помнит.
+   */
+  const visibleColumns = useMemo(
+    () => (showArchive ? columns : columns.filter((column) => column.key !== "archived")),
+    [showArchive]
+  );
+
+  const visibleTickets = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return tickets.filter((ticket) => {
+      if (!showArchive && ticket.status === "archived") return false;
+      if (reasonFilter !== "all" && ticket.reason !== reasonFilter) return false;
+      if (!q) return true;
+      const haystack = `${ticket.inventoryItem?.name ?? ""} ${ticket.number} ${ticket.title} ${ticket.inventoryItem?.sku ?? ""}`.toLowerCase();
+      return q.split(/\s+/).every((word) => haystack.includes(word));
+    });
+  }, [tickets, query, reasonFilter, showArchive]);
+
+  const filtering = query.trim() !== "" || reasonFilter !== "all";
   const brokenByItem = useMemo(() => {
     const map = new Map<string, { item: InventoryItem | undefined; count: number; cost: number }>();
     for (const ticket of tickets) {
@@ -125,21 +161,82 @@ export default function WorkshopPage() {
           <Metric label="Обслуживание" value={String(totals.service)} />
         </div>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        {/* Доска занимает всю ширину: при шестидесяти заявках ей нужно место,
+            а карточка заявки и сводка по поломкам спокойно живут под ней */}
+        <div className="space-y-5">
           <section className="min-w-0 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-[17px] font-bold">Доска заявок</h2>
                 <p className="text-[13.5px] text-[var(--color-text-muted)]">Перетащите карточку при смене этапа</p>
               </div>
-              <span className="rounded-full bg-[var(--color-bg)] px-3 py-1 text-[13px] font-semibold text-[var(--color-text-muted)]">
-                {totals.active} активных
+              <span className="shrink-0 rounded-full bg-[var(--color-bg)] px-3 py-1 text-[13px] font-semibold text-[var(--color-text-muted)]">
+                {filtering ? `${visibleTickets.length} из ${totals.active}` : `${totals.active} активных`}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {columns.map((column) => {
-                const columnTickets = tickets.filter((ticket) => ticket.status === column.key);
+            {/* Отбор: без него доска на шестьдесят заявок превращается в стену */}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[200px] flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="crm-input py-2 pl-9 text-[13.5px]"
+                  placeholder="Инструмент, номер или поломка"
+                />
+                {query && (
+                  <button
+                    onClick={() => setQuery("")}
+                    className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              {/* Переносится по словам: на телефоне «Диагностика» уезжала за край
+                  экрана и нажать её было нельзя */}
+              <div className="flex flex-wrap items-center gap-1 rounded-[10px] bg-[var(--color-bg)] p-1">
+                {(
+                  [
+                    { key: "all", label: "Все" },
+                    { key: "repair", label: "Ремонт" },
+                    { key: "service", label: "Обслуживание" },
+                    { key: "maintenance", label: "Диагностика" },
+                  ] as { key: WorkshopReason | "all"; label: string }[]
+                ).map((option) => (
+                  <button
+                    key={option.key}
+                    onClick={() => setReasonFilter(option.key)}
+                    className={cn(
+                      "rounded-[8px] px-2.5 py-1.5 text-[13px] font-semibold transition",
+                      reasonFilter === option.key
+                        ? "bg-[var(--color-surface)] text-[var(--color-primary-ink)] shadow-sm"
+                        : "text-[var(--color-text-muted)]"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowArchive((value) => !value)}
+                className={cn(
+                  "rounded-[10px] border px-3 py-2 text-[13px] font-semibold transition",
+                  showArchive
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-ink)]"
+                    : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-bg)]"
+                )}
+              >
+                {showArchive ? "Скрыть архив" : "Архив"}
+              </button>
+            </div>
+
+            {/* Колонки фиксированной ширины и своя прокрутка у каждой: доска
+                растёт вбок, а не тянет страницу вниз на несколько экранов */}
+            <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
+              {visibleColumns.map((column) => {
+                const columnTickets = visibleTickets.filter((ticket) => ticket.status === column.key);
                 return (
                   <div
                     key={column.key}
@@ -149,16 +246,18 @@ export default function WorkshopPage() {
                       setDraggingId(null);
                       if (ticket) await moveTicket(ticket, column.key);
                     }}
-                    className="min-h-[360px] rounded-[12px] bg-[var(--color-bg)] p-3"
+                    className="flex w-[240px] shrink-0 snap-start flex-col rounded-[12px] bg-[var(--color-bg)] p-3"
                   >
                     <div className="mb-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-[14px] font-semibold">
-                        <span className={cn("h-2.5 w-2.5 rounded-full", column.dot)} />
-                        {column.label}
+                      <div className="flex min-w-0 items-center gap-2 text-[13.5px] font-semibold">
+                        <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", column.dot)} />
+                        <span className="truncate">{column.label}</span>
                       </div>
-                      <span className="text-[13px] text-[var(--color-text-muted)]">{columnTickets.length}</span>
+                      <span className="shrink-0 rounded-full bg-[var(--color-surface)] px-2 py-0.5 text-[12.5px] font-semibold text-[var(--color-text-muted)]">
+                        {columnTickets.length}
+                      </span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="max-h-[52vh] min-h-[120px] space-y-2 overflow-y-auto pr-0.5">
                       {columnTickets.map((ticket) => (
                         <button
                           key={ticket.id}
@@ -166,26 +265,32 @@ export default function WorkshopPage() {
                           onDragStart={() => setDraggingId(ticket.id)}
                           onClick={() => setSelectedId(ticket.id)}
                           className={cn(
-                            "w-full rounded-[10px] border bg-[var(--color-surface)] px-3 py-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
-                            selected?.id === ticket.id ? "border-[var(--color-primary)] shadow-[0_0_0_2px_rgba(14,124,102,0.18)]" : "border-[var(--color-border)]"
+                            "w-full rounded-[10px] border bg-[var(--color-surface)] px-2.5 py-2 text-left transition hover:shadow-sm",
+                            selected?.id === ticket.id
+                              ? "border-[var(--color-primary)] shadow-[0_0_0_2px_rgba(14,124,102,0.18)]"
+                              : "border-[var(--color-border)]"
                           )}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="truncate text-[14px] font-semibold">{ticket.inventoryItem?.name ?? ticket.title}</div>
-                              <div className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">{ticket.title}</div>
-                            </div>
-                            {ticket.reason === "repair" ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-[#C0272D]" /> : <Settings2 className={cn("h-3.5 w-3.5 shrink-0", ticket.reason === "service" ? "text-[#2B5FD9]" : "text-[#B8860B]")} />}
+                          <div className="flex items-start justify-between gap-1.5">
+                            <div className="truncate text-[13.5px] font-semibold">{ticket.inventoryItem?.name ?? ticket.title}</div>
+                            {ticket.reason === "repair" ? (
+                              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#C0272D]" />
+                            ) : (
+                              <Settings2
+                                className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", ticket.reason === "service" ? "text-[#2B5FD9]" : "text-[#B8860B]")}
+                              />
+                            )}
                           </div>
-                          <div className="mt-2 flex items-center justify-between text-[12.5px]">
+                          <div className="truncate text-[12px] text-[var(--color-text-muted)]">{ticket.title}</div>
+                          <div className="mt-1.5 flex items-center justify-between text-[12px]">
                             <span className="text-[var(--color-text-muted)]">{ticket.number}</span>
-                            <span className="font-semibold">{formatMoney(ticket.total)}</span>
+                            {ticket.total > 0 && <span className="font-semibold">{formatMoney(ticket.total)}</span>}
                           </div>
                         </button>
                       ))}
                       {columnTickets.length === 0 && (
-                        <div className="grid h-24 place-items-center rounded-[10px] border border-dashed border-[var(--color-border)] text-[13px] text-[var(--color-text-muted)]">
-                          Нет заявок
+                        <div className="grid h-20 place-items-center rounded-[10px] border border-dashed border-[var(--color-border)] px-2 text-center text-[12.5px] text-[var(--color-text-muted)]">
+                          {filtering ? "Ничего не нашлось" : "Нет заявок"}
                         </div>
                       )}
                     </div>
@@ -195,7 +300,7 @@ export default function WorkshopPage() {
             </div>
           </section>
 
-          <aside className="space-y-4">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
             {selected ? (
               <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <div className="mb-4 flex items-start justify-between gap-3">
@@ -310,11 +415,18 @@ export default function WorkshopPage() {
                 {brokenByItem.length === 0 && <p className="text-[13.5px] text-[var(--color-text-muted)]">Данные появятся после первых заявок.</p>}
               </div>
             </section>
-          </aside>
+          </div>
         </div>
       </div>
 
-      {showNew && <NewTicketModal inventory={inventory} onClose={() => setShowNew(false)} onCreate={addWorkshopTicket} />}
+      {showNew && (
+        <NewTicketModal
+          inventory={inventory}
+          busyIds={busyItemIds}
+          onClose={() => setShowNew(false)}
+          onCreate={addWorkshopTicket}
+        />
+      )}
     </div>
   );
 }
@@ -328,17 +440,136 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * Поиск оборудования для заявки.
+ *
+ * Был обычный выпадающий список со всем складом: чтобы найти перфоратор среди
+ * трёхсот позиций, приходилось листать. Теперь поле поиска по названию,
+ * артикулу, серийному номеру и категории, а рядом с каждой строкой — состояние
+ * позиции: приёмщик сразу видит, что инструмент уже в мастерской, и не заводит
+ * вторую заявку по тому же станку.
+ */
+function InventoryPicker({
+  items,
+  value,
+  onChange,
+  busyIds,
+}: {
+  items: InventoryItem[];
+  value: string;
+  onChange: (id: string) => void;
+  busyIds: Set<string>;
+}) {
+  const [query, setQuery] = useState("");
+  const selected = items.find((item) => item.id === value);
+
+  const found = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items.slice(0, 40);
+    const words = q.split(/\s+/);
+    return items
+      .filter((item) => {
+        const haystack = `${item.name} ${item.sku ?? ""} ${item.serialNumber ?? ""} ${item.category ?? ""}`.toLowerCase();
+        return words.every((word) => haystack.includes(word));
+      })
+      .slice(0, 40);
+  }, [items, query]);
+
+  return (
+    <div>
+      <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Оборудование</span>
+
+      {selected ? (
+        <div className="flex items-center gap-3 rounded-[10px] border border-[var(--color-primary)] bg-[var(--color-primary-soft)] px-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-semibold text-[var(--color-primary-ink)]">{selected.name}</div>
+            <div className="truncate text-[12.5px] text-[var(--color-primary-ink)] opacity-80">
+              {[selected.sku, selected.category, inventoryStatusLabels[selected.status]].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              onChange("");
+              setQuery("");
+            }}
+            className="shrink-0 rounded-[8px] px-2 py-1 text-[13px] font-semibold text-[var(--color-primary-ink)] hover:bg-[var(--color-surface)]"
+          >
+            Изменить
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && found[0]) {
+                  event.preventDefault();
+                  onChange(found[0].id);
+                }
+              }}
+              className="crm-input pl-9"
+              placeholder="Название, артикул или серийный номер"
+            />
+          </div>
+          <div className="mt-2 max-h-56 overflow-y-auto rounded-[10px] border border-[var(--color-border)]">
+            {found.length === 0 ? (
+              <p className="px-3 py-4 text-center text-[13.5px] text-[var(--color-text-muted)]">Ничего не нашлось</p>
+            ) : (
+              found.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onChange(item.id)}
+                  className="flex w-full items-center gap-3 border-b border-[var(--color-border)] px-3 py-2 text-left last:border-0 hover:bg-[var(--color-bg)]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13.5px] font-medium">{item.name}</div>
+                    <div className="truncate text-[12px] text-[var(--color-text-muted)]">
+                      {[item.sku, item.category].filter(Boolean).join(" · ") || "без артикула"}
+                    </div>
+                  </div>
+                  {busyIds.has(item.id) ? (
+                    <span className="shrink-0 rounded-full bg-[#FEF6E3] px-2 py-0.5 text-[11.5px] font-semibold text-[#B8860B]">
+                      уже в мастерской
+                    </span>
+                  ) : (
+                    <span className="shrink-0 text-[11.5px] text-[var(--color-text-muted)]">
+                      {inventoryStatusLabels[item.status]}
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+          {!query && items.length > found.length && (
+            <p className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">
+              Показаны первые {found.length} из {items.length} — начните вводить название.
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function NewTicketModal({
   inventory,
+  busyIds,
   onClose,
   onCreate,
 }: {
   inventory: InventoryItem[];
+  busyIds: Set<string>;
   onClose: () => void;
   onCreate: (input: Partial<WorkshopTicket>) => Promise<WorkshopTicket>;
 }) {
   const candidates = inventory.filter((item) => item.status !== "written_off");
-  const [inventoryItemId, setInventoryItemId] = useState(candidates[0]?.id ?? "");
+  // Пусто по умолчанию: раньше подставлялась первая позиция склада, и заявку
+  // ничего не мешало создать не на тот инструмент, просто нажав «Создать»
+  const [inventoryItemId, setInventoryItemId] = useState("");
   const [reason, setReason] = useState<WorkshopReason>("repair");
   const [title, setTitle] = useState("Ремонт оборудования");
   const [description, setDescription] = useState("");
@@ -378,16 +609,12 @@ function NewTicketModal({
           </button>
         </div>
         <div className="space-y-3">
-          <label className="block">
-            <span className="mb-1 block text-[13px] font-medium text-[var(--color-text-muted)]">Оборудование</span>
-            <select value={inventoryItemId} onChange={(event) => setInventoryItemId(event.target.value)} className="crm-input">
-              {candidates.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} · {item.sku || item.id}
-                </option>
-              ))}
-            </select>
-          </label>
+          <InventoryPicker items={candidates} value={inventoryItemId} onChange={setInventoryItemId} busyIds={busyIds} />
+          {busyIds.has(inventoryItemId) && (
+            <p className="rounded-[10px] bg-[#FEF6E3] px-3 py-2 text-[13px] text-[#8A6414]">
+              По этому инструменту уже есть незакрытая заявка. Если это тот же случай — лучше дописать её, а не заводить вторую.
+            </p>
+          )}
           <div className="grid grid-cols-3 gap-2">
             {(
               [
