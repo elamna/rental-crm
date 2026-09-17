@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, Users, Package, ClipboardList, AlertCircle, Wrench, CreditCard, ArrowUpRight } from "lucide-react";
-import { formatMoney } from "@/lib/utils";
+import { TrendingUp, Users, Package, ClipboardList, Wrench, CreditCard, ArrowUpRight } from "lucide-react";
+import { formatMoney, plural } from "@/lib/utils";
 import { PeriodPicker } from "@/components/ui/period-picker";
 import { periodQuery, PERIOD_LABELS, type Granularity, type PeriodValue } from "@/lib/period";
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/types";
+import { useAuth } from "@/components/auth/auth-provider";
 import Link from "next/link";
 
 interface AnalyticsData {
@@ -52,6 +53,34 @@ interface LedgerData {
   totals: { paidTotal: number; debtTotal: number; payers: number; debtors: number };
 }
 
+/**
+ * Расходы мастерской за период.
+ *
+ * Своя цифра рядом с поступлениями: ремонт собственного инструмента — это
+ * деньги, которые прокат тратит на себя, и без них выручка выглядит больше,
+ * чем есть на самом деле.
+ */
+interface WorkshopCosts {
+  total: number;
+  parts: number;
+  services: number;
+  tickets: number;
+  avgTicket: number;
+  byReason: Record<string, { amount: number; count: number }>;
+  open: { count: number; amount: number; waitingParts: number };
+  avgRepairDays: number | null;
+  byMonth: { month: string; amount: number; count: number }[];
+  topItems: { id: string; name: string; tickets: number; repairs: number; amount: number }[];
+  topParts: { name: string; qty: number; amount: number }[];
+  allTime: { total: number; tickets: number };
+}
+
+const REASON_LABELS: Record<string, string> = {
+  service: "Плановое ТО",
+  maintenance: "Диагностика после возврата",
+  repair: "Ремонт",
+};
+
 const STATUS_LABELS: Record<string, string> = {
   request: "Запрос", booked: "Забронировано", active: "В аренде",
   completed: "Завершено", overdue: "Просрочено", stolen: "Украдено", cancelled: "Отменено",
@@ -69,6 +98,8 @@ export default function AnalyticsPage() {
   const [incomeView, setIncomeView] = useState<"all" | "methods" | "sources">("all");
   const [ledger, setLedger] = useState<LedgerData | null>(null);
   const [ledgerView, setLedgerView] = useState<"paid" | "unpaid">("paid");
+  const [costs, setCosts] = useState<WorkshopCosts | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     setLoading(true);
@@ -85,6 +116,11 @@ export default function AnalyticsPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setLedger)
       .catch(() => setLedger(null));
+
+    fetch(`/api/analytics/workshop?${periodQuery(period)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setCosts)
+      .catch(() => setCosts(null));
   }, [period]);
 
   const periodLabel = period.key === "custom" ? "выбранный период" : PERIOD_LABELS[period.key].toLowerCase();
@@ -104,7 +140,20 @@ export default function AnalyticsPage() {
             <h1 className="font-display text-[20px] font-bold">Аналитика</h1>
             <p className="text-[14px] text-[var(--color-text-muted)]">Ключевые показатели бизнеса</p>
           </div>
-          <PeriodPicker value={period} onChange={setPeriod} />
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Разбор по клиентам и инструменту — разговор владельца с самим
+                собой, поэтому ссылку видит только администратор */}
+            {user?.isAdmin && (
+              <Link
+                href="/analytics/deep"
+                className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[13.5px] font-semibold text-[var(--color-primary-ink)] hover:bg-[var(--color-bg)]"
+              >
+                Подробный отчёт
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
+            <PeriodPicker value={period} onChange={setPeriod} />
+          </div>
         </div>
       </header>
 
@@ -214,6 +263,8 @@ export default function AnalyticsPage() {
                 </p>
               </section>
             )}
+
+            {costs && <WorkshopCostsSection costs={costs} periodLabel={periodLabel} />}
 
             {ledger && <PayersSection ledger={ledger} view={ledgerView} onView={setLedgerView} periodLabel={periodLabel} />}
 
@@ -368,6 +419,158 @@ function IncomeTile({ label, value, total, tone }: { label: string; value: numbe
       </div>
       <div className="mt-1 text-[12.5px] text-[var(--color-text-muted)]">{share}% от поступлений</div>
     </div>
+  );
+}
+
+/**
+ * Расходы мастерской за период.
+ *
+ * Показываем не только сумму, но и из чего она собрана: запчасти или работа,
+ * плановое ТО или аварийный ремонт. Отдельной строкой — деньги в незакрытых
+ * заявках: они уже вложены, но инструмент ещё не вернулся в работу.
+ */
+function WorkshopCostsSection({ costs, periodLabel }: { costs: WorkshopCosts; periodLabel: string }) {
+  const reasons = Object.entries(costs.byReason).filter(([, v]) => v.count > 0);
+  const chart = costs.byMonth.map((m) => ({ label: formatMonth(m.month), amount: m.amount }));
+
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-[17px] font-bold">Расходы мастерской</h2>
+          <p className="text-[13.5px] text-[var(--color-text-muted)]">
+            За {periodLabel}: {costs.tickets} {plural(costs.tickets, "заявка", "заявки", "заявок")}
+            {costs.tickets > 0 ? `, в среднем ${formatMoney(costs.avgTicket)} на заявку` : ""}
+            {costs.avgRepairDays === null
+              ? ""
+              : costs.avgRepairDays < 1
+                ? " · закрываем за день"
+                : ` · закрываем за ${costs.avgRepairDays} ${plural(costs.avgRepairDays, "день", "дня", "дней")}`}
+          </p>
+        </div>
+        <Link
+          href="/workshop"
+          className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--color-primary-ink)] hover:underline"
+        >
+          В мастерскую <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
+      {costs.tickets === 0 ? (
+        <p className="py-6 text-center text-[14px] text-[var(--color-text-muted)]">
+          За {periodLabel} мастерская денег не потратила. За всё время — {formatMoney(costs.allTime.total)}.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="rounded-[12px] bg-[#FDECEC] px-4 py-3">
+              <div className="text-[12.5px] font-medium text-[#C0272D]">Потрачено за период</div>
+              <div className="mt-0.5 font-display text-[22px] font-bold text-[#C0272D]">{formatMoney(costs.total)}</div>
+            </div>
+            <div className="rounded-[12px] bg-[var(--color-bg)] px-4 py-3">
+              <div className="text-[12.5px] text-[var(--color-text-muted)]">Запчасти</div>
+              <div className="mt-0.5 font-display text-[22px] font-bold">{formatMoney(costs.parts)}</div>
+            </div>
+            <div className="rounded-[12px] bg-[var(--color-bg)] px-4 py-3">
+              <div className="text-[12.5px] text-[var(--color-text-muted)]">Работа</div>
+              <div className="mt-0.5 font-display text-[22px] font-bold">{formatMoney(costs.services)}</div>
+            </div>
+            <div className="rounded-[12px] bg-[var(--color-bg)] px-4 py-3">
+              <div className="text-[12.5px] text-[var(--color-text-muted)]">В незакрытых заявках</div>
+              <div className="mt-0.5 font-display text-[22px] font-bold">{formatMoney(costs.open.amount)}</div>
+              <div className="mt-0.5 text-[12.5px] text-[var(--color-text-muted)]">
+                {costs.open.count} в работе
+                {costs.open.waitingParts > 0
+                  ? `, ${costs.open.waitingParts} ${plural(costs.open.waitingParts, "ждёт", "ждут", "ждут")} запчасти`
+                  : ""}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div>
+              <h3 className="mb-2 text-[14px] font-semibold">На что уходят деньги</h3>
+              <div className="space-y-2">
+                {reasons.map(([key, value]) => (
+                  <div key={key} className="flex items-center gap-3 text-[13.5px]">
+                    <span className="w-32 shrink-0 truncate text-[var(--color-text-muted)] sm:w-52">{REASON_LABELS[key] ?? key}</span>
+                    {/* Полоску прячем на телефоне: вместе с ней сумма уезжала за край экрана */}
+                    <div className="hidden h-2 flex-1 overflow-hidden rounded-full bg-[var(--color-bg)] sm:block">
+                      <div
+                        className="h-full rounded-full bg-[#C0272D]"
+                        style={{ width: `${Math.max(2, costs.total > 0 ? Math.round((value.amount / costs.total) * 100) : 0)}%` }}
+                      />
+                    </div>
+                    <span className="ml-auto w-14 shrink-0 text-right text-[var(--color-text-muted)]">{value.count} шт.</span>
+                    <span className="w-24 shrink-0 text-right font-semibold sm:w-28">{formatMoney(value.amount)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {costs.topParts.length > 0 && (
+                <>
+                  <h3 className="mb-2 mt-4 text-[14px] font-semibold">Чаще всего покупаем</h3>
+                  <div className="space-y-1.5">
+                    {costs.topParts.slice(0, 5).map((p) => (
+                      <div key={p.name} className="flex items-center gap-3 text-[13.5px]">
+                        <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                        <span className="shrink-0 text-[var(--color-text-muted)]">{p.qty} шт.</span>
+                        <span className="w-28 shrink-0 text-right font-semibold">{formatMoney(p.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-[14px] font-semibold">Дороже всего обходится</h3>
+              {costs.topItems.length === 0 ? (
+                <EmptyList text="Нет данных по инструменту" />
+              ) : (
+                <div className="space-y-2">
+                  {costs.topItems.slice(0, 5).map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 text-[13.5px]">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{item.name}</div>
+                        <div className="text-[12px] text-[var(--color-text-muted)]">
+                          {item.tickets} {plural(item.tickets, "заявка", "заявки", "заявок")}
+                          {item.repairs > 0 ? `, из них ремонтов ${item.repairs}` : ""}
+                        </div>
+                      </div>
+                      <span className="shrink-0 font-semibold">{formatMoney(item.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {chart.length > 1 && (
+                <>
+                  <h3 className="mb-2 mt-4 text-[14px] font-semibold">По месяцам</h3>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <BarChart data={chart} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip
+                        formatter={(v) => [formatMoney(Number(v ?? 0)), "Расходы"]}
+                        contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--color-border)" }}
+                      />
+                      <Bar dataKey="amount" fill="#C0272D" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </>
+              )}
+            </div>
+          </div>
+
+          <p className="mt-3 text-[13px] text-[var(--color-text-muted)]">
+            За всё время мастерская обошлась в {formatMoney(costs.allTime.total)} по {costs.allTime.tickets}{" "}
+            {plural(costs.allTime.tickets, "заявке", "заявкам", "заявкам")}.
+          </p>
+        </>
+      )}
+    </section>
   );
 }
 

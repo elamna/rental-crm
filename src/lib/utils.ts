@@ -164,3 +164,18 @@ export function formatPhoneInput(raw: string) {
 export function phoneDigits(phone: string | undefined) {
   return (phone ?? "").replace(/\D/g, "");
 }
+
+/**
+ * Русское окончание по числу: 1 заявка, 2 заявки, 5 заявок.
+ *
+ * Без этого в интерфейсе попадалось «1 заявок» — мелочь, по которой сразу
+ * видно, что текст собрала программа, а не человек.
+ */
+export function plural(count: number, one: string, few: string, many: string) {
+  const abs = Math.abs(Math.round(count)) % 100;
+  if (abs > 10 && abs < 20) return many;
+  const last = abs % 10;
+  if (last === 1) return one;
+  if (last >= 2 && last <= 4) return few;
+  return many;
+}
