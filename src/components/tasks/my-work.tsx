@@ -190,7 +190,11 @@ function Content({
   children: React.ReactNode;
 }) {
   return (
-    <Tag onClick={onClick} className="min-w-0 flex-1 text-left">
+    // Нижняя граница ширины важнее гибкости: с min-w-0 кнопки действий
+    // прижимали текст задачи к нулю и на телефоне от названия оставалось
+    // «Не хв…». Теперь, когда текст и кнопки не помещаются в строку,
+    // кнопки переносятся вниз целой группой
+    <Tag onClick={onClick} className="min-w-[180px] flex-1 text-left">
       {children}
     </Tag>
   );
@@ -246,7 +250,9 @@ function TaskRow({
           {task.dueAt && <span className={cn(overdue && "font-semibold text-[#C0272D]")}>до {formatDue(task.dueAt)}</span>}
           {task.status === "in_progress" && <span>в работе</span>}
           {task.status === "review" && <span>на проверке</span>}
-          {task.description && <span className="line-clamp-2">{task.description}</span>}
+          {/* Описание занимает свою строку: в общем ряду с датой оно сжималось
+              до пары десятков точек, и на телефоне от текста оставался огрызок */}
+          {task.description && <span className="line-clamp-2 w-full">{task.description}</span>}
         </div>
       </Content>
 

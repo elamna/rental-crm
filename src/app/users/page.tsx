@@ -78,15 +78,18 @@ export default function UsersPage() {
         {loading ? (
           <p className="text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : (
-          <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
+          // На телефоне таблица не помещалась и обрезалась насовсем: кнопки правки
+          // и блокировки уезжали за край, и доскроллить до них было нельзя.
+          // Второстепенные колонки на узком экране прячем, логин уходит под имя
+          <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] card-shadow">
             <table className="w-full text-[14px]">
               <thead>
                 <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg)]">
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Пользователь</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Логин</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Должность</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Права</th>
-                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)]">Статус</th>
+                  <th className="hidden px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)] md:table-cell">Логин</th>
+                  <th className="hidden px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)] md:table-cell">Должность</th>
+                  <th className="hidden px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)] md:table-cell">Права</th>
+                  <th className="hidden px-4 py-3 text-left text-[13px] font-semibold text-[var(--color-text-muted)] md:table-cell">Статус</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -98,26 +101,30 @@ export default function UsersPage() {
                         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[12px] font-bold text-[var(--color-primary-ink)]">
                           {u.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()}
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <div className="font-medium">{u.name}</div>
                           {u.isOwner ? (
                             <span className="text-[12px] font-semibold text-[var(--color-primary-ink)]">Главный администратор</span>
                           ) : u.isAdmin ? (
                             <span className="text-[12px] font-semibold text-[var(--color-primary-ink)]">Администратор</span>
                           ) : null}
+                          <div className="text-[12px] text-[var(--color-text-muted)] md:hidden">
+                            {u.login}
+                            {!u.isActive && <span className="ml-1.5 font-semibold text-[#C0272D]">заблокирован</span>}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-[13px] text-[var(--color-text-muted)]">{u.login}</td>
-                    <td className="px-4 py-3 text-[var(--color-text-muted)]">{u.position ?? "—"}</td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 font-mono text-[13px] text-[var(--color-text-muted)] md:table-cell">{u.login}</td>
+                    <td className="hidden px-4 py-3 text-[var(--color-text-muted)] md:table-cell">{u.position ?? "—"}</td>
+                    <td className="hidden px-4 py-3 md:table-cell">
                       {u.isAdmin ? (
                         <span className="flex items-center gap-1 text-[var(--color-primary-ink)]"><ShieldCheck className="h-3.5 w-3.5" /> Полный доступ</span>
                       ) : (
                         <span className="text-[var(--color-text-muted)]">{u.permissions.length} разрешений</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 md:table-cell">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold ${u.isActive ? "bg-[#EAF7EE] text-[#1C8A46]" : "bg-[#F1F2F6] text-[#8A8F9C]"}`}>
                         {u.isActive ? "Активен" : "Заблокирован"}
                       </span>
