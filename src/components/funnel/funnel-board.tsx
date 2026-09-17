@@ -65,7 +65,10 @@ export function FunnelBoard({
                 <div className="mt-0.5 text-[12px] leading-snug text-[var(--color-text-muted)]">{col.hint}</div>
               </div>
 
-              <div className="space-y-2">
+              {/* У колонки своя прокрутка: шапка с итогом остаётся на месте, а
+                  сто карточек в «Новых» больше не растягивают страницу на
+                  несколько экранов и не уводят соседние колонки вверх */}
+              <div className="max-h-[62vh] min-h-[140px] space-y-2 overflow-y-auto pr-0.5">
                 {items.map((lead) => (
                   <LeadCard
                     key={lead.id}
