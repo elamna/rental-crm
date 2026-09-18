@@ -4,7 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 // что деплой применился, поэтому он открыт
 // /d/… — документ по ссылке для клиента: у него учётной записи нет, защищает
 // длинный случайный ключ в самой ссылке
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/version", "/d/"];
+// /api/public/… — данные для сайта quralsaiman.com: вход не нужен, но каждый
+// адрес сам требует ключ сайта (SITE_API_KEY) и без него выключен
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/version", "/d/", "/api/public/"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

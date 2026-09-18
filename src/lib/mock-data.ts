@@ -11,6 +11,8 @@ export const DEFAULT_BRANCHES = ["Атырау", "Астана"];
 export const acquisitionChannels = [
   "Instagram",
   "WhatsApp",
+  // Заявки с сайта quralsaiman.com приходят с этим источником сами
+  "Сайт",
   "Рекомендация",
   "Google / поиск",
   "Постоянный клиент",

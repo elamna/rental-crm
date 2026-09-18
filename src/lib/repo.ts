@@ -4867,6 +4867,11 @@ export type CompanySettings = {
   company_logo_url: string;
   currency: string;
   city: string;
+  /** Для сайта: WhatsApp, часы работы, Instagram, ссылка на карту */
+  company_whatsapp?: string;
+  company_work_hours?: string;
+  company_instagram?: string;
+  company_map_url?: string;
 };
 
 /**

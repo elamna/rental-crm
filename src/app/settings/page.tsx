@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import type { CompanySettings } from "@/lib/repo";
-import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor, DatabaseBackup, Download, HardDriveDownload, KeyRound, Eye, EyeOff, Check, Store, Plus, Trash2 } from "lucide-react";
+import { Building2, Phone, Mail, MapPin, CreditCard, User, Upload, Save, Wrench, Palette, Sun, Moon, Monitor, DatabaseBackup, Download, HardDriveDownload, KeyRound, Eye, EyeOff, Check, Store, Plus, Trash2, Globe } from "lucide-react";
 import { useTheme, type ThemeChoice } from "@/components/layout/theme-provider";
 import { cn } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -14,6 +14,7 @@ const EMPTY: CompanySettings = {
   company_phone: "", company_email: "", company_bank: "",
   company_bik: "", company_account: "", company_director: "",
   company_logo_url: "", currency: "₸", city: "",
+  company_whatsapp: "", company_work_hours: "", company_instagram: "", company_map_url: "",
 };
 
 const THEME_OPTIONS: { value: ThemeChoice; label: string; hint: string; icon: React.ElementType }[] = [
@@ -578,6 +579,33 @@ export default function SettingsPage() {
               <label className="block">
                 <span className="field-label">Email</span>
                 <input type="email" value={settings.company_email} onChange={(e) => set("company_email", e.target.value)} className="crm-input" placeholder="info@company.kz" disabled={!isAdmin} />
+              </label>
+            </div>
+          </Section>
+
+          {/* Для сайта quralsaiman.com: сайт берёт контакты отсюда сам, менять их
+              нужно в одном месте. Пустое поле — на сайте этой строки просто нет */}
+          <Section icon={Globe} title="Сайт quralsaiman.com">
+            <p className="mb-3 text-[13px] text-[var(--color-text-muted)]">
+              Эти данные и телефон, адрес, email выше сайт показывает посетителям. Изменения появятся на сайте в течение пяти минут.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="field-label">WhatsApp для клиентов</span>
+                <PhoneInput value={settings.company_whatsapp ?? ""} onChange={(v) => set("company_whatsapp", v)} disabled={!isAdmin} />
+                <span className="mt-1 block text-[12px] text-[var(--color-text-muted)]">Пусто — кнопка WhatsApp ведёт на основной телефон</span>
+              </label>
+              <label className="block">
+                <span className="field-label">Часы работы</span>
+                <input value={settings.company_work_hours ?? ""} onChange={(e) => set("company_work_hours", e.target.value)} className="crm-input" placeholder="Пн–Сб 09:00–19:00, Вс 10:00–16:00" disabled={!isAdmin} />
+              </label>
+              <label className="block">
+                <span className="field-label">Instagram</span>
+                <input value={settings.company_instagram ?? ""} onChange={(e) => set("company_instagram", e.target.value)} className="crm-input" placeholder="qural_saiman" disabled={!isAdmin} />
+              </label>
+              <label className="block">
+                <span className="field-label">Ссылка на карту (2ГИС или Google)</span>
+                <input value={settings.company_map_url ?? ""} onChange={(e) => set("company_map_url", e.target.value)} className="crm-input" placeholder="https://2gis.kz/atyrau/firm/…" disabled={!isAdmin} />
               </label>
             </div>
           </Section>
