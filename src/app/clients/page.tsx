@@ -10,6 +10,8 @@ import { RatingStars } from "@/components/clients/rating-stars";
 import { SelectionBar, SelectBox, ConfirmDeleteModal } from "@/components/common/selection-bar";
 import { formatImportReport } from "@/lib/import-utils";
 import { useAuth } from "@/components/auth/auth-provider";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import { matchesClientType, type ClientTypeFilter } from "@/lib/client-type";
 import {
   Search,
   ChevronDown,
@@ -42,7 +44,7 @@ export default function ClientsPage() {
   // База на несколько тысяч строк: рисуем частями, поиск идёт по всей базе
   const PAGE_SIZE = 100;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<ClientTypeFilter>("all");
   const [channelFilter, setChannelFilter] = useState<string>("");
   const [ratingFilter, setRatingFilter] = useState<string>("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "name", dir: 1 });
@@ -109,7 +111,7 @@ export default function ClientsPage() {
       const q = search.trim().toLowerCase();
       list = list.filter((c) => c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.email ?? "").toLowerCase().includes(q));
     }
-    if (typeFilter) list = list.filter((c) => c.type === typeFilter);
+    if (typeFilter !== "all") list = list.filter((c) => matchesClientType(c.type, typeFilter));
     if (channelFilter) list = list.filter((c) => c.acquisitionChannel === channelFilter);
     if (ratingFilter) list = list.filter((c) => String(c.rating ?? "") === ratingFilter);
 
@@ -250,15 +252,8 @@ export default function ClientsPage() {
               className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[14.5px] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary-soft)]"
             />
           </div>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[14px] font-medium text-[var(--color-text-muted)] outline-none focus:border-[var(--color-primary)]"
-          >
-            <option value="">Тип клиента</option>
-            <option value="individual">{clientTypeLabels.individual}</option>
-            <option value="company">{clientTypeLabels.company}</option>
-          </select>
+          {/* Тот же переключатель, что на всех остальных экранах */}
+          <ClientTypeFilterToggle value={typeFilter} onChange={setTypeFilter} />
           <select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}

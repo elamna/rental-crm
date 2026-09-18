@@ -12,6 +12,8 @@ import { SelectionBar, ConfirmDeleteModal } from "@/components/common/selection-
 import { ShortagesLink } from "@/components/rentals/shortages-panel";
 import { parseRentalsFile } from "@/lib/rental-io";
 import { formatImportReport } from "@/lib/import-utils";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import { matchesClientType, type ClientTypeFilter } from "@/lib/client-type";
 import { useAuth } from "@/components/auth/auth-provider";
 
 export default function RentalsPage() {
@@ -19,6 +21,7 @@ export default function RentalsPage() {
   const hydrated = useAppStore((s) => s.hydrated);
   const [tab, setTab] = useState<TabKey>("all");
   const [search, setSearch] = useState("");
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
   // Три тысячи карточек разом браузер рисует секундами и потом тормозит
   // на каждом клике. Показываем порциями, фильтры при этом ищут по всему списку
   const PAGE_SIZE = 60;
@@ -50,11 +53,11 @@ export default function RentalsPage() {
       const rows = await parseRentalsFile(file);
       setImportMsg(`Загружаем ${rows.length} аренд…`);
       const report = await importRentals(rows);
-      // Артикулов, которых не было в каталоге, импорт заводит сам — об этом стоит сказать:
-      // каталог после загрузки аренд станет больше, и это ожидаемо
+      // Каталог импорт аренд не трогает: позиции, которых там нет, остаются
+      // в аренде текстом — об этом говорим, чтобы не удивлялись
       const parts = [];
-      if (report.itemsCreated > 0) parts.push(`заведено единиц каталога: ${report.itemsCreated}`);
-      if (report.itemsUnmatched > 0) parts.push(`позиций без артикула: ${report.itemsUnmatched}`);
+      if (report.itemsLinked > 0) parts.push(`привязано к каталогу: ${report.itemsLinked}`);
+      if (report.itemsUnmatched > 0) parts.push(`позиций не нашлось в каталоге: ${report.itemsUnmatched}`);
       const tail = parts.length ? ` · ${parts.join(", ")}` : "";
       setImportMsg(formatImportReport("Аренды", report) + tail);
       setTimeout(() => setImportMsg(null), 15000);
@@ -96,10 +99,16 @@ export default function RentalsPage() {
   // Смена вкладки или поиска начинает показ заново
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [tab, search]);
+  }, [tab, search, clientType]);
+
+  // Отбор по типу клиента идёт до вкладок: счётчики на них должны считать то же, что в списке
+  const typedRentals = useMemo(
+    () => allRentals.filter((r) => matchesClientType(r.client?.type, clientType)),
+    [allRentals, clientType]
+  );
 
   const filtered = useMemo(() => {
-    let list = allRentals;
+    let list = typedRentals;
     if (tab === "debtors")
       list = list.filter(isDebtorRental);
     else if (tab !== "all" && tab !== "archive") list = list.filter((r) => r.status === tab);
@@ -113,7 +122,7 @@ export default function RentalsPage() {
       );
     }
     return list;
-  }, [tab, search, allRentals]);
+  }, [tab, search, typedRentals]);
 
   return (
     <div className="flex h-full flex-col">
@@ -171,8 +180,13 @@ export default function RentalsPage() {
       )}
 
       <div className="space-y-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-3">
-        <StatusTabs rentals={allRentals} active={tab} onChange={setTab} />
-        <FilterBar search={search} onSearch={setSearch} view={view} onView={setView} />
+        <StatusTabs rentals={typedRentals} active={tab} onChange={setTab} />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <FilterBar search={search} onSearch={setSearch} view={view} onView={setView} />
+          </div>
+          <ClientTypeFilterToggle value={clientType} onChange={setClientType} />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5">

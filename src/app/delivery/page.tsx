@@ -6,6 +6,8 @@ import { Delivery, DeliveryStatus } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
 import { BarChart3, Plus, Search } from "lucide-react";
 import { DeliveryCard } from "@/components/delivery/delivery-card";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import type { ClientTypeFilter } from "@/lib/client-type";
 import { DeliveryModal } from "@/components/delivery/delivery-modal";
 
 const TABS: { key: DeliveryStatus; label: string }[] = [
@@ -34,6 +36,7 @@ export default function DeliveryPage() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [counts, setCounts] = useState<Record<DeliveryStatus, number>>({ new: 0, in_progress: 0, done: 0, cancelled: 0 });
   const [search, setSearch] = useState("");
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
   const [loading, setLoading] = useState(true);
 
   const [editing, setEditing] = useState<Delivery | null>(null);
@@ -51,6 +54,7 @@ export default function DeliveryPage() {
   const load = useCallback(async () => {
     const params = new URLSearchParams({ status: tab });
     if (search.trim()) params.set("q", search.trim());
+    if (clientType !== "all") params.set("clientType", clientType);
     const res = await fetch(`/api/deliveries?${params}`);
     if (res.ok) {
       const data = await res.json();
@@ -58,7 +62,7 @@ export default function DeliveryPage() {
       setCounts(data.counts);
     }
     setLoading(false);
-  }, [tab, search]);
+  }, [tab, search, clientType]);
 
   // Поиск не дёргает сервер на каждую букву
   useEffect(() => {
@@ -201,6 +205,7 @@ export default function DeliveryPage() {
           </div>
         )}
 
+        <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full sm:max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <input
@@ -209,6 +214,8 @@ export default function DeliveryPage() {
             placeholder="Поиск по адресу, клиенту или номеру"
             className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pl-9 pr-3 text-[14.5px] outline-none transition focus:border-[var(--color-primary)]"
           />
+        </div>
+        <ClientTypeFilterToggle value={clientType} onChange={setClientType} />
         </div>
 
         {loading ? (

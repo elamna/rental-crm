@@ -6,6 +6,8 @@ import { useAppStore } from "@/lib/store";
 import { InventoryItem, WorkshopLine, WorkshopReason, WorkshopStatus, WorkshopTicket } from "@/lib/types";
 import { cn, formatMoney } from "@/lib/utils";
 import { inventoryStatusLabels } from "@/lib/mock-data";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import { matchesClientType, type ClientTypeFilter } from "@/lib/client-type";
 import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, Plus, Search, Settings2, X, Trash2, PackageSearch } from "lucide-react";
 
 const columns: { key: WorkshopStatus; label: string; dot: string; icon: React.ElementType }[] = [
@@ -28,6 +30,7 @@ const reasonLabels: Record<WorkshopReason, string> = {
 export default function WorkshopPage() {
   const tickets = useAppStore((s) => s.workshopTickets);
   const inventory = useAppStore((s) => s.inventory);
+  const rentals = useAppStore((s) => s.rentals);
   const addWorkshopTicket = useAppStore((s) => s.addWorkshopTicket);
   const updateWorkshopTicket = useAppStore((s) => s.updateWorkshopTicket);
   const deleteWorkshopTicket = useAppStore((s) => s.deleteWorkshopTicket);
@@ -39,6 +42,17 @@ export default function WorkshopPage() {
   const [reasonFilter, setReasonFilter] = useState<WorkshopReason | "all">("all");
   // Архив копится годами и на доске не нужен: открывается по кнопке
   const [showArchive, setShowArchive] = useState(false);
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
+
+  /**
+   * Чей инструмент чиним — узнаём по аренде, из которой он пришёл. У заявок
+   * без аренды (плановое ТО, поломка на складе) клиента нет, поэтому при
+   * отборе «физлица» или «юрлица» они не показываются.
+   */
+  const clientTypeByRental = useMemo(
+    () => new Map(rentals.map((r) => [r.id, r.client?.type])),
+    [rentals]
+  );
 
   const selected = tickets.find((ticket) => ticket.id === selectedId) ?? tickets[0];
   const activeTickets = tickets.filter((ticket) => ticket.status !== "archived");
@@ -66,13 +80,17 @@ export default function WorkshopPage() {
     return tickets.filter((ticket) => {
       if (!showArchive && ticket.status === "archived") return false;
       if (reasonFilter !== "all" && ticket.reason !== reasonFilter) return false;
+      if (clientType !== "all") {
+        if (!ticket.sourceRentalId || !clientTypeByRental.has(ticket.sourceRentalId)) return false;
+        if (!matchesClientType(clientTypeByRental.get(ticket.sourceRentalId), clientType)) return false;
+      }
       if (!q) return true;
       const haystack = `${ticket.inventoryItem?.name ?? ""} ${ticket.number} ${ticket.title} ${ticket.inventoryItem?.sku ?? ""}`.toLowerCase();
       return q.split(/\s+/).every((word) => haystack.includes(word));
     });
-  }, [tickets, query, reasonFilter, showArchive]);
+  }, [tickets, query, reasonFilter, showArchive, clientType, clientTypeByRental]);
 
-  const filtering = query.trim() !== "" || reasonFilter !== "all";
+  const filtering = query.trim() !== "" || reasonFilter !== "all" || clientType !== "all";
   const brokenByItem = useMemo(() => {
     const map = new Map<string, { item: InventoryItem | undefined; count: number; cost: number }>();
     for (const ticket of tickets) {
@@ -219,6 +237,7 @@ export default function WorkshopPage() {
                   </button>
                 ))}
               </div>
+              <ClientTypeFilterToggle value={clientType} onChange={setClientType} />
               <button
                 onClick={() => setShowArchive((value) => !value)}
                 className={cn(

@@ -7,6 +7,8 @@ import { formatMoney, formatDateTimeDisplay } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { findBlacklistMatch, phoneDigits } from "@/lib/blacklist";
 
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import { matchesClientType, type ClientTypeFilter } from "@/lib/client-type";
 import { Ban, ShieldOff, Siren, Plus, X } from "lucide-react";
 
 /** Частые причины — чтобы не набирать руками то, что пишут каждый раз */
@@ -20,7 +22,11 @@ export default function BlacklistPage() {
   const addClient = useAppStore((s) => s.addClient);
   const [adding, setAdding] = useState(false);
 
-  const blacklisted = useMemo(() => clients.filter((c) => c.blacklisted), [clients]);
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
+  const blacklisted = useMemo(
+    () => clients.filter((c) => c.blacklisted && matchesClientType(c.type, clientType)),
+    [clients, clientType]
+  );
 
   const stolenByClient = useMemo(() => {
     const map = new Map<string, number>();
@@ -88,6 +94,7 @@ export default function BlacklistPage() {
       )}
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <ClientTypeFilterToggle value={clientType} onChange={setClientType} className="mb-3" />
         {!hydrated ? (
           <p className="text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>
         ) : blacklisted.length === 0 ? (

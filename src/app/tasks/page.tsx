@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { TASKS_ENABLED } from "@/lib/features";
 import { Task, TaskStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Plus, Search, X } from "lucide-react";
@@ -13,7 +14,27 @@ import { TaskModal, type Assignee } from "@/components/tasks/task-modal";
 
 type Tab = "mine" | "board" | "people" | "kpi";
 
+/**
+ * «Темп» выключен (src/lib/features.ts). Проверка — снаружи основного
+ * компонента: внутри хуки, и ранний выход до них нарушил бы правила React.
+ */
 export default function TasksPage() {
+  if (!TASKS_ENABLED) {
+    return (
+      <div className="grid h-full place-items-center p-6">
+        <div className="max-w-sm rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center card-shadow">
+          <h1 className="font-display text-[17px] font-bold">Раздел временно отключён</h1>
+          <p className="mt-1.5 text-[14px] text-[var(--color-text-muted)]">
+            «Темп» выключен, пока решаем, как его доработать. Задачи, которые в нём были, сохранены.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return <TasksScreen />;
+}
+
+function TasksScreen() {
   const { user, can } = useAuth();
   const canManageAll = can("tasks.manage");
 

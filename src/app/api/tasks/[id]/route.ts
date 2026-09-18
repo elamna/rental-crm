@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { TASKS_ENABLED, featureDisabled } from "@/lib/features";
 import { requireAuth, hasPermission, ApiError } from "@/lib/auth";
 import { getTask, updateTask, deleteTask, canSeeTask } from "@/lib/repo";
 import { Task } from "@/lib/types";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!TASKS_ENABLED) return featureDisabled("Темп");
   try {
     const { id } = await params;
     const me = await requireAuth("tasks.view");
@@ -39,6 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!TASKS_ENABLED) return featureDisabled("Темп");
   try {
     const { id } = await params;
     await requireAuth("tasks.manage");

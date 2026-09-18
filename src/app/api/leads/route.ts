@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { listLeads, createLead, leadTotals } from "@/lib/repo";
 import { Lead } from "@/lib/types";
+import { parseClientTypeFilter } from "@/lib/client-type";
 
 export async function GET(req: NextRequest) {
   try {
     await requireAuth("leads.view");
     const p = req.nextUrl.searchParams;
     const status = (p.get("status") ?? "open") as Lead["status"];
+    const clientType = parseClientTypeFilter(p.get("clientType"));
 
     const leads = listLeads({
       status,
@@ -16,9 +18,10 @@ export async function GET(req: NextRequest) {
       from: p.get("from") || undefined,
       to: p.get("to") || undefined,
       search: p.get("q") || undefined,
+      clientType,
     });
 
-    return NextResponse.json({ leads, totals: leadTotals({ status }) });
+    return NextResponse.json({ leads, totals: leadTotals({ status, clientType }) });
   } catch (e: unknown) {
     const err = e as { status?: number; message?: string };
     return NextResponse.json({ error: err.message }, { status: err.status ?? 500 });

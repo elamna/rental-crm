@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { FunnelDaySummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Check, ClipboardCopy, X } from "lucide-react";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import type { ClientTypeFilter } from "@/lib/client-type";
 
 type PeriodKey = "day" | "week" | "month" | "year";
 
@@ -58,22 +60,26 @@ function ruDate(value: string) {
  * Текст для отправки в переписку — ровно тот отчёт, который прокат и так шлёт
  * владельцу вечером, только собранный системой, а не руками.
  */
-function asText(s: FunnelDaySummary, periodTitle: string, isDay: boolean) {
+function asText(s: FunnelDaySummary, periodTitle: string, isDay: boolean, clientType: ClientTypeFilter) {
+  // В отправленном тексте видно, про кого сводка: иначе «5 обращений» по юрлицам читается как все
+  const typeTitle = clientType === "company" ? " · юрлица" : clientType === "individual" ? " · физлица" : "";
   const lines = [
-    `📅 ${periodTitle}`,
+    `📅 ${periodTitle}${typeTitle}`,
     "",
     `📞 Всего обращений: ${s.calls}`,
     "",
-    isDay ? "📈 Сегодня:" : "📈 За период:",
+    "📈 Итог:",
     `• Взяли в аренду: ${s.won}`,
     `• Отказались: ${s.lost}`,
     "",
-    "📅 Кого ждём:",
+    "🔄 Ещё в работе:",
+    `• ${isDay ? "Сегодня" : "Срок наступил"}: ${s.inWork}`,
     `• Завтра: ${s.tomorrow}`,
     `• На этой неделе: ${s.thisWeek}`,
     `• Позже: ${s.later}`,
   ];
-  if (s.otherCity > 0) lines.push("", `🚚 Другой город: ${s.otherCity}`);
+  if (s.waitingStock > 0) lines.push(`• Ждут поставки: ${s.waitingStock}`);
+  if (s.otherCity > 0) lines.push(`• Другой город: ${s.otherCity}`);
   if (s.unavailable > 0) {
     lines.push("", "❗️ Спрос, который не закрыли:", `• Нет в наличии: ${s.unavailable}`);
     for (const item of s.unavailableItems) lines.push(`   — ${item}`);
@@ -89,7 +95,15 @@ function asText(s: FunnelDaySummary, periodTitle: string, isDay: boolean) {
  * на складе. Последнее — самое ценное: это спрос, за который уже заплатили
  * рекламой, но не смогли обслужить.
  */
-export function DaySummary({ onClose }: { onClose: () => void }) {
+export function DaySummary({
+  onClose,
+  clientType: initialClientType = "all",
+}: {
+  onClose: () => void;
+  /** Отбор с доски переносится в сводку: открыли «Юрлица» — сводка про них же */
+  clientType?: ClientTypeFilter;
+}) {
+  const [clientType, setClientType] = useState<ClientTypeFilter>(initialClientType);
   const [date, setDate] = useState(() => toDateInput(new Date()));
   const [period, setPeriod] = useState<PeriodKey>("day");
   const [data, setData] = useState<FunnelDaySummary | null>(null);
@@ -101,10 +115,11 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
   const load = useCallback(async () => {
     setLoading(true);
     const { from, to } = periodRange(date, period);
-    const res = await fetch(`/api/leads/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    const typeParam = clientType !== "all" ? `&clientType=${clientType}` : "";
+    const res = await fetch(`/api/leads/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${typeParam}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
-  }, [date, period]);
+  }, [date, period, clientType]);
 
   useEffect(() => {
     load();
@@ -119,7 +134,7 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
   async function copy() {
     if (!data) return;
     try {
-      await navigator.clipboard.writeText(asText(data, periodTitle, period === "day"));
+      await navigator.clipboard.writeText(asText(data, periodTitle, period === "day", clientType));
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -152,7 +167,8 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Один и тот же отчёт за день, неделю, месяц или год */}
-        <div className="flex gap-1.5 border-b border-[var(--color-border)] px-5 py-3">
+        <div className="flex flex-col gap-2 border-b border-[var(--color-border)] px-5 py-3">
+        <div className="flex gap-1.5">
           {PERIODS.map((pr) => (
             <button
               key={pr.key}
@@ -168,6 +184,8 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
             </button>
           ))}
         </div>
+        <ClientTypeFilterToggle value={clientType} onChange={setClientType} className="self-start" />
+        </div>
 
         <div className="flex-1 overflow-y-auto p-5">
           {loading || !data ? (
@@ -176,22 +194,19 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
             <div className="space-y-4">
               <Stat label="📞 Всего обращений" value={data.calls} big />
 
-              <Group title={period === "day" ? "📈 Сегодня" : "📈 За период"}>
+              <Group title="📈 Итог">
                 <Row label="Взяли в аренду" value={data.won} tone="#1C8A46" />
                 <Row label="Отказались" value={data.lost} tone={data.lost > 0 ? "#C0272D" : undefined} />
               </Group>
 
-              <Group title="📅 Кого ждём">
+              <Group title="🔄 Ещё в работе">
+                <Row label={period === "day" ? "Сегодня" : "Срок наступил"} value={data.inWork} />
                 <Row label="Завтра" value={data.tomorrow} />
                 <Row label="На этой неделе" value={data.thisWeek} />
                 <Row label="Позже" value={data.later} />
+                {data.waitingStock > 0 && <Row label="Ждут поставки" value={data.waitingStock} />}
+                {data.otherCity > 0 && <Row label="Другой город" value={data.otherCity} />}
               </Group>
-
-              {data.otherCity > 0 && (
-                <Group title="🚚 Другой город">
-                  <Row label="Заявок в работе" value={data.otherCity} />
-                </Group>
-              )}
 
               <Group title="❗️ Спрос, который не закрыли">
                 <Row label="Нет в наличии" value={data.unavailable} tone={data.unavailable > 0 ? "#C0272D" : undefined} />
@@ -205,9 +220,9 @@ export function DaySummary({ onClose }: { onClose: () => void }) {
               </Group>
 
               <p className="text-[12.5px] text-[var(--color-text-muted)]">
-                «Всего обращений» и «Нет в наличии» — заявки, заведённые за этот период: чего не хватило
-                именно тогда. «Взяли в аренду» и «Отказались» — заявки, закрытые в этот период, независимо
-                от того, когда они появились. «Кого ждём» — то, что впереди, на сегодняшний день.
+                Все цифры — только про заявки, которые пришли {period === "day" ? "в этот день" : "за этот период"}.
+                «Итог» и «Ещё в работе» раскладывают именно их и в сумме дают «Всего обращений». Если заявку
+                закрыли позже, она всё равно считается в день обращения.
               </p>
             </div>
           )}

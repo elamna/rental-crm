@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
 import { PeriodPicker } from "@/components/ui/period-picker";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import type { ClientTypeFilter } from "@/lib/client-type";
 import { periodQuery, type PeriodValue } from "@/lib/period";
 
 
@@ -53,13 +55,15 @@ export default function FinancePage() {
   const [data, setData] = useState<FinanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/finance?${periodQuery(period)}`)
+    const typeParam = clientType !== "all" ? `&clientType=${clientType}` : "";
+    fetch(`/api/finance?${periodQuery(period)}${typeParam}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); });
-  }, [period]);
+  }, [period, clientType]);
 
   const filtered = data?.transactions.filter((t) => {
     if (typeFilter !== "all" && t.type !== typeFilter) return false;
@@ -80,7 +84,10 @@ export default function FinancePage() {
             <h1 className="font-display text-[20px] font-bold">Финансы</h1>
             <p className="text-[14px] text-[var(--color-text-muted)]">Доходы, расходы и движение средств</p>
           </div>
-          <PeriodPicker value={period} onChange={setPeriod} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ClientTypeFilterToggle value={clientType} onChange={setClientType} />
+            <PeriodPicker value={period} onChange={setPeriod} />
+          </div>
         </div>
       </header>
 

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ReminderItem, ReminderKind, ReminderTemplates, REMINDER_KIND_LABELS } from "@/lib/types";
 import { cn, waLink } from "@/lib/utils";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import { matchesClientType, type ClientTypeFilter } from "@/lib/client-type";
 import { BellRing, Check, ExternalLink, MessageCircle, Phone, RotateCcw, Settings2, X } from "lucide-react";
 
 const KIND_TONES: Record<ReminderKind, { bg: string; text: string }> = {
@@ -40,6 +42,7 @@ export default function RemindersPage() {
   const [items, setItems] = useState<ReminderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState<ReminderKind | "all">("all");
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   // Текст можно поправить перед отправкой — клиент клиенту рознь
@@ -55,13 +58,16 @@ export default function RemindersPage() {
     load();
   }, [load]);
 
+  // Тип клиента отбирается до поводов: счётчики на вкладках — по тем же людям, что в списке
+  const typedItems = useMemo(() => items.filter((i) => matchesClientType(i.clientType, clientType)), [items, clientType]);
+
   const counts = useMemo(() => {
     const map = new Map<ReminderKind, number>();
-    for (const i of items) map.set(i.kind, (map.get(i.kind) ?? 0) + 1);
+    for (const i of typedItems) map.set(i.kind, (map.get(i.kind) ?? 0) + 1);
     return map;
-  }, [items]);
+  }, [typedItems]);
 
-  const visible = kind === "all" ? items : items.filter((i) => i.kind === kind);
+  const visible = kind === "all" ? typedItems : typedItems.filter((i) => i.kind === kind);
 
   const keyOf = (item: ReminderItem) => `${item.kind}:${item.targetId}`;
 
@@ -130,7 +136,7 @@ export default function RemindersPage() {
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-1 rounded-[10px] bg-[var(--color-bg)] p-1">
-          <FilterTab active={kind === "all"} onClick={() => setKind("all")} label="Все" count={items.length} />
+          <FilterTab active={kind === "all"} onClick={() => setKind("all")} label="Все" count={typedItems.length} />
           {(Object.keys(REMINDER_KIND_LABELS) as ReminderKind[]).map((k) => (
             <FilterTab
               key={k}
@@ -141,6 +147,7 @@ export default function RemindersPage() {
             />
           ))}
         </div>
+        <ClientTypeFilterToggle value={clientType} onChange={setClientType} />
 
         {loading ? (
           <p className="py-10 text-center text-[14px] text-[var(--color-text-muted)]">Загрузка…</p>

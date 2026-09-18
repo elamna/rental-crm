@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { resolvePeriod } from "@/lib/period";
+import { parseClientTypeFilter, rentalIdOfType } from "@/lib/client-type";
 import type { WorkshopLine } from "@/lib/types";
 
 /**
@@ -49,12 +50,16 @@ export async function GET(req: NextRequest) {
   }
 
   const { period, from, to } = resolvePeriod(req.nextUrl.searchParams);
+  // Отбор по типу клиента — через аренду, из которой инструмент пришёл в ремонт.
+  // Плановое ТО и поломки на складе ни к какому клиенту не относятся и при
+  // отборе «физлица» или «юрлица» не считаются
+  const byType = rentalIdOfType("source_rental_id", parseClientTypeFilter(req.nextUrl.searchParams.get("clientType")));
 
   const tickets = db
     .prepare(
       `SELECT id, number, status, reason, inventory_item_id, title, lines_json, created_at, updated_at
        FROM workshop_tickets
-       WHERE created_at >= ? AND created_at <= ?`
+       WHERE created_at >= ? AND created_at <= ?${byType}`
     )
     .all(from, to) as TicketRow[];
 
@@ -134,7 +139,7 @@ export async function GET(req: NextRequest) {
 
   // Расходы по месяцам — отдельным запросом, чтобы график не зависел от периода
   const monthly = db
-    .prepare(`SELECT created_at, lines_json FROM workshop_tickets ORDER BY created_at DESC LIMIT 2000`)
+    .prepare(`SELECT created_at, lines_json FROM workshop_tickets WHERE 1=1${byType} ORDER BY created_at DESC LIMIT 2000`)
     .all() as { created_at: string; lines_json: string }[];
   const months = new Map<string, { month: string; amount: number; count: number }>();
   for (const row of monthly) {
@@ -146,7 +151,7 @@ export async function GET(req: NextRequest) {
   }
   const byMonth = [...months.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-12);
 
-  const allTimeRows = db.prepare(`SELECT lines_json FROM workshop_tickets`).all() as { lines_json: string }[];
+  const allTimeRows = db.prepare(`SELECT lines_json FROM workshop_tickets WHERE 1=1${byType}`).all() as { lines_json: string }[];
   const allTimeTotal = allTimeRows.reduce((sum, row) => sum + ticketSum(parseLines(row.lines_json)), 0);
 
   return NextResponse.json({

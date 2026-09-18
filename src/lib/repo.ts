@@ -1,10 +1,18 @@
 import { randomBytes } from "crypto";
+import { TASKS_ENABLED } from "./features";
+import { clientIdOfType, clientTypeSql, rentalIdOfType, type ClientTypeFilter } from "./client-type";
+
+/** Хвост условия WHERE для отбора заявок воронки по типу клиента */
+function typeSqlFor(filter: ClientTypeFilter) {
+  const sql = clientTypeSql("client_type", filter);
+  return sql ? ` AND ${sql}` : "";
+}
 import { db, logActivity } from "./db";
 import { maybeDailyBackup } from "./backup";
 import { isOneTimeLine, lineTotal } from "./utils";
 import { DEFAULT_BRANCHES } from "./mock-data";
 
-import { Client, ClientRatingBreakdown, DebtCase, DebtCheck, FunnelDaySummary, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
+import { Client, ClientRatingBreakdown, ClientType, DebtCase, DebtCheck, FunnelDaySummary, ImportReport, LeadConcern, PaymentMethod, ReminderItem, ReminderKind, ReminderTemplates, RentalPayment, ReturnShortage, TaskSource, TaskWorkloadRow, ShopProduct, DocumentTemplate, InventoryCheck, InventoryItem, InventoryLine, Kit, KitLine, Rental, RentalDocument, RentalEvent, RentalPause, RentalStatus, Delivery, Lead, Service, ServiceTariff, Task, TaskKpiRow, TaskPriority, TaskStatus, WorkshopLine, WorkshopTicket } from "./types";
 
 /** Ошибка с кодом ответа: роут отдаст её пользователю, а не «500 Внутренняя ошибка» */
 function httpError(status: number, message: string) {
@@ -1451,11 +1459,15 @@ export interface RentalImportInput {
  * аренда без клиента в базе не живёт (внешний ключ), а плодить двойников нельзя.
  * Позиции привязываем к каталогу по артикулу; чего нет — остаётся текстом,
  * чтобы состав аренды не потерялся.
+ *
+ * Каталог импорт аренд НЕ трогает. Раньше артикулы, которых не было в
+ * каталоге, заводились новыми карточками — и после загрузки истории на
+ * складе появлялись сотни позиций, которых у проката давно нет. Каталог
+ * загружается только своим импортом.
  */
 export function importRentals(rows: RentalImportInput[]): ImportReport & {
   clientsCreated: number;
   itemsLinked: number;
-  itemsCreated: number;
   itemsUnmatched: number;
 } {
   const reasons: Record<string, number> = {};
@@ -1463,7 +1475,6 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
   let skipped = 0;
   let clientsCreated = 0;
   let itemsLinked = 0;
-  let itemsCreated = 0;
   let itemsUnmatched = 0;
 
   const existingNumbers = new Set(
@@ -1485,48 +1496,12 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
   }
 
   const itemBySku = new Map<string, { id: string; price: number }>();
-  // Образец по названию: у новой единицы должны быть цена и категория такие же,
-  // как у её собратьев в каталоге, иначе она заведётся пустой карточкой
-  const templateByName = new Map<string, { category: string | null; price: number }>();
-  for (const i of db.prepare(`SELECT id, name, sku, category, rental_price FROM inventory_items`).all() as {
+  for (const i of db.prepare(`SELECT id, sku, rental_price FROM inventory_items`).all() as {
     id: string;
-    name: string;
     sku: string | null;
-    category: string | null;
     rental_price: number;
   }[]) {
     if (i.sku) itemBySku.set(i.sku.trim().toLowerCase(), { id: i.id, price: i.rental_price });
-    const nameKey = i.name.trim().toLowerCase();
-    if (!templateByName.has(nameKey)) templateByName.set(nameKey, { category: i.category, price: i.rental_price });
-  }
-
-  const insertItem = db.prepare(
-    `INSERT INTO inventory_items (id, name, sku, category, rental_price, status, branch, created_at)
-     VALUES (@id, @name, @sku, @category, @price, 'available', @branch, @createdAt)`
-  );
-
-  /**
-   * Единица каталога, которой не оказалось под своим артикулом. В выгрузке каталога
-   * прошлой системы позиции сгруппированы по продуктам, поэтому артикулы конкретных
-   * единиц (QS.0404 и такие же) там просто отсутствуют — а в арендах они есть.
-   * Заводим карточку по данным из аренды, цену и категорию берём у одноимённых.
-   */
-  function ensureInventoryItem(name: string, sku: string, createdAt: string) {
-    const template = templateByName.get(name.trim().toLowerCase());
-    const id = newId("inv");
-    insertItem.run({
-      id,
-      name,
-      sku,
-      category: template?.category ?? null,
-      price: template?.price ?? 0,
-      branch: getBranches()[0] ?? null,
-      createdAt,
-    });
-    const created = { id, price: template?.price ?? 0 };
-    itemBySku.set(sku.trim().toLowerCase(), created);
-    itemsCreated++;
-    return created;
   }
 
   const insert = db.prepare(
@@ -1572,13 +1547,12 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
         clientsCreated++;
       }
 
-      // Позиции привязываем по артикулу. Артикула нет в каталоге — заводим единицу:
-      // она реально существовала, раз её выдавали в аренду
+      // Позиции привязываем по артикулу. Артикула в каталоге нет — строка
+      // остаётся текстом: название и артикул в аренде сохранены, склад не тронут
       const lines: InventoryLine[] = row.items.map((item, index) => {
         const sku = item.sku.trim();
-        let match = sku ? itemBySku.get(sku.toLowerCase()) : undefined;
+        const match = sku ? itemBySku.get(sku.toLowerCase()) : undefined;
         if (match) itemsLinked++;
-        else if (sku) match = ensureInventoryItem(item.name, sku, row.createdAt ?? row.startAt ?? new Date().toISOString());
         else itemsUnmatched++;
         return {
           id: `imp_${number}_${index}`,
@@ -1640,9 +1614,7 @@ export function importRentals(rows: RentalImportInput[]): ImportReport & {
 
   if (added) logActivity(`Импортировано аренд: ${added}`);
   if (clientsCreated) reasons["заведено новых клиентов"] = clientsCreated;
-  if (itemsCreated) reasons["заведено единиц каталога"] = itemsCreated;
-  if (itemsCreated) logActivity(`Импорт аренд: заведено единиц каталога — ${itemsCreated}`);
-  return { added, skipped, reasons, clientsCreated, itemsLinked, itemsCreated, itemsUnmatched };
+  return { added, skipped, reasons, clientsCreated, itemsLinked, itemsUnmatched };
 }
 
 // ---------- Некомплект при возврате ----------
@@ -1897,8 +1869,10 @@ export interface DebtLedgerRow {
  * Должники ищутся и по дате оформления, и по дате окончания аренды: за сутки
  * попадают и те, кто взял инструмент сегодня, и те, кто сегодня должен вернуть.
  */
-export function paymentsLedger(fromIso: string | null, toIso: string | null) {
+export function paymentsLedger(fromIso: string | null, toIso: string | null, clientType: ClientTypeFilter = "all") {
   const range = { from: fromIso, to: toIso };
+  const typeCond = clientTypeSql("c.type", clientType);
+  const typeAnd = typeCond ? ` AND ${typeCond}` : "";
 
   const paidRows = db
     .prepare(
@@ -1908,7 +1882,7 @@ export function paymentsLedger(fromIso: string | null, toIso: string | null) {
        FROM rental_payments p
        JOIN rentals r ON r.id = p.rental_id
        LEFT JOIN clients c ON c.id = r.client_id
-       WHERE (@from IS NULL OR p.created_at >= @from) AND (@to IS NULL OR p.created_at <= @to)
+       WHERE (@from IS NULL OR p.created_at >= @from) AND (@to IS NULL OR p.created_at <= @to)${typeAnd}
        ORDER BY p.created_at DESC`
     )
     .all(range) as {
@@ -1927,7 +1901,7 @@ export function paymentsLedger(fromIso: string | null, toIso: string | null) {
          AND (
            ((@from IS NULL OR r.created_at >= @from) AND (@to IS NULL OR r.created_at <= @to))
            OR ((@from IS NULL OR r.end_at >= @from) AND (@to IS NULL OR r.end_at <= @to))
-         )
+         )${typeAnd}
        ORDER BY r.total - r.paid DESC`
     )
     .all(range) as {
@@ -1984,15 +1958,18 @@ export function paymentsLedger(fromIso: string | null, toIso: string | null) {
  * товары магазина продаются внутри аренды, а доставка стоит отдельной строкой.
  * Это разные разрезы одних и тех же денег, поэтому суммы по ним не складываются.
  */
-export function incomeBreakdown(fromIso: string | null, toIso: string | null) {
+export function incomeBreakdown(fromIso: string | null, toIso: string | null, clientType: ClientTypeFilter = "all") {
   const range = { from: fromIso, to: toIso };
+  // Отбор по типу клиента: платежи и доставки — через аренду, аренды — через клиента
+  const byRental = rentalIdOfType("rental_id", clientType);
+  const byClient = clientIdOfType("client_id", clientType);
   const inRange = (column: string) =>
     `(@from IS NULL OR ${column} >= @from) AND (@to IS NULL OR ${column} <= @to)`;
 
   const byMethod = db
     .prepare(
       `SELECT method, COALESCE(SUM(amount), 0) AS total FROM rental_payments
-       WHERE ${inRange("created_at")} GROUP BY method`
+       WHERE ${inRange("created_at")}${byRental} GROUP BY method`
     )
     .all(range) as { method: string; total: number }[];
 
@@ -2005,7 +1982,7 @@ export function incomeBreakdown(fromIso: string | null, toIso: string | null) {
   // показываем их отдельной строкой, чтобы итог сходился
   const paidTotal = (
     db
-      .prepare(`SELECT COALESCE(SUM(paid), 0) AS total FROM rentals WHERE paid > 0 AND ${inRange("COALESCE(paid_at, created_at)")}`)
+      .prepare(`SELECT COALESCE(SUM(paid), 0) AS total FROM rentals WHERE paid > 0 AND ${inRange("COALESCE(paid_at, created_at)")}${byClient}`)
       .get(range) as { total: number }
   ).total;
   const trackedTotal = methods.cash + methods.kaspi + methods.company;
@@ -2013,7 +1990,7 @@ export function incomeBreakdown(fromIso: string | null, toIso: string | null) {
 
   // За что: аренда инструмента и проданные товары магазина внутри тех же аренд
   const rentalRows = db
-    .prepare(`SELECT items_json, total, paid FROM rentals WHERE paid > 0 AND ${inRange("COALESCE(paid_at, created_at)")}`)
+    .prepare(`SELECT items_json, total, paid FROM rentals WHERE paid > 0 AND ${inRange("COALESCE(paid_at, created_at)")}${byClient}`)
     .all(range) as { items_json: string; total: number; paid: number }[];
 
   let shop = 0;
@@ -2031,7 +2008,7 @@ export function incomeBreakdown(fromIso: string | null, toIso: string | null) {
     db
       .prepare(
         `SELECT COALESCE(SUM(price), 0) AS total FROM deliveries
-         WHERE status = 'done' AND ${inRange("COALESCE(completed_at, created_at)")}`
+         WHERE status = 'done' AND ${inRange("COALESCE(completed_at, created_at)")}${byRental}`
       )
       .get(range) as { total: number }
   ).total;
@@ -3214,6 +3191,8 @@ export interface DeliveryFilter {
   status?: Delivery["status"];
   courierId?: string;
   search?: string;
+  /** Физлица, юрлица или все */
+  clientType?: ClientTypeFilter;
   limit?: number;
 }
 
@@ -3235,6 +3214,8 @@ export function listDeliveries(filter: DeliveryFilter = {}): Delivery[] {
     );
     params.q = `%${filter.search.toLowerCase()}%`;
   }
+  const typeSql = clientTypeSql("c.type", filter.clientType ?? "all");
+  if (typeSql) where.push(typeSql);
 
   const rows = db
     .prepare(
@@ -3247,8 +3228,16 @@ export function listDeliveries(filter: DeliveryFilter = {}): Delivery[] {
 }
 
 /** Счётчики для вкладок — одним запросом, а не выборкой всех доставок */
-export function deliveryCounts(): Record<Delivery["status"], number> {
-  const rows = db.prepare(`SELECT status, COUNT(*) AS c FROM deliveries GROUP BY status`).all() as {
+export function deliveryCounts(clientType: ClientTypeFilter = "all"): Record<Delivery["status"], number> {
+  // Счётчики на вкладках считают с тем же отбором, что и список, иначе цифры не сходятся
+  const typeSql = clientTypeSql("c.type", clientType);
+  const rows = db
+    .prepare(
+      `SELECT d.status, COUNT(*) AS c FROM deliveries d
+       LEFT JOIN rentals r ON r.id = d.rental_id LEFT JOIN clients c ON c.id = r.client_id
+       ${typeSql ? "WHERE " + typeSql : ""} GROUP BY d.status`
+    )
+    .all() as {
     status: string;
     c: number;
   }[];
@@ -3494,6 +3483,8 @@ export interface LeadFilter {
   from?: string;
   to?: string;
   search?: string;
+  /** Физлица, юрлица или все */
+  clientType?: ClientTypeFilter;
   limit?: number;
 }
 
@@ -3524,6 +3515,8 @@ export function listLeads(filter: LeadFilter = {}): Lead[] {
     where.push("l.needed_at <= @to");
     params.to = filter.to;
   }
+  const typeSql = clientTypeSql("l.client_type", filter.clientType ?? "all");
+  if (typeSql) where.push(typeSql);
   if (filter.search) {
     where.push("(rulower(l.title) LIKE @q OR rulower(COALESCE(l.client_name, '')) LIKE @q OR COALESCE(l.phone, '') LIKE @q OR CAST(l.number AS TEXT) LIKE @q)");
     params.q = `%${filter.search.toLowerCase()}%`;
@@ -3544,43 +3537,32 @@ export function listLeads(filter: LeadFilter = {}): Lead[] {
  * и чего не хватило на складе. Считается в SQL по границам суток, которые
  * присылает браузер: только он знает часовой пояс пользователя.
  */
-export function funnelDaySummary(fromIso: string, toIso: string): FunnelDaySummary {
-  const range = { from: fromIso, to: toIso };
-
-  const calls = (
-    db.prepare(`SELECT COUNT(*) AS c FROM leads WHERE created_at >= @from AND created_at <= @to`).get(range) as { c: number }
-  ).c;
-
-  const closed = db
-    .prepare(
-      `SELECT status, COUNT(*) AS c FROM leads
-       WHERE closed_at IS NOT NULL AND closed_at >= @from AND closed_at <= @to
-       GROUP BY status`
-    )
-    .all(range) as { status: string; c: number }[];
-  const wonRow = closed.find((r) => r.status === "won");
-  const lostRow = closed.find((r) => r.status === "lost");
-
+export function funnelDaySummary(fromIso: string, toIso: string, clientType: ClientTypeFilter = "all"): FunnelDaySummary {
   /**
-   * «Нет в наличии» — событие периода, а не состояние доски.
+   * Сводка — про заявки, которые пришли в этот день, и только про них.
    *
-   * Раньше считались все открытые заявки с этой пометкой за всё время, и в
-   * сводке за сегодня стояло число, накопленное за месяцы. Теперь берём по
-   * дате обращения и независимо от статуса: если заявку потом закрыли, спрос
-   * всё равно был, и вчерашняя сводка не должна меняться задним числом.
+   * Раньше она смешивала разное: «взяли в аренду» считалось по дате закрытия,
+   * а «кого ждём» и «другой город» — по всей доске. В сводку за сегодня
+   * попадали заявки недельной и двухнедельной давности, и цифры не сходились
+   * с «всего обращений». Теперь каждая строка раскладывает одни и те же
+   * заявки дня, и в сумме они дают ровно число обращений.
+   *
+   * Следствие, о котором надо помнить: если заявку от понедельника закрыли в
+   * среду, она засчитается в сводку понедельника — туда, где клиент обратился.
    */
-  const unavailableRows = db
-    .prepare(`SELECT title FROM leads WHERE unavailable = 1 AND created_at >= @from AND created_at <= @to`)
-    .all(range) as { title: string }[];
-  const unavailable = unavailableRows.length;
-  const unavailableItems = [
-    ...new Set(unavailableRows.map((r) => r.title?.trim()).filter((t): t is string => !!t)),
-  ].slice(0, 20);
-
-  // Кого ждём дальше: считаем по той же логике, что раскладывает карточки по доске
-  const open = db
-    .prepare(`SELECT title, needed_at, unavailable, future, other_city FROM leads WHERE status = 'open'`)
-    .all() as { title: string; needed_at: string | null; unavailable: number; future: number; other_city: number }[];
+  const leads = db
+    .prepare(
+      `SELECT title, status, needed_at, unavailable, future, other_city
+       FROM leads WHERE created_at >= ? AND created_at <= ?${typeSqlFor(clientType)}`
+    )
+    .all(fromIso, toIso) as {
+    title: string;
+    status: string;
+    needed_at: string | null;
+    unavailable: number;
+    future: number;
+    other_city: number;
+  }[];
 
   const dayEnd = new Date(toIso).getTime();
   const tomorrowEnd = dayEnd + 86400000;
@@ -3588,40 +3570,50 @@ export function funnelDaySummary(fromIso: string, toIso: string): FunnelDaySumma
   const weekDay = (new Date(toIso).getDay() + 6) % 7;
   const weekEnd = dayEnd + (6 - weekDay) * 86400000;
 
+  let won = 0;
+  let lost = 0;
+  let inWork = 0;
   let tomorrow = 0;
   let thisWeek = 0;
   let later = 0;
+  let waitingStock = 0;
   let otherCity = 0;
+  // «Нет в наличии» — отдельный срез, а не часть раскладки: сюда попадают и
+  // заявки, которые ещё ждут поставки, и те, от которых из-за этого отказались
+  let unavailable = 0;
+  const unavailableItems: string[] = [];
 
-  for (const lead of open) {
-    // Ждать нечего: товара нет. Считается выше, по дате обращения
-    if (lead.unavailable) continue;
-    if (lead.other_city) {
-      otherCity++;
-      continue;
+  for (const lead of leads) {
+    if (lead.unavailable) {
+      unavailable++;
+      if (lead.title?.trim()) unavailableItems.push(lead.title.trim());
     }
-    if (lead.future || !lead.needed_at) {
-      later++;
-      continue;
-    }
-    const at = new Date(lead.needed_at).getTime();
-    if (isNaN(at) || at <= dayEnd) continue; // сегодняшних ждать уже не нужно — они в работе
-    if (at <= tomorrowEnd) tomorrow++;
+    // Закрытые — по итогу, какой бы ни была пометка
+    if (lead.status === "won") { won++; continue; }
+    if (lead.status === "lost") { lost++; continue; }
+    if (lead.unavailable) { waitingStock++; continue; }
+    if (lead.other_city) { otherCity++; continue; }
+    if (lead.future) { later++; continue; }
+    const at = lead.needed_at ? new Date(lead.needed_at).getTime() : NaN;
+    if (isNaN(at) || at <= dayEnd) inWork++;
+    else if (at <= tomorrowEnd) tomorrow++;
     else if (at <= weekEnd) thisWeek++;
     else later++;
   }
 
   return {
     date: toIso,
-    calls,
-    won: wonRow?.c ?? 0,
-    lost: lostRow?.c ?? 0,
+    calls: leads.length,
+    won,
+    lost,
+    inWork,
+    waitingStock,
     tomorrow,
     thisWeek,
     later,
     unavailable,
     otherCity,
-    unavailableItems,
+    unavailableItems: [...new Set(unavailableItems)].slice(0, 20),
   };
 }
 
@@ -3720,8 +3712,10 @@ export function deleteLead(id: string) {
 /** Итоги для шапки доски — считаются в SQL, а не перебором карточек */
 export function leadTotals(filter: LeadFilter = {}): { count: number; amount: number } {
   const status = filter.status ?? "open";
+  // Итог в шапке должен совпадать с тем, что на доске, — отбор по типу клиента тот же
+  const typeSql = clientTypeSql("client_type", filter.clientType ?? "all");
   const row = db
-    .prepare(`SELECT COUNT(*) AS count, COALESCE(SUM(amount), 0) AS amount FROM leads WHERE status = ?`)
+    .prepare(`SELECT COUNT(*) AS count, COALESCE(SUM(amount), 0) AS amount FROM leads WHERE status = ?${typeSql ? " AND " + typeSql : ""}`)
     .get(status) as { count: number; amount: number };
   return row;
 }
@@ -4204,13 +4198,13 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
   const running = db
     .prepare(
       `SELECT r.id, r.number, r.end_at, r.total, r.paid, r.items_json,
-              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone, c.type AS client_type
        FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
        WHERE r.status IN ('active','booked') AND r.paused_at IS NULL`
     )
     .all() as {
       id: string; number: string; end_at: string; total: number; paid: number; items_json: string;
-      client_id: string | null; client_name: string | null; client_phone: string | null;
+      client_id: string | null; client_name: string | null; client_phone: string | null; client_type: ClientType | null;
     }[];
 
   for (const r of running) {
@@ -4227,6 +4221,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
       targetId: r.id,
       url: `/rentals/${r.id}`,
       clientId: r.client_id ?? undefined,
+      clientType: r.client_type ?? undefined,
       clientName: r.client_name ?? "Клиент",
       phone: r.client_phone ?? undefined,
       subtitle: `Аренда №${r.number} · ${item}`,
@@ -4248,7 +4243,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
   const overdue = db
     .prepare(
       `SELECT r.id, r.number, r.end_at, r.total, r.paid, r.items_json,
-              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone, c.type AS client_type
        FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
        WHERE r.status = 'overdue'`
     )
@@ -4263,6 +4258,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
       targetId: r.id,
       url: `/rentals/${r.id}`,
       clientId: r.client_id ?? undefined,
+      clientType: r.client_type ?? undefined,
       clientName: r.client_name ?? "Клиент",
       phone: r.client_phone ?? undefined,
       subtitle: `Аренда №${r.number} · ${item} · ${days} дн. просрочки`,
@@ -4284,7 +4280,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
   const debts = db
     .prepare(
       `SELECT r.id, r.number, r.end_at, r.total, r.paid, r.items_json,
-              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone, c.type AS client_type
        FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
        WHERE r.status IN ('completed','stolen') AND r.total - r.paid > 0.5`
     )
@@ -4297,6 +4293,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
       targetId: r.id,
       url: `/rentals/${r.id}`,
       clientId: r.client_id ?? undefined,
+      clientType: r.client_type ?? undefined,
       clientName: r.client_name ?? "Клиент",
       phone: r.client_phone ?? undefined,
       subtitle: `Аренда №${r.number} · долг ${debt} ₸`,
@@ -4317,14 +4314,14 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
   const silentAfter = new Date(nowMs - 2 * 86400000).toISOString();
   const leads = db
     .prepare(
-      `SELECT id, number, title, client_name, phone, needed_at, updated_at
+      `SELECT id, number, title, client_name, client_type, phone, needed_at, updated_at
        FROM leads
        WHERE status = 'open' AND unavailable = 0 AND future = 0
          AND (needed_at IS NULL OR needed_at <= @now)
          AND updated_at <= @silentAfter`
     )
     .all({ now: now.toISOString(), silentAfter }) as {
-      id: string; number: number; title: string; client_name: string | null; phone: string | null;
+      id: string; number: number; title: string; client_name: string | null; client_type: ClientType | null; phone: string | null;
       needed_at: string | null; updated_at: string;
     }[];
 
@@ -4334,6 +4331,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
       targetId: lead.id,
       url: "/funnel",
       clientName: lead.client_name ?? "Клиент",
+      clientType: lead.client_type ?? undefined,
       phone: lead.phone ?? undefined,
       subtitle: `Заявка №${lead.number} · ${lead.title}`,
       dueAt: lead.needed_at ?? undefined,
@@ -4350,7 +4348,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
   const shortages = db
     .prepare(
       `SELECT s.id, s.item_name, s.note, r.id AS rental_id, r.number AS rental_number,
-              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+              c.id AS client_id, c.name AS client_name, c.phone AS client_phone, c.type AS client_type
        FROM return_shortages s
        JOIN rentals r ON r.id = s.rental_id
        LEFT JOIN clients c ON c.id = r.client_id
@@ -4358,7 +4356,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
     )
     .all() as {
       id: string; item_name: string; note: string | null; rental_id: string; rental_number: string;
-      client_id: string | null; client_name: string | null; client_phone: string | null;
+      client_id: string | null; client_name: string | null; client_phone: string | null; client_type: ClientType | null;
     }[];
 
   for (const sh of shortages) {
@@ -4368,6 +4366,7 @@ export function listReminders(now: Date = new Date()): ReminderItem[] {
       targetId: sh.id,
       url: "/shortages",
       clientId: sh.client_id ?? undefined,
+      clientType: sh.client_type ?? undefined,
       clientName: sh.client_name ?? "Клиент",
       phone: sh.client_phone ?? undefined,
       subtitle: `Аренда №${sh.rental_number} · ${sh.item_name}`,
@@ -4442,6 +4441,8 @@ let lastAutoSync = 0;
  * запусти проверку, второй такой задачи не появится.
  */
 export function syncAutoTasks(force = false): { created: number; closed: number; reopened: number } {
+  // Раздел выключен — задачи никто не видит, заводить их незачем
+  if (!TASKS_ENABLED) return { created: 0, closed: 0, reopened: 0 };
   // Вызывается на каждом открытии «Темпа» — чаще раза в полминуты смысла нет
   if (!force && Date.now() - lastAutoSync < 30_000) return { created: 0, closed: 0, reopened: 0 };
   lastAutoSync = Date.now();

@@ -7,6 +7,7 @@ import {
   Boxes, FileText, BellRing, Gauge, Wrench, BarChart3, Settings, ShieldCheck, HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TASKS_ENABLED } from "@/lib/features";
 
 /**
  * Помощь.
@@ -25,7 +26,7 @@ interface Topic {
   note?: string;
 }
 
-const TOPICS: Topic[] = [
+const ALL_TOPICS: Topic[] = [
   {
     id: "start",
     icon: Rocket,
@@ -35,7 +36,6 @@ const TOPICS: Topic[] = [
       "Зайдите в «Настройки» и смените пароль — тот, что выдал администратор, знают и другие.",
       "Откройте «Каталог» и посмотрите, что есть на складе: названия, артикулы, цены.",
       "Откройте «Аренды» — карточки красятся по состоянию: идёт, просрочена, ждём возврата.",
-      "«Темп» — ваши задачи на сегодня. Часть система ставит сама: просрочки, долги, некомплект.",
     ],
   },
   {
@@ -207,6 +207,9 @@ const TOPICS: Topic[] = [
   },
 ];
 
+// Выключенные разделы в справке не показываем: иначе она отправляет туда, где заглушка
+const TOPICS = ALL_TOPICS.filter((t) => TASKS_ENABLED || t.id !== "tasks");
+
 interface Faq {
   q: string;
   a: string;
@@ -361,12 +364,14 @@ export default function HelpPage() {
               >
                 Настройки и пароль
               </Link>
-              <Link
-                href="/tasks"
-                className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-[13.5px] font-semibold transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
-              >
-                Мои задачи
-              </Link>
+              {TASKS_ENABLED && (
+                <Link
+                  href="/tasks"
+                  className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2 text-[13.5px] font-semibold transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-ink)]"
+                >
+                  Мои задачи
+                </Link>
+              )}
             </div>
           </div>
         </div>

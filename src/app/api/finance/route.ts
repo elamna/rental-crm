@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { resolvePeriod } from "@/lib/period";
+import { clientTypeSql, parseClientTypeFilter } from "@/lib/client-type";
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +12,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { period, from, to, granularity } = resolvePeriod(req.nextUrl.searchParams);
+  const clientType = parseClientTypeFilter(req.nextUrl.searchParams.get("clientType"));
+  const typeSql = clientTypeSql("c.type", clientType);
 
   // Все аренды за период — JOIN с таблицей clients
   const rentals = db.prepare(`
@@ -18,7 +21,7 @@ export async function GET(req: NextRequest) {
            r.created_at, r.paid_at, r.penalties_json, r.expenses_json, r.deposit_json
     FROM rentals r
     LEFT JOIN clients c ON c.id = r.client_id
-    WHERE r.created_at >= ? AND r.created_at <= ? AND r.status NOT IN ('cancelled')
+    WHERE r.created_at >= ? AND r.created_at <= ? AND r.status NOT IN ('cancelled')${typeSql ? " AND " + typeSql : ""}
     ORDER BY r.created_at DESC
   `).all(from, to) as {
     id: string; number: string; client_name: string | null;

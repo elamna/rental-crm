@@ -9,6 +9,8 @@ import { cn, formatMoney } from "@/lib/utils";
 import { BarChart3, CalendarClock, Plus, Search, X } from "lucide-react";
 import { FunnelBoard } from "@/components/funnel/funnel-board";
 import { LeadModal, type StaffMember } from "@/components/funnel/lead-modal";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import type { ClientTypeFilter } from "@/lib/client-type";
 import { DaySummary } from "@/components/funnel/day-summary";
 
 type View = "open" | "won" | "lost" | "unavailable" | "otherCity";
@@ -35,6 +37,7 @@ export default function FunnelPage() {
   const [search, setSearch] = useState("");
   const [manager, setManager] = useState("");
   const [source, setSource] = useState("");
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
 
   const [editing, setEditing] = useState<Lead | null>(null);
   // Счётчики на вкладках: сколько заявок ждут поставки и сколько не из города
@@ -61,6 +64,7 @@ export default function FunnelPage() {
     if (search.trim()) params.set("q", search.trim());
     if (manager) params.set("manager", manager);
     if (source) params.set("source", source);
+    if (clientType !== "all") params.set("clientType", clientType);
 
     const res = await fetch(`/api/leads?${params}`);
     if (res.ok) {
@@ -74,7 +78,7 @@ export default function FunnelPage() {
       }
     }
     setLoading(false);
-  }, [view, search, manager, source]);
+  }, [view, search, manager, source, clientType]);
 
   // Поиск не дёргает сервер на каждую букву
   useEffect(() => {
@@ -231,6 +235,8 @@ export default function FunnelPage() {
               </option>
             ))}
           </select>
+
+          <ClientTypeFilterToggle value={clientType} onChange={setClientType} className="col-span-2 justify-self-start sm:col-span-1" />
         </div>
 
         {loading ? (
@@ -271,7 +277,7 @@ export default function FunnelPage() {
       {schedulingLead && (
         <ScheduleModal lead={schedulingLead} onClose={() => setSchedulingLead(null)} onSave={schedule} />
       )}
-      {showSummary && <DaySummary onClose={() => setShowSummary(false)} />}
+      {showSummary && <DaySummary clientType={clientType} onClose={() => setShowSummary(false)} />}
       {creating && <LeadModal staff={staff} onClose={() => setCreating(false)} onSaved={load} />}
       {editing && <LeadModal lead={editing} staff={staff} onClose={() => setEditing(null)} onSaved={load} />}
     </div>

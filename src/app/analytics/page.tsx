@@ -8,6 +8,8 @@ import { PeriodPicker } from "@/components/ui/period-picker";
 import { periodQuery, PERIOD_LABELS, type Granularity, type PeriodValue } from "@/lib/period";
 import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/lib/types";
 import { useAuth } from "@/components/auth/auth-provider";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import type { ClientTypeFilter } from "@/lib/client-type";
 import Link from "next/link";
 
 interface AnalyticsData {
@@ -99,29 +101,32 @@ export default function AnalyticsPage() {
   const [ledger, setLedger] = useState<LedgerData | null>(null);
   const [ledgerView, setLedgerView] = useState<"paid" | "unpaid">("paid");
   const [costs, setCosts] = useState<WorkshopCosts | null>(null);
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
   const { user } = useAuth();
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/analytics?${periodQuery(period)}`)
+    // Один отбор на всю страницу: цифры в разных блоках должны быть про одних и тех же клиентов
+    const q = periodQuery(period) + (clientType !== "all" ? `&clientType=${clientType}` : "");
+    fetch(`/api/analytics?${q}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); });
 
-    fetch(`/api/analytics/income?${periodQuery(period)}`)
+    fetch(`/api/analytics/income?${q}`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setIncome)
       .catch(() => setIncome(null));
 
-    fetch(`/api/analytics/payers?${periodQuery(period)}`)
+    fetch(`/api/analytics/payers?${q}`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setLedger)
       .catch(() => setLedger(null));
 
-    fetch(`/api/analytics/workshop?${periodQuery(period)}`)
+    fetch(`/api/analytics/workshop?${q}`)
       .then((r) => (r.ok ? r.json() : null))
       .then(setCosts)
       .catch(() => setCosts(null));
-  }, [period]);
+  }, [period, clientType]);
 
   const periodLabel = period.key === "custom" ? "выбранный период" : PERIOD_LABELS[period.key].toLowerCase();
 
@@ -152,6 +157,7 @@ export default function AnalyticsPage() {
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             )}
+            <ClientTypeFilterToggle value={clientType} onChange={setClientType} />
             <PeriodPicker value={period} onChange={setPeriod} />
           </div>
         </div>

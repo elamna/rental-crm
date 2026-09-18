@@ -7,14 +7,42 @@ import { formatMoney, plural } from "@/lib/utils";
 import { PeriodPicker } from "@/components/ui/period-picker";
 import { periodQuery, PERIOD_LABELS, type PeriodValue } from "@/lib/period";
 import { useAuth } from "@/components/auth/auth-provider";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import type { ClientTypeFilter } from "@/lib/client-type";
+import type {
+  DeepSection,
+  DeliveryData,
+  FunnelData,
+  OverviewData,
+  RentalsData,
+  RisksData,
+  ServicesData,
+  ShopData,
+  TeamData,
+} from "@/lib/deep-report";
+import {
+  DeliverySection,
+  FunnelSection,
+  OverviewSection,
+  RentalsSection,
+  RisksSection,
+  ServicesSection,
+  ShopSection,
+  TeamSection,
+} from "@/components/deep-report/sections";
+import { Card, Table } from "@/components/deep-report/ui";
 
 /**
- * Подробный отчёт: клиенты и инструмент.
+ * Подробный отчёт: всё, что есть в системе, по разделам.
  *
- * Страница отвечает на вопросы владельца, а не менеджера: кто возвращается,
- * кто пропал, что кормит, что простаивает и что чаще ломается. Поэтому она
- * закрыта от всех, кроме администратора, и лежит отдельно от обычной
- * аналитики — чтобы не утяжелять рабочий экран.
+ * Страница отвечает на вопросы владельца, а не менеджера: сколько заработали и
+ * на чём, кто возвращается и кто пропал, что кормит, что простаивает и что чаще
+ * ломается, как работает воронка, доставка, магазин и каждый сотрудник, где
+ * висят долги. Поэтому она закрыта от всех, кроме администратора, и лежит
+ * отдельно от обычной аналитики — чтобы не утяжелять рабочий экран.
+ *
+ * Разделы — вкладками: одиннадцать блоков на одной странице превращались бы в
+ * простыню. Каждая вкладка запрашивает только свой раздел.
  */
 
 interface ClientRow {
@@ -78,6 +106,7 @@ interface DeepData {
       revenue: number; repairCost: number; profit: number; days: number; unlinkedRevenue: number;
     };
     rows: ToolRow[];
+    categories?: { label: string; items: number; rented: number; revenue: number; repairCost: number; days: number }[];
   };
   workshop: {
     totals: { tickets: number; open: number; cost: number; avgTicket: number; days: number; idleCost: number };
@@ -112,28 +141,63 @@ const TOOL_VIEWS: { key: ToolView; label: string }[] = [
   { key: "durable", label: "Служат дольше всех" },
 ];
 
+type TabKey = DeepSection | "clients" | "tools" | "workshop";
+
+/** Вкладки в том порядке, в каком владелец о них думает: сначала деньги, потом люди и вещи */
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "overview", label: "Обзор" },
+  { key: "rentals", label: "Аренды" },
+  { key: "clients", label: "Клиенты" },
+  { key: "tools", label: "Инструмент" },
+  { key: "workshop", label: "Мастерская" },
+  { key: "funnel", label: "Воронка" },
+  { key: "delivery", label: "Доставка" },
+  { key: "shop", label: "Магазин" },
+  { key: "services", label: "Услуги и комплекты" },
+  { key: "team", label: "Команда" },
+  { key: "risks", label: "Риски и долги" },
+];
+
+/** Клиенты, инструмент и мастерская приходят одним ответом — они считаются вместе */
+const PEOPLE_TABS: TabKey[] = ["clients", "tools", "workshop"];
+
 export default function DeepAnalyticsPage() {
   // «Всё время» по умолчанию: отчёт про долгие закономерности, а не про сегодня
   const [period, setPeriod] = useState<PeriodValue>({ key: "all" });
-  const [data, setData] = useState<DeepData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
+  const [tab, setTab] = useState<TabKey>("overview");
+  // Ответы складываются по ключу «вкладка + период + отбор»: вернулся на
+  // вкладку — она открывается сразу, без повторного расчёта
+  const [cache, setCache] = useState<Record<string, unknown>>({});
   const [error, setError] = useState<string | null>(null);
   const [clientView, setClientView] = useState<ClientView>("revenue");
   const [toolView, setToolView] = useState<ToolView>("profit");
   const { user, loading: authLoading } = useAuth();
 
+  const isPeople = PEOPLE_TABS.includes(tab);
+  const query = `${periodQuery(period)}${clientType !== "all" ? `&clientType=${clientType}` : ""}`;
+  const cacheKey = `${isPeople ? "people" : tab}|${query}`;
+  const current = cache[cacheKey];
+
   useEffect(() => {
-    if (authLoading || !user?.isAdmin) return;
-    setLoading(true);
-    fetch(`/api/analytics/deep?${periodQuery(period)}`)
+    if (authLoading || !user?.isAdmin || current !== undefined) return;
+    let cancelled = false;
+    setError(null);
+    fetch(`/api/analytics/deep?${query}${isPeople ? "" : `&section=${tab}`}`)
       .then(async (r) => {
         if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error || "Не удалось загрузить отчёт");
         return r.json();
       })
-      .then((d) => { setData(d); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Не удалось загрузить отчёт"))
-      .finally(() => setLoading(false));
-  }, [period, user, authLoading]);
+      .then((d) => {
+        if (!cancelled) setCache((c) => ({ ...c, [cacheKey]: isPeople ? d : d.data }));
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Не удалось загрузить отчёт");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user, current, query, tab, isPeople, cacheKey]);
 
   if (!authLoading && !user?.isAdmin) {
     return (
@@ -153,10 +217,11 @@ export default function DeepAnalyticsPage() {
   }
 
   const periodLabel = period.key === "custom" ? "выбранный период" : PERIOD_LABELS[period.key].toLowerCase();
+  const typeLabel = clientType === "company" ? " · только юрлица" : clientType === "individual" ? " · только физлица" : "";
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 py-3 backdrop-blur sm:px-6 sm:py-4">
+      <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]/70 px-4 pt-3 backdrop-blur sm:px-6 sm:pt-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <Link
@@ -166,31 +231,115 @@ export default function DeepAnalyticsPage() {
               <ArrowLeft className="h-3.5 w-3.5" /> Аналитика
             </Link>
             <h1 className="font-display text-[20px] font-bold">Подробный отчёт</h1>
-            <p className="text-[14px] text-[var(--color-text-muted)]">Клиенты, инструмент и мастерская за {periodLabel}</p>
+            <p className="text-[14px] text-[var(--color-text-muted)]">
+              Всё о прокате за {periodLabel}
+              {typeLabel}
+            </p>
           </div>
-          <PeriodPicker value={period} onChange={setPeriod} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ClientTypeFilterToggle value={clientType} onChange={setClientType} />
+            <PeriodPicker value={period} onChange={setPeriod} />
+          </div>
         </div>
+
+        {/* Разделы — вкладками, а не одной простынёй: так каждый читается отдельно */}
+        <nav className="-mx-4 mt-3 flex gap-1 overflow-x-auto px-4 sm:-mx-6 sm:px-6" aria-label="Разделы отчёта">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={(e) => {
+                setTab(t.key);
+                // На телефоне вкладки уезжают вбок — выбранную подтягиваем в середину
+                // ряда. Крутим только сам ряд: scrollIntoView сдвигал вбок всю
+                // страницу, и левая половина экрана уезжала за край
+                const nav = e.currentTarget.parentElement;
+                if (nav) {
+                  const btn = e.currentTarget.getBoundingClientRect();
+                  const box = nav.getBoundingClientRect();
+                  nav.scrollTo({ left: nav.scrollLeft + btn.left - box.left - (box.width - btn.width) / 2, behavior: "smooth" });
+                }
+              }}
+              // Черта под вкладкой — тенью, а не рамкой: глобальный цвет рамок
+              // в тёмной теме перекрашивал «прозрачную» рамку в серую у всех вкладок
+              className={
+                "shrink-0 whitespace-nowrap px-3 py-2.5 text-[13.5px] font-semibold transition " +
+                (tab === t.key
+                  ? "text-[var(--color-primary-ink)] shadow-[inset_0_-2px_0_var(--color-primary)]"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]")
+              }
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
       </header>
 
       <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
-        {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center text-[14px] text-[#C0272D]">
             {error}
           </div>
-        ) : !data ? null : (
-          <>
-            <ClientsBlock data={data} view={clientView} onView={setClientView} periodLabel={periodLabel} />
-            <ToolsBlock data={data} view={toolView} onView={setToolView} periodLabel={periodLabel} />
-            {data.workshop && <WorkshopBlock data={data} periodLabel={periodLabel} />}
-          </>
+        ) : current === undefined ? (
+          <div className="flex h-64 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+          </div>
+        ) : (
+          <TabContent
+            tab={tab}
+            data={current}
+            periodLabel={periodLabel}
+            clientView={clientView}
+            onClientView={setClientView}
+            toolView={toolView}
+            onToolView={setToolView}
+          />
         )}
       </div>
     </div>
   );
+}
+
+function TabContent({
+  tab,
+  data,
+  periodLabel,
+  clientView,
+  onClientView,
+  toolView,
+  onToolView,
+}: {
+  tab: TabKey;
+  data: unknown;
+  periodLabel: string;
+  clientView: ClientView;
+  onClientView: (v: ClientView) => void;
+  toolView: ToolView;
+  onToolView: (v: ToolView) => void;
+}) {
+  switch (tab) {
+    case "overview":
+      return <OverviewSection data={data as OverviewData} periodLabel={periodLabel} />;
+    case "rentals":
+      return <RentalsSection data={data as RentalsData} />;
+    case "funnel":
+      return <FunnelSection data={data as FunnelData} />;
+    case "delivery":
+      return <DeliverySection data={data as DeliveryData} />;
+    case "shop":
+      return <ShopSection data={data as ShopData} />;
+    case "services":
+      return <ServicesSection data={data as ServicesData} />;
+    case "team":
+      return <TeamSection data={data as TeamData} />;
+    case "risks":
+      return <RisksSection data={data as RisksData} />;
+    case "clients":
+      return <ClientsBlock data={data as DeepData} view={clientView} onView={onClientView} periodLabel={periodLabel} />;
+    case "tools":
+      return <ToolsBlock data={data as DeepData} view={toolView} onView={onToolView} periodLabel={periodLabel} />;
+    case "workshop":
+      return (data as DeepData).workshop ? <WorkshopBlock data={data as DeepData} periodLabel={periodLabel} /> : null;
+  }
 }
 
 // ─── Клиенты ─────────────────────────────────────────────────────────────────
@@ -358,7 +507,7 @@ function sortClients(rows: ClientRow[], view: ClientView): ClientRow[] {
 function ToolsBlock({
   data, view, onView, periodLabel,
 }: { data: DeepData; view: ToolView; onView: (v: ToolView) => void; periodLabel: string }) {
-  const { totals, rows } = data.tools;
+  const { totals, rows, categories = [] } = data.tools;
   const shown = sortTools(rows, view).slice(0, 25);
 
   return (
@@ -397,6 +546,26 @@ function ToolsBlock({
           Ещё {formatMoney(totals.unlinkedRevenue)} пришли с позиций, не привязанных к складу, — товары магазина и строки,
           вписанные в заявку руками. Их не с чем сопоставить по ремонтам, поэтому в таблице ниже их нет.
         </p>
+      )}
+
+      {categories.length > 0 && (
+        <Card title="По категориям каталога" hint="Какие направления проката зарабатывают, а какие стоят">
+          <Table
+            minWidth={560}
+            head={[
+              { label: "Категория" },
+              { label: "Позиций", align: "right" },
+              { label: "Сдавались", align: "right" },
+              { label: "Дней в работе", align: "right" },
+              { label: "Выручка", align: "right" },
+              { label: "Ремонт", align: "right" },
+            ]}
+            rows={categories.map((c) => ({
+              key: c.label,
+              cells: [c.label, c.items, `${c.rented} из ${c.items}`, c.days, formatMoney(c.revenue), c.repairCost ? formatMoney(c.repairCost) : "—"],
+            }))}
+          />
+        </Card>
       )}
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">

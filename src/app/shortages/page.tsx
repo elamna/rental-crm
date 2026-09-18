@@ -6,6 +6,8 @@ import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Client, ReturnShortage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import { matchesClientType, type ClientTypeFilter } from "@/lib/client-type";
 import { AlertTriangle, ArrowLeft, Ban, Check, PackageX, RotateCcw, ShieldOff, Star } from "lucide-react";
 
 type TabKey = "open" | "resolved" | "all";
@@ -45,6 +47,7 @@ export default function ShortagesPage() {
   const [counts, setCounts] = useState({ open: 0, resolved: 0 });
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/shortages?status=${tab}`);
@@ -63,6 +66,14 @@ export default function ShortagesPage() {
   // Карточка клиента в сторе полнее, чем то, что приходит со списком:
   // там рейтинг и история аренд — ровно то, по чему принимают решение
   const clientsById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
+
+  const shown = useMemo(
+    () =>
+      shortages.filter((s) =>
+        matchesClientType((s.clientId ? clientsById.get(s.clientId)?.type : undefined) ?? s.clientType, clientType)
+      ),
+    [shortages, clientsById, clientType]
+  );
 
   const tabCounts: Record<TabKey, number> = {
     open: counts.open,
@@ -134,9 +145,10 @@ export default function ShortagesPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <ClientTypeFilterToggle value={clientType} onChange={setClientType} className="mb-3" />
         {loading ? (
           <p className="py-10 text-center text-[14.5px] text-[var(--color-text-muted)]">Загрузка…</p>
-        ) : shortages.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center card-shadow">
             <PackageX className="mx-auto h-7 w-7 text-[var(--color-text-muted)]" />
             <p className="mt-2 text-[14.5px] text-[var(--color-text-muted)]">
@@ -145,7 +157,7 @@ export default function ShortagesPage() {
           </div>
         ) : (
           <div className="space-y-2.5">
-            {shortages.map((s) => (
+            {shown.map((s) => (
               <ShortageRow
                 key={s.id}
                 shortage={s}

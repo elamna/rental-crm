@@ -7,6 +7,7 @@ import {
   Ban, FileText, Wallet, Wrench, Settings, Plus, Gauge, Filter, Truck, Store,
   ChevronsLeft, LogOut, UserCog, X, BellRing, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TASKS_ENABLED } from "@/lib/features";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Permission } from "@/lib/types";
@@ -38,7 +39,8 @@ const secondaryNav: NavItem[] = [
 ];
 
 const bottomNav: NavItem[] = [
-  { href: "/tasks", label: "Темп", icon: Gauge, permission: "tasks.view" },
+  // «Темп» выключен (src/lib/features.ts) — пункт меню появится вместе с разделом
+  ...(TASKS_ENABLED ? [{ href: "/tasks", label: "Темп", icon: Gauge, permission: "tasks.view" as Permission }] : []),
   { href: "/settings", label: "Настройки", icon: Settings, permission: "settings.view" },
   { href: "/users", label: "Пользователи", icon: UserCog, permission: "users.view" },
   // Без права доступа: помощь нужна как раз тем, у кого прав меньше всего

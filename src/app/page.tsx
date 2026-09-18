@@ -5,7 +5,9 @@ import { formatMoney } from "@/lib/utils";
 import { PackageCheck, Boxes, AlertTriangle, CalendarClock, Wallet, TrendingUp, Bell, Sparkles } from "lucide-react";
 import { RentalCard } from "@/components/rentals/rental-card";
 import Link from "next/link";
-import { useMemo } from "react";
+import { ClientTypeFilterToggle } from "@/components/ui/client-type-filter";
+import { matchesClientType, type ClientTypeFilter } from "@/lib/client-type";
+import { useMemo, useState } from "react";
 
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -18,9 +20,16 @@ function timeAgo(iso: string) {
 }
 
 export default function DashboardPage() {
-  const rentals = useAppStore((s) => s.rentals);
+  const allRentals = useAppStore((s) => s.rentals);
   const activity = useAppStore((s) => s.activity);
-  const clients = useAppStore((s) => s.clients);
+  const allClients = useAppStore((s) => s.clients);
+  const [clientType, setClientType] = useState<ClientTypeFilter>("all");
+  // Вся сводка — про выбранный тип клиентов: и счётчики, и списки ниже
+  const rentals = useMemo(
+    () => allRentals.filter((r) => matchesClientType(r.client?.type, clientType)),
+    [allRentals, clientType]
+  );
+  const clients = useMemo(() => allClients.filter((c) => matchesClientType(c.type, clientType)), [allClients, clientType]);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -57,17 +66,20 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6">
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-[22px] font-bold">Главная</h1>
           <p className="text-[14px] text-[var(--color-text-muted)]">Сводка по прокату на данный момент</p>
         </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+        <ClientTypeFilterToggle value={clientType} onChange={setClientType} />
         <Link
           href="/rentals/new"
           className="rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[14px] font-semibold text-[var(--color-on-primary)] shadow-[var(--shadow-primary)] transition hover:bg-[var(--color-primary-hover)]"
         >
           + Новая аренда
         </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">

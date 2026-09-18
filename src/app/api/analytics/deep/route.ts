@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError, ApiError } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { resolvePeriod } from "@/lib/period";
+import { clientIdOfType, clientTypeSql, parseClientTypeFilter, rentalIdOfType } from "@/lib/client-type";
+import { buildDeepSection, LIB_SECTIONS, type DeepSection } from "@/lib/deep-report";
 import type { InventoryLine, WorkshopLine } from "@/lib/types";
 
 /**
@@ -83,6 +85,15 @@ export async function GET(req: NextRequest) {
     if (!user.isAdmin) throw new ApiError(403, "Подробный отчёт доступен только администратору");
 
     const { period, from, to } = resolvePeriod(req.nextUrl.searchParams);
+    const clientType = parseClientTypeFilter(req.nextUrl.searchParams.get("clientType"));
+
+    // Вкладки отчёта запрашивают свой раздел; клиенты, инструмент и мастерская
+    // считаются ниже одним проходом — они связаны общими арендами и ремонтами
+    const section = req.nextUrl.searchParams.get("section") as DeepSection | null;
+    if (section && LIB_SECTIONS.includes(section)) {
+      return NextResponse.json({ period, from, to, section, data: buildDeepSection(section, from, to, clientType) });
+    }
+    const typeOnly = clientTypeSql("type", clientType);
     const now = Date.now();
     const periodStart = Date.parse(from);
 
@@ -90,12 +101,12 @@ export async function GET(req: NextRequest) {
       .prepare(
         `SELECT id, client_id, status, start_at, end_at, returned_at, total, paid, items_json, created_at
          FROM rentals
-         WHERE status NOT IN ('cancelled') AND created_at >= ? AND created_at <= ?`
+         WHERE status NOT IN ('cancelled') AND created_at >= ? AND created_at <= ?${clientIdOfType("client_id", clientType)}`
       )
       .all(from, to) as RentalRow[];
 
     const clients = db
-      .prepare(`SELECT id, name, type, phone, blacklisted, acquisition_channel, created_at FROM clients`)
+      .prepare(`SELECT id, name, type, phone, blacklisted, acquisition_channel, created_at FROM clients${typeOnly ? " WHERE " + typeOnly : ""}`)
       .all() as ClientRow[];
 
     const items = db
@@ -263,7 +274,7 @@ export async function GET(req: NextRequest) {
     const tickets = db
       .prepare(
         `SELECT id, number, title, status, reason, inventory_item_id, lines_json, created_at, updated_at
-         FROM workshop_tickets WHERE created_at >= ? AND created_at <= ?`
+         FROM workshop_tickets WHERE created_at >= ? AND created_at <= ?${rentalIdOfType("source_rental_id", clientType)}`
       )
       .all(from, to) as {
       id: string;
@@ -373,6 +384,20 @@ export async function GET(req: NextRequest) {
       })
       .sort((a, b) => b.revenue - a.revenue);
 
+    // Категории каталога: какие направления проката кормят, а какие стоят
+    const categoryMap = new Map<string, { label: string; items: number; rented: number; revenue: number; repairCost: number; days: number }>();
+    for (const t of toolRows) {
+      const key = t.category || "Без категории";
+      const c = categoryMap.get(key) ?? { label: key, items: 0, rented: 0, revenue: 0, repairCost: 0, days: 0 };
+      c.items += 1;
+      if (t.rentals > 0) c.rented += 1;
+      c.revenue += t.revenue;
+      c.repairCost += t.repairCost;
+      c.days += t.days;
+      categoryMap.set(key, c);
+    }
+    const categories = [...categoryMap.values()].sort((a, b) => b.revenue - a.revenue);
+
     const toolRevenue = toolRows.reduce((sum, t) => sum + t.revenue, 0);
     const toolRepairCost = toolRows.reduce((sum, t) => sum + t.repairCost, 0);
 
@@ -416,6 +441,7 @@ export async function GET(req: NextRequest) {
           unlinkedRevenue: Math.round(unlinkedRevenue),
         },
         rows: toolRows,
+        categories,
       },
       workshop: {
         totals: {

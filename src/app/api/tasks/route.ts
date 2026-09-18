@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { TASKS_ENABLED, featureDisabled } from "@/lib/features";
 import { requireAuth, hasPermission } from "@/lib/auth";
 import { listTasks, createTask, syncAutoTasks } from "@/lib/repo";
 
 export async function GET() {
+  if (!TASKS_ENABLED) return featureDisabled("Темп");
   try {
     const me = await requireAuth("tasks.view");
     // Просрочки, долги и некомплект превращаются в задачи здесь же: отдельного
@@ -18,6 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!TASKS_ENABLED) return featureDisabled("Темп");
   try {
     const me = await requireAuth("tasks.manage");
     const body = await req.json();

@@ -45,7 +45,7 @@ interface AppState {
   /** Импорт истории аренд: клиенты и позиции подтягиваются по телефону и артикулу */
   importRentals: (
     rows: unknown[]
-  ) => Promise<ImportReport & { clientsCreated: number; itemsLinked: number; itemsCreated: number; itemsUnmatched: number }>;
+  ) => Promise<ImportReport & { clientsCreated: number; itemsLinked: number; itemsUnmatched: number }>;
   /** Импорт каталога из выгрузки: строка файла разворачивается в несколько единиц */
   importInventoryItems: (
     rows: (Partial<InventoryItem> & { quantity?: number })[],
@@ -216,7 +216,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   importRentals: async (rows) => {
     const result = await api<
-      ImportReport & { clientsCreated: number; itemsLinked: number; itemsCreated: number; itemsUnmatched: number }
+      ImportReport & { clientsCreated: number; itemsLinked: number; itemsUnmatched: number }
     >(
       "/api/rentals/import",
       { method: "POST", body: JSON.stringify(rows) }

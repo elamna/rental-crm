@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { TASKS_ENABLED } from "@/lib/features";
 import {
   AppUser,
   Permission,
@@ -335,7 +336,7 @@ function UserModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {PERMISSION_SECTIONS.map((section) => {
+                  {PERMISSION_SECTIONS.filter((section) => TASKS_ENABLED || section.key !== "tasks").map((section) => {
                     const rowPerms = [
                       ...section.actions.map((a) => `${section.key}.${a}` as Permission),
                       ...(section.special ?? []).map((sp) => sp.key as Permission),

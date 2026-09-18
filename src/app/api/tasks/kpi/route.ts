@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { TASKS_ENABLED, featureDisabled } from "@/lib/features";
 import { requireAuth, hasPermission } from "@/lib/auth";
 import { taskKpi } from "@/lib/repo";
 
 const DAYS: Record<string, number | null> = { week: 7, month: 30, quarter: 90, all: null };
 
 export async function GET(req: NextRequest) {
+  if (!TASKS_ENABLED) return featureDisabled("Темп");
   try {
     const me = await requireAuth("tasks.view");
     const canManageAll = hasPermission(me, "tasks.manage");
