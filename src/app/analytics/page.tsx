@@ -16,15 +16,16 @@ interface AnalyticsData {
   period: string;
   granularity: Granularity;
   summary: {
-    totalRevenue: number; totalRentals: number; activeRentals: number; bookedRentals: number;
-    overdueRentals: number; totalDebt: number; newClients: number;
+    totalRevenue: number; cashRent: number; cashDelivery: number;
+    totalRentals: number; billed: number; avgCheck: number;
+    activeRentals: number; bookedRentals: number;
+    overdueRentals: number; totalDebt: number; debtors: number; newClients: number;
     totalClients: number; freeInventory: number; totalInventory: number;
     workshopActive: number;
   };
   /** Итоги за всё время, а не за выбранный период */
   allTime: { revenue: number; rentals: number; debt: number; avgCheck: number };
   revenueByDay: { day: string; revenue: number; count: number }[];
-  revenueByMonth: { month: string; revenue: number; count: number }[];
   topClients: { id: string; name: string; phone: string; rentals_count: number; total_paid: number; total_debt: number }[];
   topInventory: { name: string; count: number; revenue: number }[];
   byStatus: { status: string; count: number }[];
@@ -103,30 +104,50 @@ export default function AnalyticsPage() {
   const [costs, setCosts] = useState<WorkshopCosts | null>(null);
   const [clientType, setClientType] = useState<ClientTypeFilter>("all");
   const { user } = useAuth();
+  // Другой менеджер принял оплату или оформил аренду — пересчитываем, а не
+  // показываем цифры на момент открытия страницы
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    const bump = () => setRefresh((n) => n + 1);
+    window.addEventListener("crm:data-changed", bump);
+    return () => window.removeEventListener("crm:data-changed", bump);
+  }, []);
 
   useEffect(() => {
-    setLoading(true);
+    // Пересчёт по сигналу — без мигания загрузкой: старые цифры видны, пока идут новые
+    if (refresh === 0) setLoading(true);
+    // Ответ на старый выбор периода может прийти позже нового и перезаписать
+    // цифры — тогда на экране «7 дней», а данные за 30. Устаревшие ответы
+    // выбрасываем
+    let stale = false;
+    const keep = <T,>(set: (v: T) => void) => (v: T) => {
+      if (!stale) set(v);
+    };
     // Один отбор на всю страницу: цифры в разных блоках должны быть про одних и тех же клиентов
     const q = periodQuery(period) + (clientType !== "all" ? `&clientType=${clientType}` : "");
     fetch(`/api/analytics?${q}`)
-      .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); });
+      .then((r) => (r.ok ? r.json() : null))
+      .then(keep((d: AnalyticsData | null) => { setData(d); setLoading(false); }))
+      .catch(keep(() => { setData(null); setLoading(false); }));
 
     fetch(`/api/analytics/income?${q}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then(setIncome)
-      .catch(() => setIncome(null));
+      .then(keep(setIncome))
+      .catch(keep(() => setIncome(null)));
 
     fetch(`/api/analytics/payers?${q}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then(setLedger)
-      .catch(() => setLedger(null));
+      .then(keep(setLedger))
+      .catch(keep(() => setLedger(null)));
 
     fetch(`/api/analytics/workshop?${q}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then(setCosts)
-      .catch(() => setCosts(null));
-  }, [period, clientType]);
+      .then(keep(setCosts))
+      .catch(keep(() => setCosts(null)));
+    return () => {
+      stale = true;
+    };
+  }, [period, clientType, refresh]);
 
   const periodLabel = period.key === "custom" ? "выбранный период" : PERIOD_LABELS[period.key].toLowerCase();
 
@@ -176,11 +197,11 @@ export default function AnalyticsPage() {
               <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
                 <h2 className="font-display text-[17px] font-bold">За всё время</h2>
                 <p className="mb-4 text-[13.5px] text-[var(--color-text-muted)]">
-                  Всё, что прокат заработал с начала работы, независимо от выбранного периода
+                  Все деньги, которые прокат получил с начала работы, — независимо от выбранного периода
                 </p>
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                   <div className="rounded-[12px] bg-[var(--color-primary-soft)] px-4 py-3">
-                    <div className="text-[12.5px] font-medium text-[var(--color-primary-ink)]">Общая сумма</div>
+                    <div className="text-[12.5px] font-medium text-[var(--color-primary-ink)]">Поступило всего</div>
                     <div className="mt-0.5 font-display text-[22px] font-bold text-[var(--color-primary-ink)]">
                       {formatMoney(data.allTime.revenue)}
                     </div>
@@ -194,7 +215,7 @@ export default function AnalyticsPage() {
                     <div className="mt-0.5 font-display text-[22px] font-bold">{formatMoney(data.allTime.avgCheck)}</div>
                   </div>
                   <div className="rounded-[12px] bg-[var(--color-bg)] px-4 py-3">
-                    <div className="text-[12.5px] text-[var(--color-text-muted)]">Не оплачено</div>
+                    <div className="text-[12.5px] text-[var(--color-text-muted)]">Долг клиентов сейчас</div>
                     <div
                       className={
                         "mt-0.5 font-display text-[22px] font-bold " +
@@ -259,8 +280,8 @@ export default function AnalyticsPage() {
 
                 {incomeView !== "sources" && income.untracked > 0 && (
                   <p className="mt-3 rounded-[10px] bg-[var(--color-bg)] px-3 py-2 text-[13px] text-[var(--color-text-muted)]">
-                    Ещё {formatMoney(income.untracked)} приняты до того, как начали записывать способ оплаты — они есть в общей
-                    сумме, но не разложены по Kaspi и наличным.
+                    Ещё {formatMoney(income.untracked)} — оплаты без чека: старые аренды из прошлой системы и суммы,
+                    исправленные вручную. Они есть в общей сумме, но способ оплаты у них неизвестен.
                   </p>
                 )}
 
@@ -276,24 +297,53 @@ export default function AnalyticsPage() {
 
             {/* KPI карточки */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <KpiCard icon={TrendingUp} label="Выручка" value={formatMoney(data.summary.totalRevenue)} color="primary" sub={`${data.summary.totalRentals} аренд за период`} />
-              <KpiCard icon={CreditCard} label="Долги клиентов" value={formatMoney(data.summary.totalDebt)} color="danger" sub={`${data.summary.bookedRentals} забронировано, ${data.summary.overdueRentals} просрочено`} />
-              <KpiCard icon={ClipboardList} label="Активные аренды" value={String(data.summary.activeRentals)} color="success" sub={`${data.summary.overdueRentals} просрочено`} />
+              {/* Поступления — деньги по дню, когда их приняли; оформлено — аренды,
+                  заведённые в периоде. Это разные вопросы, и раньше их смешивали
+                  в одну «выручку», поэтому цифры не сходились с «Поступлениями» */}
+              <KpiCard
+                icon={TrendingUp}
+                label="Поступления"
+                value={formatMoney(data.summary.totalRevenue)}
+                color="primary"
+                sub={data.summary.cashDelivery > 0 ? `аренды ${formatMoney(data.summary.cashRent)} · доставка ${formatMoney(data.summary.cashDelivery)}` : "деньги, принятые за период"}
+              />
+              <KpiCard
+                icon={ClipboardList}
+                label="Оформлено аренд"
+                value={String(data.summary.totalRentals)}
+                color="success"
+                sub={`на ${formatMoney(data.summary.billed)} · средний чек ${formatMoney(data.summary.avgCheck)}`}
+              />
+              <KpiCard
+                icon={CreditCard}
+                label="Долги клиентов"
+                value={formatMoney(data.summary.totalDebt)}
+                color="danger"
+                sub={data.summary.debtors ? `${data.summary.debtors} ${plural(data.summary.debtors, "должник", "должника", "должников")} · сейчас` : "должников нет"}
+              />
+              <KpiCard
+                icon={ClipboardList}
+                label="Сейчас в аренде"
+                value={String(data.summary.activeRentals)}
+                color="success"
+                sub={`просрочено ${data.summary.overdueRentals} · в брони ${data.summary.bookedRentals}`}
+              />
               <KpiCard icon={Users} label="Клиентов" value={String(data.summary.totalClients)} color="info" sub={`+${data.summary.newClients} за период`} />
               <KpiCard icon={Package} label="Инвентарь" value={`${data.summary.freeInventory} / ${data.summary.totalInventory}`} color="neutral" sub="свободно / всего" />
-              <KpiCard icon={Wrench} label="Заявки мастерской" value={String(data.summary.workshopActive)} color="warning" sub="активных заявок" />
+              <KpiCard icon={Wrench} label="Заявки мастерской" value={String(data.summary.workshopActive)} color="warning" sub="не закрыты сейчас" />
             </div>
 
             {/* График выручки */}
             <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-              <h2 className="mb-4 text-[16px] font-semibold">Выручка за период</h2>
+              <h2 className="text-[16px] font-semibold">Поступления за период</h2>
+              <p className="mb-4 text-[12.5px] text-[var(--color-text-muted)]">По дню, когда деньги приняли, — по местному времени</p>
               {chartData && chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} />
                     <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v) => [formatMoney(Number(v ?? 0)), "Выручка"]} labelStyle={{ fontSize: 12 }} contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--color-border)" }} />
+                    <Tooltip formatter={(v) => [formatMoney(Number(v ?? 0)), "Поступления"]} labelStyle={{ fontSize: 12 }} contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--color-border)" }} />
                     <Bar dataKey="revenue" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -333,7 +383,7 @@ export default function AnalyticsPage() {
 
               {/* Количество аренд по дням */}
               <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-                <h2 className="mb-4 text-[16px] font-semibold">Количество аренд</h2>
+                <h2 className="mb-4 text-[16px] font-semibold">Оформлено аренд</h2>
                 {chartData && chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={160}>
                     <LineChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
@@ -351,7 +401,8 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {/* Топ клиентов */}
               <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-                <h2 className="mb-4 text-[16px] font-semibold">Топ клиентов</h2>
+                <h2 className="text-[16px] font-semibold">Топ клиентов</h2>
+                <p className="mb-4 text-[12.5px] text-[var(--color-text-muted)]">Кто больше всех заплатил за период; долг — на сегодня</p>
                 {data.topClients.length > 0 ? (
                   <div className="space-y-2">
                     {data.topClients.map((c, i) => (
@@ -362,7 +413,7 @@ export default function AnalyticsPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[14px] font-medium">{c.name}</div>
-                          <div className="text-[12px] text-[var(--color-text-muted)]">{c.rentals_count} аренд</div>
+                          <div className="text-[12px] text-[var(--color-text-muted)]">{c.rentals_count} {plural(c.rentals_count, "аренда", "аренды", "аренд")} за период</div>
                         </div>
                         <div className="text-right">
                           <div className="text-[14px] font-semibold">{formatMoney(c.total_paid)}</div>
@@ -376,7 +427,8 @@ export default function AnalyticsPage() {
 
               {/* Топ инвентаря */}
               <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 card-shadow">
-                <h2 className="mb-4 text-[16px] font-semibold">Популярный инвентарь</h2>
+                <h2 className="text-[16px] font-semibold">Популярный инвентарь</h2>
+                <p className="mb-4 text-[12.5px] text-[var(--color-text-muted)]">Сколько раз брали и на какую сумму оформили</p>
                 {data.topInventory.length > 0 ? (
                   <div className="space-y-2">
                     {data.topInventory.map((item, i) => (
@@ -620,10 +672,10 @@ function EmptyList({ text }: { text: string }) {
 }
 
 function formatBucket(value: string, granularity: Granularity) {
-  if (granularity === "hour") {
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? value : d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  }
+  // Сервер уже разложил по местному времени и прислал «2026-09-18T14:00» —
+  // берём часы как есть. Раньше строка разбиралась ещё раз как время и
+  // сдвигалась на пять часов
+  if (granularity === "hour") return value.slice(11, 16) || value;
   if (granularity === "month") return formatMonth(value);
   const d = new Date(value + "T00:00:00");
   return isNaN(d.getTime()) ? value : d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
@@ -727,12 +779,14 @@ function PayersSection({
                           №{p.rentalNumber}
                         </Link>
                       </td>
-                      <td className="py-2.5">{PAYMENT_METHOD_LABELS[p.method] ?? p.method}</td>
+                      <td className="py-2.5">
+                        {p.amount < 0 ? "Возврат" : p.method === ("unknown" as PaymentMethod) ? "Без чека" : PAYMENT_METHOD_LABELS[p.method] ?? p.method}
+                      </td>
                       <td className="py-2.5 text-[var(--color-text-muted)]">
                         {formatWhen(p.createdAt)}
                         {p.createdBy ? ` · ${p.createdBy}` : ""}
                       </td>
-                      <td className="py-2.5 text-right font-semibold text-[#1C8A46]">{formatMoney(p.amount)}</td>
+                      <td className={`py-2.5 text-right font-semibold ${p.amount < 0 ? "text-[#C0272D]" : "text-[#1C8A46]"}`}>{formatMoney(p.amount)}</td>
                     </tr>
                   ))
                 : ledger.unpaid.map((d) => (

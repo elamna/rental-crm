@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { clientIdOfType, clientTypeSql, rentalIdOfType, type ClientTypeFilter } from "./client-type";
 import type { InventoryLine } from "./types";
+import { cashEntries, debtNow, debtStatuses, localKey, localWeekday, REAL_RENTAL, splitCash } from "./analytics-core";
 
 /**
  * Подробный отчёт владельца — всё, что есть в системе, по разделам.
@@ -32,6 +33,8 @@ interface Ctx {
   to: string;
   type: ClientTypeFilter;
   now: number;
+  /** Часовой пояс браузера, минут к востоку от UTC — для дней, недель и месяцев */
+  tz: number;
 }
 
 const DAY = 86400000;
@@ -102,64 +105,49 @@ interface RentalRow {
   deposit_json: string | null;
 }
 
-/** Аренды периода (по дате оформления) с отбором по типу клиента; отменённые не считаем */
+/** Аренды периода (по дате оформления) с отбором по типу клиента — без отмен и черновиков-запросов */
 function periodRentals(ctx: Ctx): RentalRow[] {
   return db
     .prepare(
       `SELECT id, number, status, client_id, start_at, end_at, returned_at, total, paid, items_json, created_at,
               rental_period, branch, delivery, booked_by_name, issued_by_name, penalties_json, expenses_json, deposit_json
        FROM rentals
-       WHERE status NOT IN ('cancelled') AND created_at >= ? AND created_at <= ?${clientIdOfType("client_id", ctx.type)}`
+       WHERE ${REAL_RENTAL} AND created_at >= ? AND created_at <= ?${clientIdOfType("client_id", ctx.type)}`
     )
     .all(ctx.from, ctx.to) as RentalRow[];
 }
 
-/** Выручка аренды по месяцам за год — одна и та же ось для обзора и аренд */
+/**
+ * Год по месяцам: сколько денег пришло и сколько аренд оформили. Месяц — по
+ * местному времени; деньги — по дню, когда их приняли (lib/analytics-core).
+ */
 function monthlyRentals(ctx: Ctx) {
   const months = lastMonths();
+  // Начало первого месяца по местному времени, переведённое в UTC
+  const start = new Date(Date.parse(`${months[0]}-01T00:00:00Z`) - ctx.tz * 60000).toISOString();
+  const byMonth = new Map(months.map((m) => [m, { month: m, count: 0, revenue: 0 }]));
+  for (const e of cashEntries(start, "9999", ctx.type)) {
+    if (e.kind === "delivery") continue;
+    const b = byMonth.get(localKey(e.at, ctx.tz, "month"));
+    if (b) b.revenue += e.amount;
+  }
   const rows = db
-    .prepare(
-      `SELECT strftime('%Y-%m', created_at) AS month, COUNT(*) AS count, COALESCE(SUM(paid), 0) AS revenue
-       FROM rentals
-       WHERE status NOT IN ('cancelled') AND created_at >= ?${clientIdOfType("client_id", ctx.type)}
-       GROUP BY month`
-    )
-    .all(`${months[0]}-01`) as { month: string; count: number; revenue: number }[];
-  const byMonth = new Map(rows.map((r) => [r.month, r]));
-  return months.map((month) => ({
-    month,
-    count: byMonth.get(month)?.count ?? 0,
-    revenue: round(byMonth.get(month)?.revenue ?? 0),
-  }));
-}
-
-/** Сколько из оплаченного пришлось на товары магазина — они продаются внутри аренды */
-function shopShare(rental: RentalRow) {
-  const lines = parseLines(rental.items_json);
-  const weights = lines.map((l) => num(l.pricePerDay) * num(l.qty));
-  const sum = weights.reduce((a, b) => a + b, 0);
-  let shop = 0;
-  lines.forEach((line, i) => {
-    if (line.category === "shop" && sum > 0) shop += (num(rental.paid) * weights[i]) / sum;
-  });
-  return shop;
+    .prepare(`SELECT created_at FROM rentals WHERE ${REAL_RENTAL} AND created_at >= ?${clientIdOfType("client_id", ctx.type)}`)
+    .all(start) as { created_at: string }[];
+  for (const r of rows) {
+    const b = byMonth.get(localKey(r.created_at, ctx.tz, "month"));
+    if (b) b.count += 1;
+  }
+  return [...byMonth.values()].map((b) => ({ ...b, revenue: round(b.revenue) }));
 }
 
 // ─── Обзор ──────────────────────────────────────────────────────────────────
 
 function overview(ctx: Ctx) {
   const rentals = periodRentals(ctx);
-  const revenue = rentals.reduce((s, r) => s + num(r.paid), 0);
-  const shop = rentals.reduce((s, r) => s + shopShare(r), 0);
-
-  const delivery = (
-    db
-      .prepare(
-        `SELECT COALESCE(SUM(price), 0) AS v FROM deliveries
-         WHERE status = 'done' AND COALESCE(completed_at, created_at) >= ? AND COALESCE(completed_at, created_at) <= ?${rentalIdOfType("rental_id", ctx.type)}`
-      )
-      .get(ctx.from, ctx.to) as { v: number }
-  ).v;
+  const billed = rentals.reduce((s, r) => s + num(r.total), 0);
+  // Деньги — по дню, когда их приняли, как на главной странице аналитики
+  const money = splitCash(cashEntries(ctx.from, ctx.to, ctx.type));
 
   const workshop = (
     db
@@ -174,15 +162,7 @@ function overview(ctx: Ctx) {
   const won = leads.filter((l) => l.status === "won").length;
   const lost = leads.filter((l) => l.status === "lost").length;
 
-  const debtNow = (
-    db
-      .prepare(
-        `SELECT COALESCE(SUM(total - paid), 0) AS v FROM rentals
-         WHERE total > paid AND status NOT IN ('cancelled','request')${clientIdOfType("client_id", ctx.type)}`
-      )
-      .get() as { v: number }
-  ).v;
-
+  const debt = debtNow(ctx.type);
   const activeClients = new Set(rentals.map((r) => r.client_id)).size;
   const typeOnly = clientTypeSql("type", ctx.type);
   const newClients = (
@@ -191,25 +171,26 @@ function overview(ctx: Ctx) {
       .get(ctx.from, ctx.to) as { v: number }
   ).v;
 
-  // Откуда деньги: аренда, магазин, доставка — это одна сумма, разложенная на части
+  // Откуда деньги: аренда, магазин, доставка — одна сумма, разложенная на части
   const income = [
-    { label: "Аренда инструмента", value: round(revenue - shop) },
-    { label: "Товары магазина", value: round(shop) },
-    { label: "Доставка", value: round(delivery) },
+    { label: "Аренда инструмента", value: round(money.rent) },
+    { label: "Товары магазина", value: round(money.shop) },
+    { label: "Доставка", value: round(money.delivery) },
   ];
 
   return {
     kpi: {
-      income: round(revenue + delivery),
+      income: round(money.total),
       rentals: rentals.length,
-      avgCheck: rentals.length ? round(revenue / rentals.length) : 0,
+      billed: round(billed),
+      avgCheck: rentals.length ? round(billed / rentals.length) : 0,
       activeClients,
       newClients,
       leads: leads.length,
       conversion: won + lost > 0 ? share(won, won + lost) : null,
       workshopCost: round(workshop),
-      debtNow: round(debtNow),
-      net: round(revenue + delivery - workshop),
+      debtNow: round(debt.amount),
+      net: round(money.total - workshop),
     },
     income,
     monthly: monthlyRentals(ctx),
@@ -232,7 +213,9 @@ const DEPOSIT_LABELS: Record<string, string> = { money: "Деньгами", docu
 
 function rentalsSection(ctx: Ctx) {
   const rentals = periodRentals(ctx);
-  const revenue = rentals.reduce((s, r) => s + num(r.paid), 0);
+  // Стоимость аренд периода — то, на что оформили; сколько по ним заплатили — ниже
+  const revenue = rentals.reduce((s, r) => s + num(r.total), 0);
+  const paidOnThem = rentals.reduce((s, r) => s + num(r.paid), 0);
 
   const byStatus = new Map<string, number>();
   const byPeriod = new Map<string, number>();
@@ -265,8 +248,10 @@ function rentalsSection(ctx: Ctx) {
     b.revenue += num(r.paid);
     byBranch.set(branch, b);
 
-    const start = new Date(r.start_at);
-    if (!isNaN(start.getTime())) byWeekday[(start.getDay() + 6) % 7].value++;
+    // День недели по местному времени: сервер в UTC, и утренняя выдача в понедельник
+    // до пяти часов считалась воскресеньем
+    const weekday = localWeekday(r.start_at, ctx.tz);
+    if (weekday >= 0) byWeekday[weekday].value++;
 
     const d = rentalDays(r.start_at, r.end_at, r.returned_at, ctx.now);
     if (d > 0) {
@@ -309,6 +294,7 @@ function rentalsSection(ctx: Ctx) {
     kpi: {
       count: rentals.length,
       revenue: round(revenue),
+      paid: round(paidOnThem),
       avgCheck: rentals.length ? round(revenue / rentals.length) : 0,
       avgDays: withDays ? round1(days / withDays) : 0,
       lateShare: returned ? share(late, returned) : null,
@@ -417,17 +403,20 @@ function funnel(ctx: Ctx) {
     conversion: g.won + g.lost > 0 ? share(g.won, g.won + g.lost) : null,
   });
 
-  // Заявки по месяцам за год — сколько людей обращается, независимо от исхода
+  // Заявки по месяцам за год — сколько людей обращается, независимо от исхода.
+  // Месяц по местному времени: заявка в ночь на первое число — это новый месяц
   const months = lastMonths();
-  const monthlyRows = db
-    .prepare(
-      `SELECT strftime('%Y-%m', created_at) AS month, COUNT(*) AS count,
-              COALESCE(SUM(CASE WHEN status = 'won' THEN 1 ELSE 0 END), 0) AS won
-       FROM leads WHERE created_at >= ?${clientTypeSql("client_type", ctx.type) ? " AND " + clientTypeSql("client_type", ctx.type) : ""}
-       GROUP BY month`
-    )
-    .all(`${months[0]}-01`) as { month: string; count: number; won: number }[];
-  const monthly = new Map(monthlyRows.map((r) => [r.month, r]));
+  const start = new Date(Date.parse(`${months[0]}-01T00:00:00Z`) - ctx.tz * 60000).toISOString();
+  const monthlyType = clientTypeSql("client_type", ctx.type);
+  const monthly = new Map(months.map((m) => [m, { month: m, count: 0, won: 0 }]));
+  for (const l of db
+    .prepare(`SELECT status, created_at FROM leads WHERE created_at >= ?${monthlyType ? " AND " + monthlyType : ""}`)
+    .all(start) as { status: string; created_at: string }[]) {
+    const b = monthly.get(localKey(l.created_at, ctx.tz, "month"));
+    if (!b) continue;
+    b.count += 1;
+    if (l.status === "won") b.won += 1;
+  }
 
   return {
     kpi: {
@@ -687,7 +676,8 @@ function team(ctx: Ctx) {
     .all(ctx.from, ctx.to) as { created_by: string | null; amount: number }[]) {
     const who = person(p.created_by);
     if (who) {
-      who.payments++;
+      // Возврат — отрицательная строка: деньги из суммы уходят, а «приёмом оплаты» он не считается
+      if (num(p.amount) > 0) who.payments++;
       who.paymentsSum += num(p.amount);
     }
   }
@@ -737,7 +727,7 @@ function risks(ctx: Ctx) {
     .prepare(
       `SELECT r.id, r.number, r.status, r.total, r.paid, r.end_at, c.name AS client_name, c.id AS client_id
        FROM rentals r LEFT JOIN clients c ON c.id = r.client_id
-       WHERE r.total - r.paid > 0.5 AND r.status NOT IN ('cancelled','request')${R}`
+       WHERE r.total - r.paid > 0.5 AND ${debtStatuses("r")}${R}`
     )
     .all() as { id: string; number: string; status: string; total: number; paid: number; end_at: string; client_name: string | null; client_id: string }[];
 
@@ -810,8 +800,8 @@ function risks(ctx: Ctx) {
   };
 }
 
-export function buildDeepSection(section: DeepSection, from: string, to: string, type: ClientTypeFilter) {
-  const ctx: Ctx = { from, to, type, now: Date.now() };
+export function buildDeepSection(section: DeepSection, from: string, to: string, type: ClientTypeFilter, tz = 300) {
+  const ctx: Ctx = { from, to, type, now: Date.now(), tz };
   switch (section) {
     case "overview":
       return overview(ctx);

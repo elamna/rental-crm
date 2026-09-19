@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, apiError } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { resolvePeriod } from "@/lib/period";
+import { localKey } from "@/lib/analytics-core";
 import { parseClientTypeFilter, rentalIdOfType } from "@/lib/client-type";
 import type { WorkshopLine } from "@/lib/types";
 
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
     return apiError(e);
   }
 
-  const { period, from, to } = resolvePeriod(req.nextUrl.searchParams);
+  const { period, from, to, tz } = resolvePeriod(req.nextUrl.searchParams);
   // Отбор по типу клиента — через аренду, из которой инструмент пришёл в ремонт.
   // Плановое ТО и поломки на складе ни к какому клиенту не относятся и при
   // отборе «физлица» или «юрлица» не считаются
@@ -139,11 +140,14 @@ export async function GET(req: NextRequest) {
 
   // Расходы по месяцам — отдельным запросом, чтобы график не зависел от периода
   const monthly = db
-    .prepare(`SELECT created_at, lines_json FROM workshop_tickets WHERE 1=1${byType} ORDER BY created_at DESC LIMIT 2000`)
-    .all() as { created_at: string; lines_json: string }[];
+    // Год и месяц с запасом: без ограничения «2000 последних», которое при большой
+    // мастерской обрезало бы начало года
+    .prepare(`SELECT created_at, lines_json FROM workshop_tickets WHERE created_at >= ?${byType}`)
+    .all(new Date(Date.now() - 400 * 86400000).toISOString()) as { created_at: string; lines_json: string }[];
   const months = new Map<string, { month: string; amount: number; count: number }>();
   for (const row of monthly) {
-    const month = String(row.created_at).slice(0, 7);
+    // Месяц — по местному времени: заявка в ночь на первое число не уезжает в прошлый месяц
+    const month = localKey(row.created_at, tz, "month");
     const entry = months.get(month) ?? { month, amount: 0, count: 0 };
     entry.amount += ticketSum(parseLines(row.lines_json));
     entry.count += 1;

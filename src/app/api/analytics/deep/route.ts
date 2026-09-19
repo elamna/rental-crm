@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { resolvePeriod } from "@/lib/period";
 import { clientIdOfType, clientTypeSql, parseClientTypeFilter, rentalIdOfType } from "@/lib/client-type";
 import { buildDeepSection, LIB_SECTIONS, type DeepSection } from "@/lib/deep-report";
+import { REAL_RENTAL } from "@/lib/analytics-core";
 import type { InventoryLine, WorkshopLine } from "@/lib/types";
 
 /**
@@ -84,14 +85,14 @@ export async function GET(req: NextRequest) {
     const user = await requireAuth("analytics.view");
     if (!user.isAdmin) throw new ApiError(403, "Подробный отчёт доступен только администратору");
 
-    const { period, from, to } = resolvePeriod(req.nextUrl.searchParams);
+    const { period, from, to, tz } = resolvePeriod(req.nextUrl.searchParams);
     const clientType = parseClientTypeFilter(req.nextUrl.searchParams.get("clientType"));
 
     // Вкладки отчёта запрашивают свой раздел; клиенты, инструмент и мастерская
     // считаются ниже одним проходом — они связаны общими арендами и ремонтами
     const section = req.nextUrl.searchParams.get("section") as DeepSection | null;
     if (section && LIB_SECTIONS.includes(section)) {
-      return NextResponse.json({ period, from, to, section, data: buildDeepSection(section, from, to, clientType) });
+      return NextResponse.json({ period, from, to, section, data: buildDeepSection(section, from, to, clientType, tz) });
     }
     const typeOnly = clientTypeSql("type", clientType);
     const now = Date.now();
@@ -101,7 +102,7 @@ export async function GET(req: NextRequest) {
       .prepare(
         `SELECT id, client_id, status, start_at, end_at, returned_at, total, paid, items_json, created_at
          FROM rentals
-         WHERE status NOT IN ('cancelled') AND created_at >= ? AND created_at <= ?${clientIdOfType("client_id", clientType)}`
+         WHERE ${REAL_RENTAL} AND created_at >= ? AND created_at <= ?${clientIdOfType("client_id", clientType)}`
       )
       .all(from, to) as RentalRow[];
 
@@ -167,7 +168,10 @@ export async function GET(req: NextRequest) {
       const stat = statFor(rental.client_id);
       stat.rentals += 1;
       stat.revenue += num(rental.paid);
-      stat.debt += Math.max(0, num(rental.total) - num(rental.paid));
+      // Долг — только по выданному инструменту: бронь ещё не долг
+      if (["active", "overdue", "completed", "stolen"].includes(rental.status)) {
+        stat.debt += Math.max(0, num(rental.total) - num(rental.paid));
+      }
       if (rental.status === "overdue") stat.overdue += 1;
       if (!stat.firstAt || rental.created_at < stat.firstAt) stat.firstAt = rental.created_at;
       if (!stat.lastAt || rental.created_at > stat.lastAt) stat.lastAt = rental.created_at;
@@ -219,7 +223,7 @@ export async function GET(req: NextRequest) {
     const lifetime = db
       .prepare(
         `SELECT client_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
-         FROM rentals WHERE status NOT IN ('cancelled') GROUP BY client_id`
+         FROM rentals WHERE ${REAL_RENTAL} GROUP BY client_id`
       )
       .all() as { client_id: string; cnt: number; last_at: string }[];
     const lifetimeById = new Map(lifetime.map((r) => [r.client_id, r]));

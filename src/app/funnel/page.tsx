@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Lead } from "@/lib/types";
 import { acquisitionChannels } from "@/lib/mock-data";
 import { FunnelBucket, patchForBucket } from "@/lib/funnel";
-import { cn, formatMoney } from "@/lib/utils";
+import { cn, formatMoney, plural } from "@/lib/utils";
 import { BarChart3, CalendarClock, Plus, Search, X } from "lucide-react";
 import { FunnelBoard } from "@/components/funnel/funnel-board";
 import { LeadModal, type StaffMember } from "@/components/funnel/lead-modal";
@@ -30,9 +30,9 @@ export default function FunnelPage() {
 
   const [view, setView] = useState<View>("open");
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [totals, setTotals] = useState({ count: 0, amount: 0 });
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadTicket = useRef(0);
 
   const [search, setSearch] = useState("");
   const [manager, setManager] = useState("");
@@ -66,11 +66,14 @@ export default function FunnelPage() {
     if (source) params.set("source", source);
     if (clientType !== "all") params.set("clientType", clientType);
 
+    // Ответы на быстрый ввод в поиске приходят не по порядку: показываем только
+    // последний, иначе старый ответ перерисовывал доску поверх нового
+    const ticket = ++loadTicket.current;
     const res = await fetch(`/api/leads?${params}`);
+    if (ticket !== loadTicket.current) return;
     if (res.ok) {
       const data = await res.json();
       setLeads(data.leads);
-      setTotals(data.totals);
       if (view === "open" || view === "unavailable" || view === "otherCity") {
         const open = data.leads as Lead[];
         setUnavailableCount(open.filter((l) => l.unavailable).length);
@@ -124,6 +127,14 @@ export default function FunnelPage() {
   const waitingLeads = leads.filter((l) => l.unavailable);
   const otherCityLeads = leads.filter((l) => !l.unavailable && l.otherCity);
 
+  // Итог в шапке — ровно то, что видно на экране. Раньше он приходил с сервера
+  // по всем открытым заявкам без учёта поиска, менеджера и канала и вместе с
+  // «нет в наличии» и «другим городом», поэтому не сходился с доской
+  const visible =
+    view === "open" ? boardLeads : view === "unavailable" ? waitingLeads : view === "otherCity" ? otherCityLeads : leads;
+  const headerCount = visible.length;
+  const headerAmount = visible.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+
   function moveBucket(lead: Lead, bucket: FunnelBucket) {
     const patch = patchForBucket(bucket, new Date());
     // Для «Даты» нужны конкретные день и час — их спрашиваем, а не выдумываем
@@ -151,7 +162,7 @@ export default function FunnelPage() {
         <div className="min-w-0">
           <h1 className="font-display text-[20px] font-bold">Воронка</h1>
           <p className="text-[14px] text-[var(--color-text-muted)]">
-            {totals.count} сделки — {formatMoney(totals.amount)}
+            {headerCount} {plural(headerCount, "сделка", "сделки", "сделок")} — {formatMoney(headerAmount)}
           </p>
         </div>
         <div className="flex items-center gap-2">

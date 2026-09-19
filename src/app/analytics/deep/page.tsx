@@ -174,6 +174,14 @@ export default function DeepAnalyticsPage() {
   const [toolView, setToolView] = useState<ToolView>("profit");
   const { user, loading: authLoading } = useAuth();
 
+  // Кто-то изменил данные — запомненные вкладки устарели. Раньше отчёт показывал
+  // цифры на момент первого открытия вкладки, пока страницу не перезагрузят
+  useEffect(() => {
+    const reset = () => setCache({});
+    window.addEventListener("crm:data-changed", reset);
+    return () => window.removeEventListener("crm:data-changed", reset);
+  }, []);
+
   const isPeople = PEOPLE_TABS.includes(tab);
   const query = `${periodQuery(period)}${clientType !== "all" ? `&clientType=${clientType}` : ""}`;
   const cacheKey = `${isPeople ? "people" : tab}|${query}`;
@@ -447,7 +455,7 @@ function ClientsBlock({
                   <th className="pb-2 text-right font-semibold">Аренд</th>
                   <th className="pb-2 text-right font-semibold">Дней</th>
                   <th className="pb-2 text-right font-semibold">Средняя аренда</th>
-                  <th className="pb-2 text-right font-semibold">Выручка</th>
+                  <th className="pb-2 text-right font-semibold">Оплачено</th>
                   <th className="pb-2 text-right font-semibold">Долг</th>
                   <th className="pb-2 text-right font-semibold">Опозданий</th>
                   <th className="pb-2 text-right font-semibold">Последняя</th>

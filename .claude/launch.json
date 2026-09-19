@@ -4,14 +4,31 @@
     {
       "name": "rental-crm",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
     },
     {
       "name": "site",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "../qural-saiman-site", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "../qural-saiman-site",
+        "run",
+        "dev"
+      ],
       "port": 3100
+    },
+    {
+      "name": "rental-crm-utc",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set TZ=UTC&& npm run dev"
+      ],
+      "port": 3000
     }
   ]
 }

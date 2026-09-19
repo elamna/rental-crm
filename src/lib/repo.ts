@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { TASKS_ENABLED } from "./features";
-import { clientIdOfType, clientTypeSql, rentalIdOfType, type ClientTypeFilter } from "./client-type";
+import { clientTypeSql, type ClientTypeFilter } from "./client-type";
+import { cashEntries, debtStatuses, splitCash } from "./analytics-core";
 
 /** Хвост условия WHERE для отбора заявок воронки по типу клиента */
 function typeSqlFor(filter: ClientTypeFilter) {
@@ -1413,6 +1414,19 @@ export function updateRental(id: string, patch: Partial<Rental>, options: { sile
     db.prepare(`UPDATE rentals SET paid_at = ? WHERE id = ?`).run(merged.paid > 0 ? now : null, id);
   }
 
+  // Оплата уменьшилась — это возврат денег клиенту или отмена ошибочной оплаты.
+  // Пишем отрицательную строку чека тем же способом, каким платили в последний
+  // раз: иначе принятая оплата так и числилась в поступлениях, и касса за день
+  // показывала деньги, которые уже отдали обратно
+  if (merged.paid < existing.paid - 0.5) {
+    const last = db
+      .prepare(`SELECT method FROM rental_payments WHERE rental_id = ? AND amount > 0 ORDER BY created_at DESC LIMIT 1`)
+      .get(id) as { method: string } | undefined;
+    db.prepare(
+      `INSERT INTO rental_payments (id, rental_id, amount, method, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(newId("pay"), id, merged.paid - existing.paid, last?.method ?? "cash", now, options.actorName ?? null);
+  }
+
   // Дата фактического возврата: по ней считается пунктуальность клиента.
   // Откатили завершение — дату убираем, иначе рейтинг останется врать
   if (merged.status === "completed" && existing.status !== "completed") {
@@ -1870,60 +1884,62 @@ export interface DebtLedgerRow {
  * попадают и те, кто взял инструмент сегодня, и те, кто сегодня должен вернуть.
  */
 export function paymentsLedger(fromIso: string | null, toIso: string | null, clientType: ClientTypeFilter = "all") {
-  const range = { from: fromIso, to: toIso };
+  const from = fromIso ?? "0000";
+  const to = toIso ?? "9999";
+
+  // Кто заплатил — те же деньги, что в «Поступлениях»: строки чеков и старые
+  // оплаты без чеков. Раньше вторых здесь не было, и итог списка не сходился
+  // с суммой поступлений. Возвраты идут отрицательной строкой
+  const entries = cashEntries(from, to, clientType).filter((e) => e.kind !== "delivery" && e.rentalId);
+  const rentalInfo = db.prepare(
+    `SELECT r.id, r.number, r.total, r.paid, c.id AS client_id, c.name AS client_name, c.phone AS client_phone
+     FROM rentals r LEFT JOIN clients c ON c.id = r.client_id WHERE r.id = ?`
+  );
+  const cache = new Map<string, { id: string; number: string; total: number; paid: number; client_id: string | null; client_name: string | null; client_phone: string | null }>();
+  const info = (id: string) => {
+    if (!cache.has(id)) cache.set(id, rentalInfo.get(id) as never);
+    return cache.get(id);
+  };
+
+  const paid: PaymentLedgerRow[] = entries
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .map((e) => {
+      const r = info(e.rentalId!);
+      return {
+        id: e.paymentId ?? `legacy_${e.rentalId}`,
+        amount: e.amount,
+        // Старая оплата без чека — способ неизвестен
+        method: (e.method ?? "unknown") as PaymentMethod,
+        createdAt: e.at,
+        createdBy: e.createdBy,
+        rentalId: e.rentalId!,
+        rentalNumber: r?.number ?? "—",
+        rentalTotal: r?.total ?? 0,
+        rentalPaid: r?.paid ?? 0,
+        clientId: r?.client_id ?? undefined,
+        clientName: r?.client_name ?? undefined,
+        clientPhone: r?.client_phone ?? undefined,
+      };
+    });
+
+  // Должники периода: остаток по выданному инструменту (бронь — ещё не долг),
+  // аренда оформлена или должна была закончиться в этом периоде
   const typeCond = clientTypeSql("c.type", clientType);
-  const typeAnd = typeCond ? ` AND ${typeCond}` : "";
-
-  const paidRows = db
-    .prepare(
-      `SELECT p.id, p.amount, p.method, p.created_at, p.created_by,
-              r.id AS rental_id, r.number AS rental_number, r.total AS rental_total, r.paid AS rental_paid,
-              c.id AS client_id, c.name AS client_name, c.phone AS client_phone
-       FROM rental_payments p
-       JOIN rentals r ON r.id = p.rental_id
-       LEFT JOIN clients c ON c.id = r.client_id
-       WHERE (@from IS NULL OR p.created_at >= @from) AND (@to IS NULL OR p.created_at <= @to)${typeAnd}
-       ORDER BY p.created_at DESC`
-    )
-    .all(range) as {
-      id: string; amount: number; method: string; created_at: string; created_by: string | null;
-      rental_id: string; rental_number: string; rental_total: number; rental_paid: number;
-      client_id: string | null; client_name: string | null; client_phone: string | null;
-    }[];
-
   const debtRows = db
     .prepare(
       `SELECT r.id, r.number, r.status, r.total, r.paid, r.created_at, r.end_at,
               c.id AS client_id, c.name AS client_name, c.phone AS client_phone
        FROM rentals r
        LEFT JOIN clients c ON c.id = r.client_id
-       WHERE r.status NOT IN ('cancelled', 'request') AND r.total - r.paid > 0
-         AND (
-           ((@from IS NULL OR r.created_at >= @from) AND (@to IS NULL OR r.created_at <= @to))
-           OR ((@from IS NULL OR r.end_at >= @from) AND (@to IS NULL OR r.end_at <= @to))
-         )${typeAnd}
+       WHERE ${debtStatuses("r")} AND r.total - r.paid > 0.5
+         AND ((r.created_at >= @from AND r.created_at <= @to) OR (r.end_at >= @from AND r.end_at <= @to))${typeCond ? ` AND ${typeCond}` : ""}
        ORDER BY r.total - r.paid DESC`
     )
-    .all(range) as {
+    .all({ from, to }) as {
       id: string; number: string; status: string; total: number; paid: number;
       created_at: string; end_at: string;
       client_id: string | null; client_name: string | null; client_phone: string | null;
     }[];
-
-  const paid: PaymentLedgerRow[] = paidRows.map((r) => ({
-    id: r.id,
-    amount: r.amount,
-    method: r.method as PaymentMethod,
-    createdAt: r.created_at,
-    createdBy: r.created_by ?? undefined,
-    rentalId: r.rental_id,
-    rentalNumber: r.rental_number,
-    rentalTotal: r.rental_total,
-    rentalPaid: r.rental_paid,
-    clientId: r.client_id ?? undefined,
-    clientName: r.client_name ?? undefined,
-    clientPhone: r.client_phone ?? undefined,
-  }));
 
   const unpaid: DebtLedgerRow[] = debtRows.map((r) => ({
     rentalId: r.id,
@@ -1939,13 +1955,14 @@ export function paymentsLedger(fromIso: string | null, toIso: string | null, cli
     clientPhone: r.client_phone ?? undefined,
   }));
 
+  const positive = paid.filter((p) => p.amount > 0);
   return {
     paid,
     unpaid,
     totals: {
       paidTotal: Math.round(paid.reduce((sum, p) => sum + p.amount, 0)),
       debtTotal: unpaid.reduce((sum, d) => sum + d.debt, 0),
-      payers: new Set(paid.map((p) => p.clientId ?? p.rentalId)).size,
+      payers: new Set(positive.map((p) => p.clientId ?? p.rentalId)).size,
       debtors: new Set(unpaid.map((d) => d.clientId ?? d.rentalId)).size,
     },
   };
@@ -1954,74 +1971,37 @@ export function paymentsLedger(fromIso: string | null, toIso: string | null, cli
 /**
  * Поступления за период: чем платили и за что.
  *
- * «Чем» берём из строк платежей. «За что» — из состава аренд и доставок:
- * товары магазина продаются внутри аренды, а доставка стоит отдельной строкой.
- * Это разные разрезы одних и тех же денег, поэтому суммы по ним не складываются.
+ * Считаются по дню, когда деньги приняли (lib/analytics-core). Раньше «всего»
+ * бралось по дате последнего изменения оплаты: аренда, оплаченная двумя
+ * частями в разные дни, целиком падала на день второй части, а разница
+ * показывалась как деньги «без способа оплаты», которых на самом деле не было.
+ * «Чем платили» и «за что» — два разреза одних и тех же денег.
  */
 export function incomeBreakdown(fromIso: string | null, toIso: string | null, clientType: ClientTypeFilter = "all") {
-  const range = { from: fromIso, to: toIso };
-  // Отбор по типу клиента: платежи и доставки — через аренду, аренды — через клиента
-  const byRental = rentalIdOfType("rental_id", clientType);
-  const byClient = clientIdOfType("client_id", clientType);
-  const inRange = (column: string) =>
-    `(@from IS NULL OR ${column} >= @from) AND (@to IS NULL OR ${column} <= @to)`;
-
-  const byMethod = db
-    .prepare(
-      `SELECT method, COALESCE(SUM(amount), 0) AS total FROM rental_payments
-       WHERE ${inRange("created_at")}${byRental} GROUP BY method`
-    )
-    .all(range) as { method: string; total: number }[];
+  const entries = cashEntries(fromIso ?? "0000", toIso ?? "9999", clientType);
 
   const methods: Record<PaymentMethod, number> = { cash: 0, kaspi: 0, company: 0 };
-  for (const row of byMethod) {
-    if (row.method in methods) methods[row.method as PaymentMethod] = row.total;
+  let untracked = 0;
+  for (const e of entries) {
+    if (e.kind === "payment" && e.method && e.method in methods) methods[e.method] += e.amount;
+    else if (e.kind !== "delivery") untracked += e.amount;
   }
 
-  // Оплаты, принятые до появления истории платежей, в разрезе способов не видны —
-  // показываем их отдельной строкой, чтобы итог сходился
-  const paidTotal = (
-    db
-      .prepare(`SELECT COALESCE(SUM(paid), 0) AS total FROM rentals WHERE paid > 0 AND ${inRange("COALESCE(paid_at, created_at)")}${byClient}`)
-      .get(range) as { total: number }
-  ).total;
-  const trackedTotal = methods.cash + methods.kaspi + methods.company;
-  const untracked = Math.max(0, Math.round(paidTotal - trackedTotal));
-
-  // За что: аренда инструмента и проданные товары магазина внутри тех же аренд
-  const rentalRows = db
-    .prepare(`SELECT items_json, total, paid FROM rentals WHERE paid > 0 AND ${inRange("COALESCE(paid_at, created_at)")}${byClient}`)
-    .all(range) as { items_json: string; total: number; paid: number }[];
-
-  let shop = 0;
-  for (const row of rentalRows) {
-    try {
-      for (const line of JSON.parse(row.items_json || "[]") as InventoryLine[]) {
-        if (line.category === "shop") shop += line.pricePerDay * line.qty;
-      }
-    } catch {
-      // Битый состав не должен ронять отчёт
-    }
-  }
-
-  const delivery = (
-    db
-      .prepare(
-        `SELECT COALESCE(SUM(price), 0) AS total FROM deliveries
-         WHERE status = 'done' AND ${inRange("COALESCE(completed_at, created_at)")}${byRental}`
-      )
-      .get(range) as { total: number }
-  ).total;
-
+  const split = splitCash(entries);
+  const paidTotal = split.rent + split.shop;
   return {
-    methods,
-    untracked,
-    sources: {
-      rent: Math.max(0, Math.round(paidTotal - shop)),
-      shop: Math.round(shop),
-      delivery: Math.round(delivery),
+    methods: {
+      cash: Math.round(methods.cash),
+      kaspi: Math.round(methods.kaspi),
+      company: Math.round(methods.company),
     },
-    total: Math.round(paidTotal + delivery),
+    untracked: Math.round(untracked),
+    sources: {
+      rent: Math.round(split.rent),
+      shop: Math.round(split.shop),
+      delivery: Math.round(split.delivery),
+    },
+    total: Math.round(split.total),
     paidTotal: Math.round(paidTotal),
   };
 }
@@ -3494,7 +3474,9 @@ export interface LeadFilter {
  */
 export function listLeads(filter: LeadFilter = {}): Lead[] {
   const where: string[] = [];
-  const params: Record<string, unknown> = { limit: filter.limit ?? 500 };
+  // Доска показывает все открытые заявки: при 500 хвост молча обрезался,
+  // и часть клиентов пропадала из воронки без всякого предупреждения
+  const params: Record<string, unknown> = { limit: filter.limit ?? 10000 };
 
   where.push("l.status = @status");
   params.status = filter.status ?? "open";

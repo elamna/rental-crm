@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Lead, LEAD_CONCERN_LABELS, LEAD_MOODS } from "@/lib/types";
 import { BOARD_COLUMNS, FUNNEL_COLUMNS, FunnelBucket, groupLeads } from "@/lib/funnel";
-import { cn, formatMoney } from "@/lib/utils";
+import { cn, formatMoney, plural } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { CalendarPlus, CheckCircle2, Phone, Timer, Truck, User, XCircle } from "lucide-react";
 
@@ -60,7 +60,7 @@ export function FunnelBoard({
                   {col.label}
                 </div>
                 <div className="text-[12.5px] text-[var(--color-text-muted)]">
-                  {items.length} сделки: {formatMoney(sum)}
+                  {items.length} {plural(items.length, "сделка", "сделки", "сделок")}: {formatMoney(sum)}
                 </div>
                 <div className="mt-0.5 text-[12px] leading-snug text-[var(--color-text-muted)]">{col.hint}</div>
               </div>

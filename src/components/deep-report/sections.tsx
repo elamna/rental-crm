@@ -38,7 +38,7 @@ export function OverviewSection({ data, periodLabel }: { data: OverviewData; per
       />
       <Tiles>
         <Tile label="Поступления" value={formatMoney(k.income)} sub={`чистыми ${formatMoney(k.net)} после мастерской`} tone="primary" />
-        <Tile label="Аренд" value={String(k.rentals)} sub={`средний чек ${formatMoney(k.avgCheck)}`} />
+        <Tile label="Оформлено аренд" value={String(k.rentals)} sub={`на ${formatMoney(k.billed)} · чек ${formatMoney(k.avgCheck)}`} />
         <Tile label="Клиентов брали" value={String(k.activeClients)} sub={`+${k.newClients} новых в базе`} />
         <Tile label="Заявок в воронке" value={String(k.leads)} sub={k.conversion === null ? "решений ещё нет" : `конверсия ${k.conversion}%`} />
       </Tiles>
@@ -69,7 +69,7 @@ export function RentalsSection({ data }: { data: RentalsData }) {
         ]}
       />
       <Tiles>
-        <Tile label="Аренд" value={String(k.count)} sub={`выручка ${formatMoney(k.revenue)}`} tone="primary" />
+        <Tile label="Аренд" value={String(k.count)} sub={`на ${formatMoney(k.revenue)}, оплачено ${formatMoney(k.paid)}`} tone="primary" />
         <Tile label="Средний чек" value={formatMoney(k.avgCheck)} sub={`средняя длина ${k.avgDays} дн.`} />
         <Tile
           label="Возвращают с опозданием"

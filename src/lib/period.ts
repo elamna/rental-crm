@@ -25,11 +25,14 @@ export type Granularity = "hour" | "day" | "month";
  * пользователя, а в базе время лежит в UTC. Сервер получает готовый ISO.
  */
 export function periodQuery(value: PeriodValue): string {
-  if (value.key !== "custom") return `period=${value.key}`;
-  if (!value.from || !value.to) return "period=month";
+  // Часовой пояс браузера: сервер живёт в UTC и без него раскладывал бы
+  // аренды по дням и часам со сдвигом на пять часов
+  const tz = `&tz=${-new Date().getTimezoneOffset()}`;
+  if (value.key !== "custom") return `period=${value.key}${tz}`;
+  if (!value.from || !value.to) return `period=month${tz}`;
   const from = new Date(`${value.from}T00:00:00`).toISOString();
   const to = new Date(`${value.to}T23:59:59.999`).toISOString();
-  return `period=custom&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  return `period=custom&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${tz}`;
 }
 
 export interface ResolvedPeriod {
@@ -37,12 +40,21 @@ export interface ResolvedPeriod {
   from: string;
   to: string;
   granularity: Granularity;
+  /** Смещение часового пояса браузера, минут к востоку от UTC */
+  tz: number;
 }
 
 const DAY = 86400000;
 
 /** Разбор периода на стороне API */
 export function resolvePeriod(params: URLSearchParams): ResolvedPeriod {
+  const tzRaw = Number(params.get("tz"));
+  // Казахстан (UTC+5) — если браузер пояс не прислал
+  const tz = Number.isFinite(tzRaw) && tzRaw >= -720 && tzRaw <= 840 && params.get("tz") !== null ? Math.round(tzRaw) : 300;
+  return { ...resolveRange(params), tz };
+}
+
+function resolveRange(params: URLSearchParams): Omit<ResolvedPeriod, "tz"> {
   const period = (params.get("period") ?? "month") as PeriodKey;
   const now = new Date();
   const to = now.toISOString();
